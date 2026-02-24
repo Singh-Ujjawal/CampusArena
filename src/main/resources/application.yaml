@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: eventhub
+  data:
+    mongodb:
+      uri: mongodb://admin:password@localhost:27017/EventHub?authSource=admin
+server:
+  port: 8080
