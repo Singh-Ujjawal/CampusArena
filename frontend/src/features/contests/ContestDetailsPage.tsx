@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { type Contest, type Problem } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, CheckCircle2, Clock, Users } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock, Users, Lock, Key } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { ContestDetailsSkeleton } from '@/components/skeleton';
@@ -19,7 +20,48 @@ export default function ContestDetailsPage() {
     const [problems, setProblems] = useState<Problem[]>([]);
     const [solvedProblemIds, setSolvedProblemIds] = useState<Set<string>>(new Set());
     const [status, setStatus] = useState<string>('');
+    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
+    const [hasAccess, setHasAccess] = useState(false);
+    const [passwordEntry, setPasswordEntry] = useState('');
+    const [isValidating, setIsValidating] = useState(false);
+    const [isRegistered, setIsRegistered] = useState(false);
+    const [regFormId, setRegFormId] = useState<string | null>(null);
+    const [isCheckingReg, setIsCheckingReg] = useState(true);
+
+    useEffect(() => {
+        if (contestId && sessionStorage.getItem(`contest_access_${contestId}`)) {
+            setHasAccess(true);
+        }
+    }, [contestId]);
+
+    const handleValidatePassword = async () => {
+        if (passwordEntry.length !== 6) {
+            toast.error('Enter 6-digit password');
+            return;
+        }
+        setIsValidating(true);
+        try {
+            const response = await api.post(`/api/contests/${contestId}/validate-password`, null, {
+                params: {
+                    password: passwordEntry,
+                    userId: user?.id
+                }
+            });
+            if (response.data === true) {
+                setHasAccess(true);
+                sessionStorage.setItem(`contest_access_${contestId}`, 'true');
+                toast.success('Access granted!');
+            } else {
+                toast.error('Invalid password');
+            }
+        } catch (error: any) {
+            const msg = error.response?.data?.message || 'Verification failed';
+            toast.error(msg);
+        } finally {
+            setIsValidating(false);
+        }
+    };
 
     useEffect(() => {
         const fetchContestAndProblems = async () => {
@@ -29,6 +71,22 @@ export default function ContestDetailsPage() {
                 const contestStatus = response.data.status || '';
                 setContest(contestData);
                 setStatus(contestStatus);
+
+                if (user && contestData.registrationRequired) {
+                    try {
+                        const regRes = await api.get(`/api/registration/responses/check`, {
+                            params: { contestId, userId: user.id }
+                        });
+                        setIsRegistered(regRes.data);
+
+                        if (!regRes.data) {
+                            const formRes = await api.get(`/api/registration/forms/contest/${contestId}`);
+                            setRegFormId(formRes.data.id);
+                        }
+                    } catch (e) {
+                        // Form might not exist yet
+                    }
+                }
 
                 if (contestStatus !== 'UPCOMING' && contestData.problemIds && contestData.problemIds.length > 0) {
                     const problemPromises = contestData.problemIds.map((id: string) =>
@@ -41,10 +99,11 @@ export default function ContestDetailsPage() {
                 console.error("Failed to fetch contest details");
             } finally {
                 setIsLoading(false);
+                setIsCheckingReg(false);
             }
         };
         if (contestId) fetchContestAndProblems();
-    }, [contestId]);
+    }, [contestId, user]);
 
     // Fetch user's accepted submissions for this contest
     useEffect(() => {
@@ -155,6 +214,74 @@ export default function ContestDetailsPage() {
                                 <div className="text-xl font-black text-blue-900 dark:text-blue-300 bg-white dark:bg-gray-800 inline-block px-6 py-3 rounded-2xl shadow-sm">
                                     {new Date(contest.startTime).toLocaleString('en-IN', { timeZone: IST_TZ, hour: '2-digit', minute: '2-digit', hour12: true, day: '2-digit', month: 'short' })}
                                 </div>
+                            </div>
+                            {/* Registration CTA for upcoming contests */}
+                            {!isCheckingReg && contest.registrationRequired && !isRegistered && (
+                                <div className="pt-4">
+                                    <Button
+                                        onClick={() => regFormId ? navigate(`/registration/forms/${regFormId}`) : toast.error('Registration form not found')}
+                                        className="py-4 px-8 text-base font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-lg shadow-indigo-500/20"
+                                    >
+                                        Register Now
+                                    </Button>
+                                    <p className="text-xs text-blue-500 dark:text-blue-400 mt-2 font-medium">Register before the contest begins!</p>
+                                </div>
+                            )}
+                            {!isCheckingReg && contest.registrationRequired && isRegistered && (
+                                <div className="pt-4 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-bold">
+                                    <CheckCircle2 className="h-5 w-5" />
+                                    <span>You are registered!</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : status === 'LIVE' && !hasAccess ? (
+                    <div className="bg-white dark:bg-gray-800 border-2 border-dashed border-indigo-200 dark:border-indigo-900/50 rounded-[2rem] p-12 text-center shadow-sm">
+                        <div className="max-w-md mx-auto space-y-6">
+                            <div className="bg-indigo-50 dark:bg-indigo-900/40 h-20 w-20 rounded-3xl flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400 mb-2 shadow-inner">
+                                {contest.registrationRequired && !isRegistered ? <Users className="h-10 w-10" /> : <Lock className="h-10 w-10" />}
+                            </div>
+                            <div>
+                                <h2 className="text-3xl font-black text-gray-900 dark:text-white">
+                                    {contest.registrationRequired && !isRegistered ? 'Register for Contest' : 'Join the Contest'}
+                                </h2>
+                                <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">
+                                    {contest.registrationRequired && !isRegistered
+                                        ? 'You must register using the official form before you can access the contest problems.'
+                                        : 'Enter the 6-digit access code to see the problems and start coding.'}
+                                </p>
+                            </div>
+                            <div className="space-y-4">
+                                {contest.registrationRequired && !isRegistered ? (
+                                    <Button
+                                        onClick={() => regFormId ? navigate(`/registration/forms/${regFormId}`) : toast.error('Registration form not found')}
+                                        className="w-full max-w-[240px] py-6 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
+                                    >
+                                        Register Now
+                                    </Button>
+                                ) : (
+                                    <>
+                                        <div className="relative max-w-[240px] mx-auto">
+                                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400" />
+                                            <input
+                                                type="text"
+                                                maxLength={6}
+                                                placeholder="000000"
+                                                className="w-full pl-12 pr-4 py-4 text-2xl font-black tracking-[0.3em] text-center border-2 border-gray-100 dark:border-gray-700 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all dark:bg-gray-900 dark:text-white"
+                                                value={passwordEntry}
+                                                onChange={e => setPasswordEntry(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                onKeyDown={e => e.key === 'Enter' && handleValidatePassword()}
+                                            />
+                                        </div>
+                                        <Button
+                                            onClick={handleValidatePassword}
+                                            isLoading={isValidating}
+                                            className="w-full max-w-[240px] py-6 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
+                                        >
+                                            Access Problems
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

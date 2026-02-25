@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Code2, Users, FileText, BarChart3, ClipboardList, TrendingUp, Zap, Shield } from 'lucide-react';
+import { Trophy, Code2, Users, FileText, BarChart3, ClipboardList, TrendingUp, Zap, Shield, Building2, UserCheck } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
 import { GlassmorphismCard } from './components/GlassmorphismCard';
@@ -70,6 +70,20 @@ export default function AdminDashboard() {
             adminOnly: true,
         },
         {
+            name: 'Manage Clubs',
+            href: '/admin/clubs',
+            icon: Building2,
+            gradientBg: 'from-amber-600 to-yellow-600',
+            adminOnly: true,
+        },
+        {
+            name: 'Manage Faculty',
+            href: '/admin/faculty',
+            icon: UserCheck,
+            gradientBg: 'from-blue-600 to-indigo-600',
+            adminOnly: true,
+        },
+        {
             name: 'Event Analytics',
             href: '/admin/analytics',
             icon: BarChart3,
@@ -81,6 +95,13 @@ export default function AdminDashboard() {
             href: '/admin/submissions',
             icon: ClipboardList,
             gradientBg: 'from-orange-500 to-red-500',
+            adminOnly: true,
+        },
+        {
+            name: 'Registration Hub',
+            href: '/admin/registration',
+            icon: ClipboardList,
+            gradientBg: 'from-pink-500 to-rose-500',
             adminOnly: true,
         },
         {

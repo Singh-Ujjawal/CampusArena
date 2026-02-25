@@ -83,8 +83,18 @@ public class UserActivityService {
                     List<Submission> subs = entry.getValue();
                     Contest contest = contestsById.get(contestId);
 
-                    long solved = subs.stream().filter(s -> "ACCEPTED".equals(s.getVerdict())).count();
-                    int totalScore = subs.stream()
+                    // Group by problemId to handle multiple submissions correctly
+                    Map<String, Submission> bestSubByProblem = subs.stream()
+                            .collect(Collectors.toMap(
+                                    Submission::getProblemId,
+                                    s -> s,
+                                    (s1, s2) -> (s1.getScore() != null ? s1.getScore() : 0) >= (s2.getScore() != null ? s2.getScore() : 0) ? s1 : s2
+                            ));
+
+                    long solved = bestSubByProblem.values().stream()
+                            .filter(s -> "ACCEPTED".equals(s.getVerdict()))
+                            .count();
+                    int totalScore = bestSubByProblem.values().stream()
                             .filter(s -> "ACCEPTED".equals(s.getVerdict()))
                             .mapToInt(s -> s.getScore() != null ? s.getScore() : 0)
                             .sum();

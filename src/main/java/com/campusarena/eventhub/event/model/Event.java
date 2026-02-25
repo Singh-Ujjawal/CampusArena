@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
 
@@ -26,6 +27,9 @@ public class Event {
     private Double totalMarks;
     private String clubId; // Reference to Club ID
     private String status; // UPCOMING, LIVE, COMPLETED
+    @Size(min = 6, max = 6, message = "Password must be exactly 6 digits")
+    private String accessPassword;
     private List<String> facultyCoordinators;
     private List<String> studentCoordinators;
+    private Boolean registrationRequired = true;
 }

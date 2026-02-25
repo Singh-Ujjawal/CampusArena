@@ -1,8 +1,22 @@
 spring:
   application:
     name: eventhub
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 10MB
   data:
     mongodb:
-      uri: mongodb://admin:password@localhost:27017/EventHub?authSource=admin
+      uri: mongodb://localhost:27017/CampusArena
 server:
   port: 8080
+
+
+
+file:
+  upload-dir: uploads
+  max-size: 2097152 # 2MB
+
+
+

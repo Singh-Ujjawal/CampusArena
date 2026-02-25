@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { type Event } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash, X } from 'lucide-react';
+import { Plus, Edit, Trash, X, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
 import { CLUBS } from '@/lib/constants';
@@ -79,14 +80,26 @@ function fromISTInput(localValue: string): string {
 }
 
 export default function AdminEventsPage() {
+    const navigate = useNavigate();
     const [events, setEvents] = useState<Event[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [currentEvent, setCurrentEvent] = useState<Partial<Event>>({});
+    const [registrationForms, setRegistrationForms] = useState<any[]>([]);
 
     useEffect(() => {
         fetchEvents();
+        fetchRegistrationForms();
     }, []);
+
+    const fetchRegistrationForms = async () => {
+        try {
+            const response = await api.get('/api/registration/forms');
+            setRegistrationForms(response.data);
+        } catch (error) {
+            console.error('Failed to load registration forms');
+        }
+    };
 
     const fetchEvents = async () => {
         setIsLoading(true);
@@ -114,8 +127,13 @@ export default function AdminEventsPage() {
     const handleSave = async () => {
         try {
             // Validate
-            if (!currentEvent.title || !currentEvent.startTime || !currentEvent.endTime || !currentEvent.clubId) {
-                toast.error('Please fill required fields (including club)');
+            if (!currentEvent.title || !currentEvent.startTime || !currentEvent.endTime || !currentEvent.clubId || !currentEvent.accessPassword) {
+                toast.error('Please fill all required fields including password');
+                return;
+            }
+
+            if (currentEvent.accessPassword.length !== 6) {
+                toast.error('Password must be exactly 6 digits');
                 return;
             }
 
@@ -125,6 +143,7 @@ export default function AdminEventsPage() {
                 // Ensure dates are ISO strings
                 startTime: new Date(currentEvent.startTime!).toISOString(),
                 endTime: new Date(currentEvent.endTime!).toISOString(),
+                registrationRequired: currentEvent.registrationRequired !== false, // default true
             };
 
             if (currentEvent.id) {
@@ -138,6 +157,7 @@ export default function AdminEventsPage() {
             setIsEditing(false);
             setCurrentEvent({});
             fetchEvents();
+            fetchRegistrationForms();
         } catch (error) {
             console.log(error)
             toast.error('Failed to save event');
@@ -157,7 +177,8 @@ export default function AdminEventsPage() {
             durationInMinutes: 60,
             totalMarks: 100,
             attendanceProcessed: false,
-            status: 'UPCOMING'
+            status: 'UPCOMING',
+            registrationRequired: true
         });
         setIsEditing(true);
     };
@@ -182,6 +203,15 @@ export default function AdminEventsPage() {
                             value={currentEvent.title || ''}
                             onChange={e => setCurrentEvent({ ...currentEvent, title: e.target.value })}
                         />
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                            <textarea
+                                className="w-full h-24 p-3 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                                placeholder="Enter event description..."
+                                value={currentEvent.description || ''}
+                                onChange={e => setCurrentEvent({ ...currentEvent, description: e.target.value })}
+                            />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <Input
                                 label="Start Time (IST)"
@@ -216,6 +246,13 @@ export default function AdminEventsPage() {
                             onChange={e => setCurrentEvent({ ...currentEvent, clubId: e.target.value })}
                             options={CLUBS.map(c => ({ value: c.id, label: c.name }))}
                         />
+                        <Input
+                            label="Access Password (6 digits)"
+                            value={currentEvent.accessPassword || ''}
+                            maxLength={6}
+                            placeholder="Enter 6-digit password"
+                            onChange={e => setCurrentEvent({ ...currentEvent, accessPassword: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                        />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <TagInput
                                 label="Faculty Coordinators"
@@ -227,6 +264,20 @@ export default function AdminEventsPage() {
                                 values={currentEvent.studentCoordinators || []}
                                 onChange={v => setCurrentEvent({ ...currentEvent, studentCoordinators: v })}
                             />
+                        </div>
+
+                        <div className="flex items-center gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/50">
+                            <input
+                                type="checkbox"
+                                id="regReq"
+                                className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                checked={currentEvent.registrationRequired !== false}
+                                onChange={e => setCurrentEvent({ ...currentEvent, registrationRequired: e.target.checked })}
+                            />
+                            <label htmlFor="regReq" className="text-sm font-bold text-indigo-900 dark:text-indigo-300">
+                                Registration Required
+                                <span className="block text-xs font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">Participants must fill the registration form before starting the test.</span>
+                            </label>
                         </div>
                         <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                             <Button variant="outline" onClick={() => setIsEditing(false)} className="text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</Button>
@@ -254,6 +305,9 @@ export default function AdminEventsPage() {
                                         {event.status === 'COMPLETED' && (
                                             <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600">COMPLETED</span>
                                         )}
+                                        {event.accessPassword && (
+                                            <span className="inline-block px-2 py-0.5 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 tracking-wider">PWD: {event.accessPassword}</span>
+                                        )}
                                     </div>
                                     {(event.facultyCoordinators?.length || event.studentCoordinators?.length) ? (
                                         <p className="text-xs text-gray-400 dark:text-gray-400 mt-0.5">
@@ -267,6 +321,15 @@ export default function AdminEventsPage() {
                                     <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => openEdit(event)}><Edit className="h-4 w-4" /></Button>
                                     <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => window.location.href = `/admin/events/${event.id}/questions`}>Questions</Button>
                                     <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => window.location.href = `/admin/events/${event.id}/analytics`}>Analytics</Button>
+                                    {registrationForms.find(f => f.eventId === event.id) ? (
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20" onClick={() => navigate(`/admin/registration/edit/${registrationForms.find(f => f.eventId === event.id).id}`)}>
+                                            <ClipboardCheck className="h-4 w-4 mr-1 text-indigo-600 dark:text-indigo-400" />Edit Form
+                                        </Button>
+                                    ) : (
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => navigate(`/admin/registration/create?eventId=${event.id}`)}>
+                                            <ClipboardCheck className="h-4 w-4 mr-1" />Reg. Form
+                                        </Button>
+                                    )}
                                     <Button size="sm" variant="danger" onClick={() => handleDelete(event.id!)}><Trash className="h-4 w-4" /></Button>
                                 </div>
                             </CardContent>

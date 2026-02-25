@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { type Problem } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Play, CheckCircle2, XCircle, Clock, AlertTriangle,
-    Zap, Code2, Terminal, Database
+    Zap, Code2, Terminal, Database, Trophy, ChevronLeft
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { toast } from 'sonner';
@@ -360,152 +360,171 @@ export default function ProblemDetailsPage() {
     const monacoLang = LANGUAGES.find(l => l.value === language)?.monaco ?? 'cpp';
 
     return (
-        <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row gap-4 p-4">
+        <div className="h-[calc(100vh-6rem)] flex flex-col p-4 space-y-4">
+            {/* ── Navigation Header ── */}
+            <div className="flex items-center justify-between flex-shrink-0 bg-white dark:bg-gray-800 p-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                <Link to={`/contests/${contestId}`}>
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600">
+                        <ChevronLeft className="h-4 w-4" />
+                        Back to Contest
+                    </Button>
+                </Link>
 
-            {/* ── Problem Description ── */}
-            <div className="md:w-1/2 flex flex-col overflow-hidden">
-                <Card className="h-full flex flex-col bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <CardHeader>
-                        <CardTitle className="flex justify-between items-center text-gray-900 dark:text-gray-100">
-                            <span>{problem.title}</span>
-                            <span className={`text-sm px-2 py-1 rounded font-semibold ${problem.difficulty === 'EASY' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' :
-                                problem.difficulty === 'MEDIUM' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300' :
-                                    'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300'
-                                }`}>
-                                {problem.difficulty}
-                            </span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-y-auto prose dark:prose-invert max-w-none text-gray-900 dark:text-gray-100">
-                        <div dangerouslySetInnerHTML={{ __html: problem.description.replace(/\n/g, '<br />') }} />
-
-                        {problem.testCases && problem.testCases.filter(tc => !tc.hidden).length > 0 && (
-                            <div className="mt-6 space-y-4">
-                                <h4 className="font-bold text-gray-900 dark:text-gray-100">Example Test Cases</h4>
-                                {problem.testCases?.filter(tc => !tc.hidden).map((tc, idx) => (
-                                    <div key={idx} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md text-sm font-mono border border-gray-200 dark:border-gray-600">
-                                        <div className="mb-2">
-                                            <span className="text-gray-500 dark:text-gray-400 text-xs uppercase block mb-1">Input:</span>
-                                            <pre className="whitespace-pre-wrap break-words">{tc.input}</pre>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500 dark:text-gray-400 text-xs uppercase block mb-1">Expected Output:</span>
-                                            <pre className="whitespace-pre-wrap break-words">{tc.expectedOutput}</pre>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                <Link to={`/leaderboard/${contestId}`}>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2 text-indigo-600 border-indigo-100 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg font-bold">
+                        <Trophy className="h-4 w-4" />
+                        Live Leaderboard
+                    </Button>
+                </Link>
             </div>
 
-            {/* ── Editor + Results ── */}
-            <div className="md:w-1/2 flex flex-col gap-3 overflow-y-auto">
+            <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0">
 
-                <Card className="flex flex-col overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                    style={{ height: '65%', minHeight: '300px' }}>
-                    {/* Toolbar */}
-                    <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between flex-shrink-0">
-                        <div className="flex items-center gap-3">
-                            <select
-                                className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm px-2"
-                                value={language}
-                                onChange={e => handleLanguageChange(e.target.value)}
-                            >
-                                {LANGUAGES.map(l => (
-                                    <option key={l.value} value={l.value}>{l.label}</option>
-                                ))}
-                            </select>
-                            {contest?.endTime && (
-                                <CountdownTimer
-                                    targetDate={contest.endTime}
-                                    className="text-xs bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-200 dark:border-gray-600"
-                                />
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {/* Run button */}
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleRun}
-                                disabled={isRunning || isSubmitting}
-                                className="border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs"
-                            >
-                                {isRunning ? (
-                                    <span className="flex items-center gap-1">
-                                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                        </svg>
-                                        Running...
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-1">
-                                        <Play className="h-3 w-3" /> Run
-                                    </span>
-                                )}
-                            </Button>
-
-                            {/* Submit button */}
-                            {alreadySolved ? (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300">
-                                    <CheckCircle2 className="h-3 w-3" /> Solved
+                {/* ── Problem Description ── */}
+                <div className="md:w-1/2 flex flex-col overflow-hidden">
+                    <Card className="h-full flex flex-col bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center text-gray-900 dark:text-gray-100">
+                                <span>{problem.title}</span>
+                                <span className={`text-sm px-2 py-1 rounded font-semibold ${problem.difficulty === 'EASY' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' :
+                                    problem.difficulty === 'MEDIUM' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300' :
+                                        'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300'
+                                    }`}>
+                                    {problem.difficulty}
                                 </span>
-                            ) : (
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-y-auto prose dark:prose-invert max-w-none text-gray-900 dark:text-gray-100">
+                            <div dangerouslySetInnerHTML={{ __html: problem.description.replace(/\n/g, '<br />') }} />
+
+                            {problem.testCases && problem.testCases.filter(tc => !tc.hidden).length > 0 && (
+                                <div className="mt-6 space-y-4">
+                                    <h4 className="font-bold text-gray-900 dark:text-gray-100">Example Test Cases</h4>
+                                    {problem.testCases?.filter(tc => !tc.hidden).map((tc, idx) => (
+                                        <div key={idx} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md text-sm font-mono border border-gray-200 dark:border-gray-600">
+                                            <div className="mb-2">
+                                                <span className="text-gray-500 dark:text-gray-400 text-xs uppercase block mb-1">Input:</span>
+                                                <pre className="whitespace-pre-wrap break-words">{tc.input}</pre>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500 dark:text-gray-400 text-xs uppercase block mb-1">Expected Output:</span>
+                                                <pre className="whitespace-pre-wrap break-words">{tc.expectedOutput}</pre>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* ── Editor + Results ── */}
+                <div className="md:w-1/2 flex flex-col gap-3 overflow-y-auto">
+
+                    <Card className="flex flex-col overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                        style={{ height: '65%', minHeight: '300px' }}>
+                        {/* Toolbar */}
+                        <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between flex-shrink-0">
+                            <div className="flex items-center gap-3">
+                                <select
+                                    className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm px-2"
+                                    value={language}
+                                    onChange={e => handleLanguageChange(e.target.value)}
+                                >
+                                    {LANGUAGES.map(l => (
+                                        <option key={l.value} value={l.value}>{l.label}</option>
+                                    ))}
+                                </select>
+                                {contest?.endTime && (
+                                    <CountdownTimer
+                                        targetDate={contest.endTime}
+                                        className="text-xs bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-200 dark:border-gray-600"
+                                    />
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                {/* Run button */}
                                 <Button
                                     size="sm"
-                                    onClick={handleSubmit}
-                                    disabled={isSubmitting || isRunning}
-                                    className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs"
+                                    variant="outline"
+                                    onClick={handleRun}
+                                    disabled={isRunning || isSubmitting}
+                                    className="border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs"
                                 >
-                                    {isSubmitting ? (
+                                    {isRunning ? (
                                         <span className="flex items-center gap-1">
                                             <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                             </svg>
-                                            Judging...
+                                            Running...
                                         </span>
                                     ) : (
                                         <span className="flex items-center gap-1">
-                                            <Play className="h-3 w-3" /> Submit
+                                            <Play className="h-3 w-3" /> Run
                                         </span>
                                     )}
                                 </Button>
-                            )}
+
+                                {/* Submit button */}
+                                {alreadySolved ? (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300">
+                                        <CheckCircle2 className="h-3 w-3" /> Solved
+                                    </span>
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        onClick={handleSubmit}
+                                        disabled={isSubmitting || isRunning}
+                                        className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs"
+                                    >
+                                        {isSubmitting ? (
+                                            <span className="flex items-center gap-1">
+                                                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                                </svg>
+                                                Judging...
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1">
+                                                <Play className="h-3 w-3" /> Submit
+                                            </span>
+                                        )}
+                                    </Button>
+                                )}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Editor */}
-                    <div className="flex-1 min-h-0">
-                        <Editor
-                            height="100%"
-                            language={monacoLang}
-                            value={code}
-                            onChange={val => setCode(val || '')}
-                            theme="vs-dark"
-                            options={{
-                                minimap: { enabled: false },
-                                fontSize: 14,
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                            }}
-                        />
-                    </div>
-                </Card>
+                        {/* Editor */}
+                        <div className="flex-1 min-h-0">
+                            <Editor
+                                height="100%"
+                                language={monacoLang}
+                                value={code}
+                                onChange={val => setCode(val || '')}
+                                theme="vs-dark"
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 14,
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                }}
+                            />
+                        </div>
+                    </Card>
 
-                {/* Run result */}
-                {runResult && (
-                    <ResultPanel result={runResult} isRun={true} />
-                )}
+                    {/* Run result */}
+                    {runResult && (
+                        <ResultPanel result={runResult} isRun={true} />
+                    )}
 
-                {/* Submit result */}
-                {submitResult && (
-                    <ResultPanel result={submitResult} isRun={false} />
-                )}
+                    {/* Submit result */}
+                    {submitResult && (
+                        <ResultPanel result={submitResult} isRun={false} />
+                    )}
+                </div>
             </div>
         </div>
     );

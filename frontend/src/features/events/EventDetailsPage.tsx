@@ -5,7 +5,7 @@ import { type Event } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Calendar, Clock, AlertCircle, Users } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, Users, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EventDetailsSkeleton } from '@/components/skeleton';
 
@@ -15,7 +15,12 @@ export default function EventDetailsPage() {
     const { user } = useAuth();
     const [event, setEvent] = useState<Event | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isRegistering, setIsRegistering] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordEntry, setPasswordEntry] = useState('');
+    const [isValidating, setIsValidating] = useState(false);
+    const [isRegistered, setIsRegistered] = useState(false);
+    const [regFormId, setRegFormId] = useState<string | null>(null);
+    const [isCheckingReg, setIsCheckingReg] = useState(true);
     // Need to know if already registered? 
     // API doesn't allow checking registration status easily without failing?
     // We'll treat the "Register" button as idempotent or handle error "Already registered".
@@ -25,35 +30,66 @@ export default function EventDetailsPage() {
         const fetchEvent = async () => {
             try {
                 const response = await api.get(`/api/events/${eventId}`);
-                setEvent(response.data);
+                const eventData = response.data;
+                setEvent(eventData);
+
+                if (user && eventData.registrationRequired) {
+                    try {
+                        const regRes = await api.get(`/api/registration/responses/check`, {
+                            params: { eventId, userId: user.id }
+                        });
+                        setIsRegistered(regRes.data);
+
+                        if (!regRes.data) {
+                            const formRes = await api.get(`/api/registration/forms/event/${eventId}`);
+                            setRegFormId(formRes.data.id);
+                        }
+                    } catch (e) {
+                        // Form might not exist yet if flag was false before
+                    }
+                }
             } catch (error) {
                 navigate('/events');
             } finally {
                 setIsLoading(false);
+                setIsCheckingReg(false);
             }
         };
         if (eventId) fetchEvent();
-    }, [eventId, navigate]);
+    }, [eventId, navigate, user]);
 
-    const handleRegister = async () => {
-        if (!event || !user) return;
-        setIsRegistering(true);
-        try {
-            await api.post(`/api/events/${event.id}/register`, null, { params: { userId: user.id } });
-            toast.success('Successfully registered for the event!');
-            // Update UI? Maybe refresh or just show "Start" if live?
-        } catch (error: any) {
-            // If error says "already registered", that's fine.
-            if (error.response?.data?.message?.includes('already')) {
-                toast.info('You are already registered.');
-            }
-        } finally {
-            setIsRegistering(false);
+    const handleRegister = () => {
+        if (regFormId) {
+            navigate(`/registration/forms/${regFormId}`);
+        } else {
+            toast.error('Registration form not found for this event.');
         }
     };
 
     const handleStartTest = () => {
-        navigate(`/test/${event?.id}`);
+        setShowPasswordModal(true);
+    };
+
+    const handlePasswordSubmit = async () => {
+        if (passwordEntry.length !== 6) {
+            toast.error('Please enter a 6-digit password');
+            return;
+        }
+
+        setIsValidating(true);
+        try {
+            // Verify password by calling start endpoint
+            await api.post(`/api/events/${event?.id}/start`, null, {
+                params: { userId: user?.id, accessPassword: passwordEntry }
+            });
+            // If success, navigate to test page
+            navigate(`/test/${event?.id}?pass=${passwordEntry}`);
+        } catch (error: any) {
+            const msg = error.response?.data?.message || 'Invalid password';
+            toast.error(msg);
+        } finally {
+            setIsValidating(false);
+        }
     };
 
     if (isLoading) return <EventDetailsSkeleton />;
@@ -100,7 +136,12 @@ export default function EventDetailsPage() {
                             </div>
                         </div>
                     </div>
-
+                    {event.description && (
+                        <div className="prose dark:prose-invert max-w-none border-t border-gray-100 dark:border-gray-800 pt-4">
+                            <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">About Quiz</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{event.description}</p>
+                        </div>
+                    )}
                     {/* Coordinators */}
                     {(event.facultyCoordinators?.length || event.studentCoordinators?.length) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -149,18 +190,33 @@ export default function EventDetailsPage() {
                 <CardFooter className="flex justify-end space-x-4">
                     {!isCompleted && (
                         <>
-                            <Button
-                                variant="outline"
-                                onClick={handleRegister}
-                                disabled={isRegistering || isLive} // Allow registering if not live? Or even if live?
-                                isLoading={isRegistering}
-                            >
-                                Register
-                            </Button>
-                            {isLive && (
-                                <Button onClick={handleStartTest}>
+                            {event.registrationRequired && !isRegistered && !isCheckingReg && (
+                                <Button
+                                    variant="primary"
+                                    onClick={handleRegister}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                                >
+                                    Register Now
+                                </Button>
+                            )}
+
+                            {event.registrationRequired && isRegistered && !isLive && (
+                                <div className="text-sm font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-4 py-2 rounded-lg border border-green-100 dark:border-green-800 flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Registered Successfully
+                                </div>
+                            )}
+
+                            {(!event.registrationRequired || isRegistered) && isLive && (
+                                <Button onClick={handleStartTest} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
                                     Start Test
                                 </Button>
+                            )}
+
+                            {(!event.registrationRequired || isRegistered) && !isLive && (
+                                <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                                    Test starts at {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
                             )}
                         </>
                     )}
@@ -169,6 +225,41 @@ export default function EventDetailsPage() {
                     )}
                 </CardFooter>
             </Card>
+
+            {/* Password Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <Card className="w-full max-w-sm shadow-2xl border-indigo-100 dark:border-indigo-900 overflow-hidden transform animate-in zoom-in-95 duration-200">
+                        <CardHeader className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white p-6">
+                            <CardTitle className="text-xl">Enter Access Password</CardTitle>
+                            <p className="text-indigo-100 text-sm mt-1">Please enter the 6-digit code provided by the admin.</p>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                            <div className="flex justify-center">
+                                <input
+                                    type="text"
+                                    maxLength={6}
+                                    autoFocus
+                                    className="w-48 text-center text-3xl font-black tracking-[0.5em] py-3 border-2 border-indigo-100 dark:border-gray-700 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all dark:bg-gray-800 dark:text-white"
+                                    value={passwordEntry}
+                                    onChange={e => setPasswordEntry(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
+                                />
+                            </div>
+                        </CardContent>
+                        <CardFooter className="bg-gray-50 dark:bg-gray-800/50 p-4 flex justify-end gap-3">
+                            <Button variant="outline" onClick={() => setShowPasswordModal(false)} disabled={isValidating}>Cancel</Button>
+                            <Button
+                                onClick={handlePasswordSubmit}
+                                isLoading={isValidating}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                            >
+                                Start Now
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }
