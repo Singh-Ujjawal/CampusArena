@@ -33,8 +33,12 @@ export default function TestInterface() {
     // Fetch Questions (Start Test)
     useEffect(() => {
         const startTest = async () => {
+            const searchParams = new URLSearchParams(window.location.search);
+            const pass = searchParams.get('pass');
             try {
-                const response = await api.post(`/api/events/${eventId}/start`, null, { params: { userId: user?.id } });
+                const response = await api.post(`/api/events/${eventId}/start`, null, {
+                    params: { userId: user?.id, accessPassword: pass }
+                });
                 if (Array.isArray(response.data)) {
                     setQuestions(response.data);
                 } else if (response.data && typeof response.data === 'object') {
@@ -50,47 +54,6 @@ export default function TestInterface() {
         };
         if (eventId && user?.id) startTest();
     }, [eventId, user?.id, navigate]);
-
-    // Sync Timer — runs after questions are loaded
-    useEffect(() => {
-        if (!eventId || !user?.id || isLoading) return;
-
-        const syncTime = async () => {
-            try {
-                const response = await api.get(`/api/events/${eventId}/remaining-time`, { params: { userId: user?.id } });
-                // Backend DTO field is 'remainingSeconds'
-                const time = response.data?.remainingSeconds ?? response.data?.remainingTime ?? 0;
-                setRemainingTime(Number(time));
-            } catch {
-                // Silently ignore — timer keeps counting down locally
-            }
-        };
-
-        syncTime(); // Initial sync
-
-        const interval = setInterval(() => {
-            setRemainingTime(prev => {
-                if (prev === null) return null;
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    if (!isSubmittingRef.current) {
-                        isSubmittingRef.current = true;
-                        handleSubmit(true);
-                    }
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        // Sync with server every 30s
-        const syncInterval = setInterval(syncTime, 30000);
-
-        return () => {
-            clearInterval(interval);
-            clearInterval(syncInterval);
-        };
-    }, [eventId, user?.id, isLoading]);
 
     const handleOptionSelect = (questionId: string | undefined, optionIndex: number) => {
         if (!questionId) return;
@@ -123,6 +86,51 @@ export default function TestInterface() {
             setIsSubmitting(false);
         }
     }, [answers, eventId, navigate, user?.id]);
+
+    const [targetEndTime, setTargetEndTime] = useState<number | null>(null);
+
+    // Sync Timer — runs after questions are loaded
+    useEffect(() => {
+        if (!eventId || !user?.id || isLoading) return;
+
+        const syncTime = async () => {
+            try {
+                const response = await api.get(`/api/events/${eventId}/remaining-time`, { params: { userId: user?.id } });
+                const time = response.data?.remainingSeconds ?? response.data?.remainingTime ?? 0;
+                const end = Date.now() + (Number(time) * 1000);
+                setTargetEndTime(end);
+                setRemainingTime(Math.max(0, Math.floor((end - Date.now()) / 1000)));
+            } catch {
+                // Silently ignore
+            }
+        };
+
+        syncTime(); // Initial sync
+
+        const interval = setInterval(() => {
+            if (targetEndTime === null) return;
+
+            const now = Date.now();
+            const diff = Math.max(0, Math.floor((targetEndTime - now) / 1000));
+            setRemainingTime(diff);
+
+            if (diff <= 0) {
+                clearInterval(interval);
+                if (!isSubmittingRef.current) {
+                    isSubmittingRef.current = true;
+                    handleSubmit(true);
+                }
+            }
+        }, 1000);
+
+        // Sync with server every 30s
+        const syncInterval = setInterval(syncTime, 30000);
+
+        return () => {
+            clearInterval(interval);
+            clearInterval(syncInterval);
+        };
+    }, [eventId, user?.id, isLoading, targetEndTime, handleSubmit]);
 
     if (isLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
     if (!questions.length) return <div className="p-10">No questions found.</div>;

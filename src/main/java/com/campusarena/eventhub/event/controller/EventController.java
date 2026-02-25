@@ -27,7 +27,12 @@ public class EventController {
 
     @PostMapping
     public ResponseEntity<Event> createEvent(@Valid @RequestBody Event event) {
-        return ResponseEntity.ok(eventRepository.save(event));
+        return ResponseEntity.ok(eventService.createEvent(event));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Event> updateEvent(@PathVariable String id, @Valid @RequestBody Event event) {
+        return ResponseEntity.ok(eventService.updateEvent(id, event));
     }
 
     @GetMapping
@@ -49,8 +54,11 @@ public class EventController {
 
     // MCQ Endpoints
     @PostMapping("/{id}/start")
-    public ResponseEntity<List<QuestionResponseDTO>> startTest(@PathVariable String id, @RequestParam String userId) {
-        return ResponseEntity.ok(eventService.startTest(userId, id));
+    public ResponseEntity<List<QuestionResponseDTO>> startTest(
+            @PathVariable String id,
+            @RequestParam String userId,
+            @RequestParam(required = false) String accessPassword) {
+        return ResponseEntity.ok(eventService.startTest(userId, id, accessPassword));
     }
 
     @PostMapping("/{id}/submit")

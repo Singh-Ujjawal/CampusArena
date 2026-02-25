@@ -16,10 +16,20 @@ export interface User {
     leetCodeUsername?: string;
 }
 
+export interface Club {
+    id: string;
+    name: string;
+    clubCoordinatorName: string;
+}
+
+export interface Faculty extends User {
+}
+
 // Event (MCQ)
 export interface Event {
     id: string;
     title: string;
+    description: string;
     type: string; // "MCQ"
     startTime: string;
     endTime: string;
@@ -28,8 +38,10 @@ export interface Event {
     totalMarks: number;
     clubId: string;
     status: 'UPCOMING' | 'LIVE' | 'COMPLETED';
+    accessPassword?: string;
     facultyCoordinators?: string[];
     studentCoordinators?: string[];
+    registrationRequired?: boolean;
 }
 
 // Contest
@@ -41,8 +53,10 @@ export interface Contest {
     clubId: string;
     problemIds: string[];
     status?: 'UPCOMING' | 'LIVE' | 'ENDED'; // Derived or from API
+    accessPassword?: string;
     facultyCoordinators?: string[];
     studentCoordinators?: string[];
+    registrationRequired?: boolean;
 }
 
 // Problem

@@ -33,6 +33,8 @@ import AdminQuestionsPage from '@/features/admin/AdminQuestionsPage';
 import AdminSubmissionsPage from '@/features/admin/AdminSubmissionsPage';
 import AdminContestParticipantsPage from '@/features/admin/AdminContestParticipantsPage';
 import AdminEventAnalyticsPage from '@/features/admin/AdminEventAnalyticsPage';
+import AdminClubsPage from '@/features/admin/AdminClubsPage';
+import AdminFacultyPage from '@/features/admin/AdminFacultyPage';
 
 // Submissions
 import MySubmissionsPage from '@/features/submissions/MySubmissionsPage';
@@ -45,6 +47,12 @@ import AboutUsPage from '@/features/about/AboutUsPage';
 import LeetCodeLeaderboardPage from '@/features/leetcode/components/LeetCodeLeaderboardPage';
 import LeetCodeQuestionsPage from '@/features/leetcode/components/LeetCodeQuestionsPage';
 import AdminLeetCodePage from '@/features/admin/AdminLeetCodePage';
+
+// Registration
+import AdminRegistrationHub from '@/features/admin/AdminRegistrationHub';
+import AdminCreateRegistrationForm from '@/features/admin/AdminCreateRegistrationForm';
+import AdminRegistrationResponses from '@/features/admin/AdminRegistrationResponses';
+import RegistrationFormSubmission from '@/features/registration/RegistrationFormSubmission';
 
 function App() {
   return (
@@ -79,6 +87,8 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/leetcode/questions" element={<LeetCodeQuestionsPage />} />
                 <Route path="/about" element={<AboutUsPage />} />
+                <Route path="/registration/:id" element={<RegistrationFormSubmission />} />
+                <Route path="/registration/forms/:id" element={<RegistrationFormSubmission />} />
               </Route>
             </Route>
 
@@ -104,6 +114,12 @@ function App() {
                 <Route path="/admin/users/:userId" element={<ProfilePage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                 <Route path="/admin/submissions" element={<AdminSubmissionsPage />} />
+                <Route path="/admin/clubs" element={<AdminClubsPage />} />
+                <Route path="/admin/faculty" element={<AdminFacultyPage />} />
+                <Route path="/admin/registration" element={<AdminRegistrationHub />} />
+                <Route path="/admin/registration/create" element={<AdminCreateRegistrationForm />} />
+                <Route path="/admin/registration/edit/:id" element={<AdminCreateRegistrationForm />} />
+                <Route path="/admin/registration/forms/:id/responses" element={<AdminRegistrationResponses />} />
               </Route>
             </Route>
 

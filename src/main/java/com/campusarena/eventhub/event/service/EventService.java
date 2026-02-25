@@ -5,6 +5,7 @@ import com.campusarena.eventhub.event.model.*;
 import com.campusarena.eventhub.event.repository.*;
 import com.campusarena.eventhub.exception.ApiException;
 import com.campusarena.eventhub.exception.ResourceNotFoundException;
+import com.campusarena.eventhub.registration.model.RegistrationForm;
 import com.campusarena.eventhub.user.model.User;
 import com.campusarena.eventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,9 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
+import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -26,6 +30,14 @@ public class EventService {
     private final McqSubmissionRepository submissionRepository;
     private final EventRegistrationRepository registrationRepository;
     private final UserRepository userRepository;
+    private final RegistrationFormRepository registrationFormRepository;
+    private final RegistrationResponseRepository registrationResponseRepository;
+
+    public Event createEvent(Event event) {
+        event.setStatus("UPCOMING");
+        Event savedEvent = eventRepository.save(event);
+        return savedEvent;
+    }
 
     public List<Event> getAllEvents() {
         return eventRepository.findAll().stream()
@@ -54,9 +66,17 @@ public class EventService {
         }
     }
 
-    public List<QuestionResponseDTO> startTest(String userId, String eventId) {
+    public List<QuestionResponseDTO> startTest(String userId, String eventId, String enteredPassword) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
+
+        Optional<McqSubmission> existingSubmission =
+                submissionRepository.findTopByUserIdAndEventIdOrderByStartTimeDesc(userId, eventId);
+
+        // If no submission yet, we MUST check password
+        if (existingSubmission.isEmpty() && event.getAccessPassword() != null && !event.getAccessPassword().equals(enteredPassword)) {
+            throw new ApiException("Invalid access password");
+        }
 
         if (event.getStartTime() == null || event.getEndTime() == null) {
             throw new ApiException("Event timing not configured properly");
@@ -70,18 +90,19 @@ public class EventService {
             throw new ApiException("Event has ended");
         }
 
-        // Auto-register if not registered (allows joining during live window)
-        if (!registrationRepository.existsByEventIdAndUserId(eventId, userId)) {
-            EventRegistration reg = new EventRegistration();
-            reg.setEventId(eventId);
-            reg.setUserId(userId);
-            reg.setRegisteredAt(now);
-            reg.setStatus("REGISTERED");
-            registrationRepository.save(reg);
+        // Check registration via the new Registration Form system
+        if (event.getRegistrationRequired() != null && event.getRegistrationRequired()) {
+            Optional<RegistrationForm> regForm = registrationFormRepository.findByEventId(eventId);
+            if (regForm.isPresent()) {
+                boolean isRegistered = registrationResponseRepository.existsByFormIdAndUserId(regForm.get().getId(), userId);
+                if (!isRegistered) {
+                    throw new ApiException("You must register for this event before participating.");
+                }
+            } else {
+                // If registration is required but no form has been created yet
+                throw new ApiException("Registration is required for this event, but the registration form is not yet available.");
+            }
         }
-
-        Optional<McqSubmission> existingSubmission =
-                submissionRepository.findTopByUserIdAndEventIdOrderByStartTimeDesc(userId, eventId);
 
         if (existingSubmission.isPresent()) {
             McqSubmission submission = existingSubmission.get();
@@ -227,7 +248,14 @@ public class EventService {
         long elapsedSeconds = Duration.between(submission.getStartTime(), now).getSeconds();
         long remaining = Math.max(0, totalAllowedSeconds - elapsedSeconds);
 
-        if (remaining == 0) {
+        // ALWAYS cap by event end time (essential for consistency like a contest)
+        if (event.getEndTime() != null) {
+            long remainingToEventEnd = Math.max(0, Duration.between(now, event.getEndTime()).getSeconds());
+            remaining = Math.min(remaining, remainingToEventEnd);
+        }
+
+        if (remaining <= 0) {
+            remaining = 0;
             submission.setStatus("AUTO_SUBMITTED");
             submission.setSubmittedAt(now);
             submissionRepository.save(submission);
@@ -272,5 +300,25 @@ public class EventService {
         }
 
         return new AdminEventAnalyticsDTO(totalRegistrations, totalAttempts, totalAbsent, average, highest, lowest, passPercentage, topPerformers);
+    }
+    public Event updateEvent(String id, Event updatedEvent) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+
+        event.setTitle(updatedEvent.getTitle());
+        event.setDescription(updatedEvent.getDescription());
+        event.setType(updatedEvent.getType());
+        event.setStartTime(updatedEvent.getStartTime());
+        event.setEndTime(updatedEvent.getEndTime());
+        event.setDurationInMinutes(updatedEvent.getDurationInMinutes());
+        event.setTotalMarks(updatedEvent.getTotalMarks());
+        event.setClubId(updatedEvent.getClubId());
+        event.setAccessPassword(updatedEvent.getAccessPassword());
+        event.setFacultyCoordinators(updatedEvent.getFacultyCoordinators());
+        event.setStudentCoordinators(updatedEvent.getStudentCoordinators());
+        event.setRegistrationRequired(updatedEvent.getRegistrationRequired() != null ? updatedEvent.getRegistrationRequired() : true);
+
+        updateStatus(event);
+        return eventRepository.save(event);
     }
 }

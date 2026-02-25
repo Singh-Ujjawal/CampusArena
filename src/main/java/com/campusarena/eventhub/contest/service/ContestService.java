@@ -6,6 +6,9 @@ import com.campusarena.eventhub.contest.model.Contest;
 import com.campusarena.eventhub.contest.repository.ContestRepository;
 import com.campusarena.eventhub.exception.ApiException;
 import com.campusarena.eventhub.exception.ResourceNotFoundException;
+import com.campusarena.eventhub.registration.model.RegistrationForm;
+import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
+import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,8 @@ import java.util.stream.Collectors;
 public class ContestService {
 
     private final ContestRepository contestRepository;
+    private final RegistrationFormRepository registrationFormRepository;
+    private final RegistrationResponseRepository registrationResponseRepository;
 
     public ContestResponse createContest(ContestRequest request) {
         if (request.getStartTime().isAfter(request.getEndTime())) {
@@ -29,12 +34,15 @@ public class ContestService {
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .clubId(request.getClubId())
+                .accessPassword(request.getAccessPassword())
                 .problemIds(request.getProblemIds())
                 .facultyCoordinators(request.getFacultyCoordinators())
                 .studentCoordinators(request.getStudentCoordinators())
+                .registrationRequired(request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true)
                 .build();
 
-        return mapToResponse(contestRepository.save(contest));
+        Contest savedContest = contestRepository.save(contest);
+        return mapToResponse(savedContest);
     }
 
     public List<ContestResponse> getAllContests() {
@@ -76,11 +84,38 @@ public class ContestService {
         contest.setStartTime(request.getStartTime());
         contest.setEndTime(request.getEndTime());
         contest.setClubId(request.getClubId());
+        contest.setAccessPassword(request.getAccessPassword());
         contest.setProblemIds(request.getProblemIds());
         contest.setFacultyCoordinators(request.getFacultyCoordinators());
         contest.setStudentCoordinators(request.getStudentCoordinators());
+        contest.setRegistrationRequired(request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true);
 
         return mapToResponse(contestRepository.save(contest));
+    }
+
+    public boolean validatePassword(String id, String password, String userId) {
+        Contest contest = contestRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contest not found"));
+        
+        // Always check password first
+        if (contest.getAccessPassword() == null || !contest.getAccessPassword().equals(password)) {
+            return false;
+        }
+
+        // Check registration
+        if (contest.getRegistrationRequired() != null && contest.getRegistrationRequired()) {
+            java.util.Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(id);
+            if (regForm.isPresent()) {
+                boolean isRegistered = registrationResponseRepository.existsByFormIdAndUserId(regForm.get().getId(), userId);
+                if (!isRegistered) {
+                    throw new ApiException("You must register for this contest before participating.");
+                }
+            } else {
+                throw new ApiException("Registration is required for this contest, but the registration form is not yet available.");
+            }
+        }
+        
+        return true;
     }
 
     private ContestResponse mapToResponse(Contest contest) {
@@ -90,10 +125,12 @@ public class ContestService {
                 .startTime(contest.getStartTime())
                 .endTime(contest.getEndTime())
                 .clubId(contest.getClubId())
+                .accessPassword(contest.getAccessPassword())
                 .problemIds(contest.getProblemIds())
                 .facultyCoordinators(contest.getFacultyCoordinators())
                 .studentCoordinators(contest.getStudentCoordinators())
                 .status(getContestStatus(contest.getStartTime(), contest.getEndTime()))
+                .registrationRequired(contest.getRegistrationRequired())
                 .build();
     }
 }

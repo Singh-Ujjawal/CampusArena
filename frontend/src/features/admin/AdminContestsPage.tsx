@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { type Contest, type Problem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash, Check, Users, X } from 'lucide-react';
+import { Plus, Edit, Trash, Check, Users, X, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
 import { CLUBS } from '@/lib/constants';
@@ -77,16 +77,28 @@ function fromISTInput(localValue: string): string {
 }
 
 export default function AdminContestsPage() {
+    const navigate = useNavigate();
     const [contests, setContests] = useState<Contest[]>([]);
     const [allProblems, setAllProblems] = useState<Problem[]>([]); // Store all problems
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [currentContest, setCurrentContest] = useState<Partial<Contest>>({});
+    const [registrationForms, setRegistrationForms] = useState<any[]>([]);
 
     useEffect(() => {
         fetchContests();
         fetchProblems(); // Fetch problems on load
+        fetchRegistrationForms();
     }, []);
+
+    const fetchRegistrationForms = async () => {
+        try {
+            const response = await api.get('/api/registration/forms');
+            setRegistrationForms(response.data);
+        } catch (error) {
+            console.error('Failed to load registration forms');
+        }
+    };
 
     const fetchContests = async () => {
         setIsLoading(true);
@@ -122,8 +134,13 @@ export default function AdminContestsPage() {
 
     const handleSave = async () => {
         // Validation
-        if (!currentContest.title || !currentContest.startTime || !currentContest.endTime || !currentContest.clubId) {
-            toast.error('Please fill in Title, Dates, and Club');
+        if (!currentContest.title || !currentContest.startTime || !currentContest.endTime || !currentContest.clubId || !currentContest.accessPassword) {
+            toast.error('Please fill in Title, Dates, Club and Password');
+            return;
+        }
+
+        if (currentContest.accessPassword.length !== 6) {
+            toast.error('Password must be exactly 6 digits');
             return;
         }
 
@@ -138,9 +155,11 @@ export default function AdminContestsPage() {
                 startTime: currentContest.startTime, // Already ISO from IST_INPUT
                 endTime: currentContest.endTime,     // Already ISO from IST_INPUT
                 clubId: currentContest.clubId,
+                accessPassword: currentContest.accessPassword,
                 problemIds: currentContest.problemIds || [],
                 facultyCoordinators: currentContest.facultyCoordinators || [],
                 studentCoordinators: currentContest.studentCoordinators || [],
+                registrationRequired: currentContest.registrationRequired !== false, // default true
             };
 
             if (currentContest.id) {
@@ -153,6 +172,7 @@ export default function AdminContestsPage() {
             setIsEditing(false);
             setCurrentContest({});
             fetchContests();
+            fetchRegistrationForms();
         } catch (error: any) {
             const msg = error.response?.data?.message || 'Failed to save contest';
             toast.error(msg);
@@ -176,7 +196,7 @@ export default function AdminContestsPage() {
     };
 
     const openCreate = () => {
-        setCurrentContest({ problemIds: [] });
+        setCurrentContest({ problemIds: [], registrationRequired: true });
         setIsEditing(true);
     };
 
@@ -222,6 +242,14 @@ export default function AdminContestsPage() {
                             options={CLUBS.map(c => ({ value: c.id, label: c.name }))}
                         />
 
+                        <Input
+                            label="Access Password (6 digits)"
+                            value={currentContest.accessPassword || ''}
+                            maxLength={6}
+                            placeholder="Enter 6-digit password"
+                            onChange={e => setCurrentContest({ ...currentContest, accessPassword: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                        />
+
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Problems</label>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-600 p-3 rounded-md bg-white dark:bg-gray-700">
@@ -256,6 +284,20 @@ export default function AdminContestsPage() {
                             />
                         </div>
 
+                        <div className="flex items-center gap-3 p-4 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/50">
+                            <input
+                                type="checkbox"
+                                id="regReq"
+                                className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                checked={currentContest.registrationRequired !== false}
+                                onChange={e => setCurrentContest({ ...currentContest, registrationRequired: e.target.checked })}
+                            />
+                            <label htmlFor="regReq" className="text-sm font-bold text-indigo-900 dark:text-indigo-300">
+                                Registration Required
+                                <span className="block text-xs font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">Participants must fill the registration form before accessing contest problems.</span>
+                            </label>
+                        </div>
+
                         <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                             <Button variant="outline" onClick={() => setIsEditing(false)} className="text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</Button>
                             <Button onClick={handleSave} className="bg-indigo-600 dark:bg-indigo-500 text-white hover:bg-indigo-700 dark:hover:bg-indigo-600 font-semibold">Save</Button>
@@ -272,7 +314,12 @@ export default function AdminContestsPage() {
                                     <p className="text-sm text-gray-600 dark:text-gray-300">
                                         {new Date(contest.startTime).toLocaleString('en-IN', { timeZone: IST_TZ })} — {new Date(contest.endTime).toLocaleString('en-IN', { timeZone: IST_TZ })}
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Problems: {contest.problemIds?.length || 0}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Problems: {contest.problemIds?.length || 0}</p>
+                                        {contest.accessPassword && (
+                                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 tracking-wider uppercase">PWD: {contest.accessPassword}</span>
+                                        )}
+                                    </div>
                                     {(contest.facultyCoordinators?.length || contest.studentCoordinators?.length) ? (
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                             {contest.facultyCoordinators?.length ? `Faculty: ${contest.facultyCoordinators.join(', ')}` : ''}
@@ -289,6 +336,15 @@ export default function AdminContestsPage() {
                                         </Button>
                                     </Link>
                                     <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600" onClick={() => { setCurrentContest(contest); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
+                                    {registrationForms.find(f => f.contestId === contest.id) ? (
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20" onClick={() => navigate(`/admin/registration/edit/${registrationForms.find(f => f.contestId === contest.id).id}`)}>
+                                            <ClipboardCheck className="h-4 w-4 mr-1 text-indigo-600 dark:text-indigo-400" />Edit Form
+                                        </Button>
+                                    ) : (
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => navigate(`/admin/registration/create?contestId=${contest.id}`)}>
+                                            <ClipboardCheck className="h-4 w-4 mr-1" />Reg. Form
+                                        </Button>
+                                    )}
                                     <Button size="sm" variant="danger" className="bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800" onClick={() => handleDelete(contest.id)}><Trash className="h-4 w-4" /></Button>
                                 </div>
                             </CardContent>

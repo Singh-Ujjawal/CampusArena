@@ -27,7 +27,7 @@ public class EventRegistrationService {
         }
 
         Instant now = Instant.now();
-        if (!now.isBefore(event.getStartTime())) {
+        if (!"MCQ".equals(event.getType()) && !now.isBefore(event.getStartTime())) {
             throw new ApiException("Registration closed. Event already started.");
         }
 

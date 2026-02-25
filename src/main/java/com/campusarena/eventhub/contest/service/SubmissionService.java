@@ -93,10 +93,19 @@ public class SubmissionService {
 
         int passed = res.getPassedTestCases() != null ? res.getPassedTestCases() : 0;
         int total = res.getTotalTestCases() != null ? res.getTotalTestCases() : testCases.size();
-        int score = total > 0 ? (int) ((passed / (double) total) * 100) : 0;
+        
+        // No partial marking: only 100 if all pass, else 0
+        int score = (total > 0 && passed == total) ? 100 : 0;
 
         submission.setScore(score);
-        submission.setVerdict(res.getStatus().name());
+        
+        // If not all passed, the verdict should be WRONG_ANSWER (or whatever non-ACCEPTED status it has)
+        String finalVerdict = res.getStatus().name();
+        if (passed < total && "ACCEPTED".equals(finalVerdict)) {
+            finalVerdict = "WRONG_ANSWER";
+        }
+        
+        submission.setVerdict(finalVerdict);
         submission.setExecutionTime(res.getExecutionTime());
         submission.setPassedTestCases(passed);
         submission.setTotalTestCases(total);

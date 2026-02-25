@@ -211,7 +211,7 @@ export default function LeaderboardPage() {
             </Card>
 
             {/* Live indicator */}
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
                     <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -219,6 +219,13 @@ export default function LeaderboardPage() {
                     </span>
                     Live • Refreshes automatically every 30 seconds
                 </div>
+
+                <Link to={`/contests/${contestId}`}>
+                    <Button variant="outline" className="flex items-center gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 rounded-xl">
+                        <Trophy className="h-4 w-4" />
+                        Back to Coding Problems
+                    </Button>
+                </Link>
             </div>
         </div>
     );

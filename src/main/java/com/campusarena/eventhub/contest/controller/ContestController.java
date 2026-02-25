@@ -42,4 +42,9 @@ public class ContestController {
         contestService.deleteContest(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/validate-password")
+    public ResponseEntity<Boolean> validatePassword(@PathVariable String id, @RequestParam String password, @RequestParam String userId) {
+        return ResponseEntity.ok(contestService.validatePassword(id, password, userId));
+    }
 }

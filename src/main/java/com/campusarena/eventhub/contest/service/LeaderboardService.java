@@ -51,7 +51,7 @@ public class LeaderboardService {
 
             for (Submission sub : userProblems.values()) {
                 totalScore += Optional.ofNullable(sub.getScore()).orElse(0);
-                if (Optional.ofNullable(sub.getScore()).orElse(0) > 0) solved++;
+                if ("ACCEPTED".equals(sub.getVerdict())) solved++;
                 Instant submittedAt = sub.getSubmittedAt();
                 if (submittedAt != null && (lastTime == null || submittedAt.isAfter(lastTime))) {
                     lastTime = submittedAt;
