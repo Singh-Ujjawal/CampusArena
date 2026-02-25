@@ -1,0 +1,43 @@
+package com.campusarena.eventhub.user.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class UserActivityDTO {
+    private List<McqActivityDTO> mcqActivities;
+    private List<ContestActivityDTO> contestActivities;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class McqActivityDTO {
+        private String eventId;
+        private String title;
+        private String registeredAt;
+        private String submittedAt;
+        private String status;
+        private Double score;
+        private Double totalMarks;
+        private Integer rank;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ContestActivityDTO {
+        private String contestId;
+        private String title;
+        private int problemsSolved;
+        private int totalProblems;
+        private double totalScore;
+        private String lastSubmissionTime;
+        private Integer rank;
+    }
+}
