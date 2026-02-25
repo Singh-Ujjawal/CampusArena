@@ -18,7 +18,7 @@ export default function EventDetailsPage() {
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [passwordEntry, setPasswordEntry] = useState('');
     const [isValidating, setIsValidating] = useState(false);
-    const [isRegistered, setIsRegistered] = useState(false);
+    const [isRegistered, setIsRegistered] = useState<string | null>(null);
     const [regFormId, setRegFormId] = useState<string | null>(null);
     const [isCheckingReg, setIsCheckingReg] = useState(true);
     // Need to know if already registered? 
@@ -38,7 +38,7 @@ export default function EventDetailsPage() {
                         const regRes = await api.get(`/api/registration/responses/check`, {
                             params: { eventId, userId: user.id }
                         });
-                        setIsRegistered(regRes.data);
+                        setIsRegistered(regRes.data); // data is now the status string from backend
 
                         if (!regRes.data) {
                             const formRes = await api.get(`/api/registration/forms/event/${eventId}`);
@@ -201,19 +201,32 @@ export default function EventDetailsPage() {
                             )}
 
                             {event.registrationRequired && isRegistered && !isLive && (
-                                <div className="text-sm font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-4 py-2 rounded-lg border border-green-100 dark:border-green-800 flex items-center gap-2">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    Registered Successfully
+                                <div className={`text-sm font-semibold px-4 py-2 rounded-lg border flex items-center gap-2 ${
+                                    isRegistered === 'APPROVED' ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800' :
+                                    isRegistered === 'PENDING' ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-100 dark:border-yellow-800' :
+                                    'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800'
+                                }`}>
+                                    {isRegistered === 'APPROVED' ? <CheckCircle2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                                    {isRegistered === 'APPROVED' ? 'Registration Approved' : 
+                                     isRegistered === 'PENDING' ? 'Registration Pending Approval' : 
+                                     'Registration Rejected'}
                                 </div>
                             )}
 
-                            {(!event.registrationRequired || isRegistered) && isLive && (
+                            {(!event.registrationRequired || isRegistered === 'APPROVED') && isLive && (
                                 <Button onClick={handleStartTest} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
                                     Start Test
                                 </Button>
                             )}
 
-                            {(!event.registrationRequired || isRegistered) && !isLive && (
+                            {isLive && event.registrationRequired && isRegistered !== 'APPROVED' && (
+                                <div className="text-sm font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 rounded-lg border border-amber-100 dark:border-amber-800 flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    {isRegistered === 'PENDING' ? 'Waiting for Admin Approval' : 'Registration Rejected'}
+                                </div>
+                            )}
+
+                            {(!event.registrationRequired || isRegistered === 'APPROVED') && !isLive && (
                                 <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 rounded-lg border border-indigo-100 dark:border-indigo-800">
                                     Test starts at {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>

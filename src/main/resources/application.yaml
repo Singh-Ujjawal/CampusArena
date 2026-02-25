@@ -8,7 +8,7 @@ spring:
       max-request-size: 10MB
   data:
     mongodb:
-      uri: mongodb://localhost:27017/CampusArena
+      uri: mongodb+srv://abhi:abhi123@cluster0.jaoirfq.mongodb.net/eventdb?retryWrites=true&w=majority
 server:
   port: 8080
 

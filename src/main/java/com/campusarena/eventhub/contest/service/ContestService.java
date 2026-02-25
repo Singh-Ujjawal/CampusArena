@@ -38,7 +38,8 @@ public class ContestService {
                 .problemIds(request.getProblemIds())
                 .facultyCoordinators(request.getFacultyCoordinators())
                 .studentCoordinators(request.getStudentCoordinators())
-                .registrationRequired(request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true)
+                .registrationRequired(
+                        request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true)
                 .build();
 
         Contest savedContest = contestRepository.save(contest);
@@ -60,8 +61,10 @@ public class ContestService {
 
     public String getContestStatus(Instant startTime, Instant endTime) {
         Instant now = Instant.now();
-        if (now.isBefore(startTime)) return "UPCOMING";
-        if (now.isAfter(endTime)) return "ENDED";
+        if (now.isBefore(startTime))
+            return "UPCOMING";
+        if (now.isAfter(endTime))
+            return "ENDED";
         return "LIVE";
     }
 
@@ -88,7 +91,8 @@ public class ContestService {
         contest.setProblemIds(request.getProblemIds());
         contest.setFacultyCoordinators(request.getFacultyCoordinators());
         contest.setStudentCoordinators(request.getStudentCoordinators());
-        contest.setRegistrationRequired(request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true);
+        contest.setRegistrationRequired(
+                request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true);
 
         return mapToResponse(contestRepository.save(contest));
     }
@@ -96,25 +100,33 @@ public class ContestService {
     public boolean validatePassword(String id, String password, String userId) {
         Contest contest = contestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contest not found"));
-        
+
         // Always check password first
         if (contest.getAccessPassword() == null || !contest.getAccessPassword().equals(password)) {
             return false;
         }
 
-        // Check registration
         if (contest.getRegistrationRequired() != null && contest.getRegistrationRequired()) {
             java.util.Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(id);
             if (regForm.isPresent()) {
-                boolean isRegistered = registrationResponseRepository.existsByFormIdAndUserId(regForm.get().getId(), userId);
-                if (!isRegistered) {
+                java.util.Optional<com.campusarena.eventhub.registration.model.RegistrationResponse> regResponse = registrationResponseRepository
+                        .findByFormIdAndUserId(regForm.get().getId(), userId);
+
+                if (regResponse.isEmpty()) {
                     throw new ApiException("You must register for this contest before participating.");
                 }
+
+                if (!"APPROVED".equals(regResponse.get().getStatus())) {
+                    String status = regResponse.get().getStatus();
+                    throw new ApiException("Your registration status is " + status
+                            + ". You can only participate once it is APPROVED by an admin.");
+                }
             } else {
-                throw new ApiException("Registration is required for this contest, but the registration form is not yet available.");
+                throw new ApiException(
+                        "Registration is required for this contest, but the registration form is not yet available.");
             }
         }
-        
+
         return true;
     }
 

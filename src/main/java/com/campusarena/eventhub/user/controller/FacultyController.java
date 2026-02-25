@@ -8,13 +8,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
-@RequestMapping("/faculty")
+@RequestMapping("/api/faculty")
 @RestController
 @RequiredArgsConstructor
 public class FacultyController {
 
     private final FacultyService facultyService;
+
+    @GetMapping
+    public ResponseEntity<List<FacultyResponse>> getAllFaculties() {
+        return new ResponseEntity<>(facultyService.getAllFaculties(), HttpStatus.OK);
+    }
 
     @PutMapping("/{facultyId}")
     public ResponseEntity<FacultyResponse> updateFaculty(@PathVariable String facultyId, @Valid @RequestBody FacultyRequest facultyRequest) {

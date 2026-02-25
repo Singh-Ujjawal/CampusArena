@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
-import { type Event } from '@/types';
+import { type Event, type Club } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash, X, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
-import { CLUBS } from '@/lib/constants';
 import { AdminEventsPageSkeleton } from '@/components/skeleton';
 
 /**
@@ -22,7 +21,7 @@ function TagInput({ label, values, onChange }: { label: string; values: string[]
         if (trimmed && !values.includes(trimmed)) onChange([...values, trimmed]);
         setDraft('');
     };
-    return (
+    return (    
         <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
             <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 min-h-[50px]">
@@ -82,6 +81,7 @@ function fromISTInput(localValue: string): string {
 export default function AdminEventsPage() {
     const navigate = useNavigate();
     const [events, setEvents] = useState<Event[]>([]);
+    const [clubs, setClubs] = useState<Club[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [currentEvent, setCurrentEvent] = useState<Partial<Event>>({});
@@ -89,6 +89,7 @@ export default function AdminEventsPage() {
 
     useEffect(() => {
         fetchEvents();
+        fetchClubs();
         fetchRegistrationForms();
     }, []);
 
@@ -98,6 +99,15 @@ export default function AdminEventsPage() {
             setRegistrationForms(response.data);
         } catch (error) {
             console.error('Failed to load registration forms');
+        }
+    };
+
+    const fetchClubs = async () => {
+        try {
+            const response = await api.get('/api/clubs');
+            setClubs(response.data);
+        } catch (error) {
+            console.error('Failed to load clubs');
         }
     };
 
@@ -244,7 +254,7 @@ export default function AdminEventsPage() {
                             label="Club"
                             value={currentEvent.clubId || ''}
                             onChange={e => setCurrentEvent({ ...currentEvent, clubId: e.target.value })}
-                            options={CLUBS.map(c => ({ value: c.id, label: c.name }))}
+                            options={clubs.map(c => ({ value: c.id, label: c.name }))}
                         />
                         <Input
                             label="Access Password (6 digits)"
@@ -322,11 +332,11 @@ export default function AdminEventsPage() {
                                     <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => window.location.href = `/admin/events/${event.id}/questions`}>Questions</Button>
                                     <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => window.location.href = `/admin/events/${event.id}/analytics`}>Analytics</Button>
                                     {registrationForms.find(f => f.eventId === event.id) ? (
-                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20" onClick={() => navigate(`/admin/registration/edit/${registrationForms.find(f => f.eventId === event.id).id}`)}>
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20" onClick={() => navigate(`/admin/registration/edit/${registrationForms.find(f => f.eventId === event.id).id}?eventId=${event.id}&clubId=${event.clubId}`)}>
                                             <ClipboardCheck className="h-4 w-4 mr-1 text-indigo-600 dark:text-indigo-400" />Edit Form
                                         </Button>
                                     ) : (
-                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => navigate(`/admin/registration/create?eventId=${event.id}`)}>
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => navigate(`/admin/registration/create?eventId=${event.id}&clubId=${event.clubId}`)}>
                                             <ClipboardCheck className="h-4 w-4 mr-1" />Reg. Form
                                         </Button>
                                     )}

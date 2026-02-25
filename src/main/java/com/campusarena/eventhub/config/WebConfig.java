@@ -1,13 +1,19 @@
 package com.campusarena.eventhub.config;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Paths;
+
 @Configuration
+@Slf4j
 public class WebConfig implements WebMvcConfigurer {
 
-    @org.springframework.beans.factory.annotation.Value("${file.upload-dir}")
+    @Value("${file.upload-dir:uploads}")
     private String uploadDir;
 
     @Override
@@ -20,8 +26,15 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Override
-    public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/files/**")
-                .addResourceLocations("file:" + uploadDir + "/");
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String absolutePath = Paths.get(uploadDir).toAbsolutePath().toString();
+        String fileUrl = "file:" + (absolutePath.startsWith("/") ? "" : "/") + absolutePath.replace("\\", "/") + "/";
+        
+        log.info("Configuring resource handler for /uploads/** -> {}", fileUrl);
+        
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations(fileUrl)
+                .setCachePeriod(3600);
     }
 }
+

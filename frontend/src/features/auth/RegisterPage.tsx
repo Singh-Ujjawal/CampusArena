@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Zap, Award, Users } from 'lucide-react';
+import { Zap, Award, Users, Eye, EyeOff } from 'lucide-react';
 
 const registerSchema = z.object({
     username: z.string().min(3, 'Username must be at least 3 characters'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
+    passwordConfirm: z.string().min(6, 'Confirm password must be at least 6 characters'),
     email: z.string().email('Invalid email address'),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
@@ -22,9 +23,12 @@ const registerSchema = z.object({
     branch: z.enum(['CSE', 'IT', 'AIML', 'DS', 'CIVIL', 'MECHANICAL', 'BIOTECH']).optional(),
     rollNumber: z.string().length(13, 'Roll number must be exactly 13 characters'),
     phoneNumber: z.string().length(10, 'Phone number must be exactly 10 characters'),
-    section: z.string().min(1, 'Section is required'),
+    section: z.string().length(1, 'Section must be a single character'),
     session: z.string().regex(/^20\d{2}-\d{2}$/, 'Session must be in YYYY-YY format (e.g., 2025-26)'),
     leetCodeUsername: z.string().optional(),
+}).refine((data) => data.password === data.passwordConfirm, {
+    message: "Passwords don't match",
+    path: ["passwordConfirm"],
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -32,15 +36,22 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [selectedCourse, setSelectedCourse] = useState<string>('');
 
-    const { register, handleSubmit, setError, formState: { errors } } = useForm<RegisterForm>({
+    const { register, handleSubmit, setError, watch, formState: { errors } } = useForm<RegisterForm>({
         resolver: zodResolver(registerSchema),
     });
+
+    const course = watch('course');
 
     const onSubmit = async (data: RegisterForm) => {
         setIsLoading(true);
         try {
-            await api.post('/user', data);
+            // Remove passwordConfirm before sending to backend
+            const { passwordConfirm, ...submitData } = data;
+            await api.post('/user', submitData);
             toast.success('Account created successfully! Please login.');
             navigate('/login');
         } catch (error: any) {
@@ -160,6 +171,7 @@ export default function RegisterPage() {
                                     <Select
                                         label="Course"
                                         id="course"
+                                        className="dark:bg-gray-900 dark:text-gray-100"
                                         style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
                                         options={[
                                             { value: 'BTECH', label: 'B.Tech' },
@@ -169,25 +181,30 @@ export default function RegisterPage() {
                                             { value: 'MBA', label: 'MBA' },
                                             { value: 'DIPLOMA', label: 'Diploma' },
                                         ]}
-                                        {...register('course')}
+                                        {...register('course', {
+                                            onChange: (e) => setSelectedCourse(e.target.value),
+                                        })}
                                         error={errors.course?.message}
                                     />
-                                    <Select
-                                        label="Branch"
-                                        id="branch"
-                                        style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
-                                        options={[
-                                            { value: 'CSE', label: 'CSE' },
-                                            { value: 'IT', label: 'IT' },
-                                            { value: 'AIML', label: 'AIML' },
-                                            { value: 'DS', label: 'DS' },
-                                            { value: 'CIVIL', label: 'Civil' },
-                                            { value: 'MECHANICAL', label: 'Mechanical' },
-                                            { value: 'BIOTECH', label: 'Biotech' },
-                                        ]}
-                                        {...register('branch')}
-                                        error={errors.branch?.message}
-                                    />
+                                    {(course === 'BTECH' || course === 'DIPLOMA') && (
+                                        <Select
+                                            label="Branch"
+                                            id="branch"
+                                            className="dark:bg-gray-900 dark:text-gray-100"
+                                            style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
+                                            options={[
+                                                { value: 'CSE', label: 'CSE' },
+                                                { value: 'IT', label: 'IT' },
+                                                { value: 'AIML', label: 'AIML' },
+                                                { value: 'DS', label: 'DS' },
+                                                { value: 'CIVIL', label: 'Civil' },
+                                                { value: 'MECHANICAL', label: 'Mechanical' },
+                                                { value: 'BIOTECH', label: 'Biotech' },
+                                            ]}
+                                            {...register('branch')}
+                                            error={errors.branch?.message}
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -221,6 +238,7 @@ export default function RegisterPage() {
                                         <Input
                                             id="section"
                                             placeholder="A, B, etc."
+                                            maxLength={1}
                                             style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
                                             {...register('section')}
                                             error={errors.section?.message}
@@ -274,14 +292,44 @@ export default function RegisterPage() {
 
                                 <div>
                                     <label htmlFor="password" style={{ color: '#E8F4F8' }} className="text-sm font-medium block mb-2">Password</label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        placeholder="Min 6 characters"
-                                        style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
-                                        {...register('password')}
-                                        error={errors.password?.message}
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="password"
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="Min 6 characters"
+                                            style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040', paddingRight: '40px' }}
+                                            {...register('password')}
+                                            error={errors.password?.message}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                                        >
+                                            {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="passwordConfirm" style={{ color: '#E8F4F8' }} className="text-sm font-medium block mb-2">Confirm Password</label>
+                                    <div className="relative">
+                                        <Input
+                                            id="passwordConfirm"
+                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            placeholder="Re-enter your password"
+                                            style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040', paddingRight: '40px' }}
+                                            {...register('passwordConfirm')}
+                                            error={errors.passwordConfirm?.message}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                                        >
+                                            {showConfirmPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <Button type="submit" className="w-full mt-4" style={{ backgroundColor: '#8ECAE6', color: '#000' }} isLoading={isLoading}>

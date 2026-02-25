@@ -37,6 +37,7 @@ export default function AdminRegistrationResponses() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+    const [viewingResponse, setViewingResponse] = useState<RegistrationResponse | null>(null);
 
     useEffect(() => {
         if (id) {
@@ -208,6 +209,15 @@ export default function AdminRegistrationResponses() {
                                                     </Button>
                                                 </div>
                                             )}
+
+                                            <Button
+                                                variant="outline"
+                                                className="w-full rounded-xl border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 h-10 font-bold"
+                                                onClick={() => setViewingResponse(res)}
+                                            >
+                                                <Eye className="h-4 w-4 mr-2" />
+                                                View Details
+                                            </Button>
                                         </div>
 
                                         <div className="flex-1 p-6">
@@ -231,6 +241,119 @@ export default function AdminRegistrationResponses() {
                     ))
                 )}
             </div>
+
+            <AnimatePresence>
+                {viewingResponse && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setViewingResponse(null)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                        >
+                            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Registration Details</h2>
+                                    <p className="text-sm text-gray-500">Submitted on {new Date(viewingResponse.submittedAt).toLocaleString()}</p>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setViewingResponse(null)} className="rounded-full h-10 w-10 p-0">
+                                    <X className="h-6 w-6" />
+                                </Button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                    <div className="space-y-8">
+                                        <div className="space-y-6">
+                                            <h3 className="text-sm font-black text-indigo-600 uppercase tracking-widest border-l-4 border-indigo-600 pl-3">Form Responses</h3>
+                                            <div className="space-y-6">
+                                                {Object.entries(viewingResponse.answers || {}).map(([qId, val]) => {
+                                                    const question = form?.questions.find(q => q.id === qId);
+                                                    if (question?.type === 'IMAGE_UPLOAD') return null;
+                                                    return (
+                                                        <div key={qId} className="space-y-1.5 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">
+                                                                {question?.label || 'Deleted Question'}
+                                                            </p>
+                                                            <p className="font-bold text-gray-900 dark:text-white text-lg">
+                                                                {Array.isArray(val) ? val.join(', ') : String(val)}
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <h3 className="text-sm font-black text-indigo-600 uppercase tracking-widest border-l-4 border-indigo-600 pl-3">Verification Proof</h3>
+                                        {Object.entries(viewingResponse.answers || {}).map(([qId, val]) => {
+                                            const question = form?.questions.find(q => q.id === qId);
+                                            if (question?.type !== 'IMAGE_UPLOAD' || !val) return null;
+                                            return (
+                                                <div key={qId} className="space-y-4">
+                                                    <div className="aspect-[4/3] rounded-2xl border-2 border-gray-100 dark:border-gray-800 overflow-hidden bg-gray-100 dark:bg-gray-950 relative group">
+                                                        <img src={val} alt="Proof" className="w-full h-full object-contain" />
+                                                        <a
+                                                            href={val}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold gap-2 backdrop-blur-[2px]"
+                                                        >
+                                                            <ExternalLink className="h-5 w-5" />
+                                                            Open Full Image
+                                                        </a>
+                                                    </div>
+                                                    <p className="text-center text-xs text-gray-500 font-medium italic">Click image or button below to view in full resolution</p>
+                                                </div>
+                                            );
+                                        })}
+                                        {!Object.values(form?.questions || []).some(q => q.type === 'IMAGE_UPLOAD') && (
+                                            <div className="py-12 text-center bg-gray-50 dark:bg-gray-800/40 rounded-3xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                                                <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                                                <p className="text-sm text-gray-400 font-medium">No proof upload required<br/>for this form</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex gap-4 bg-gray-50/50 dark:bg-gray-800/50">
+                                <Button
+                                    className="flex-1 bg-green-500 hover:bg-green-600 text-white rounded-xl h-12 font-bold text-base shadow-lg shadow-green-100 dark:shadow-none"
+                                    onClick={() => {
+                                        updateStatus(viewingResponse.id, 'APPROVED');
+                                        setViewingResponse(null);
+                                    }}
+                                    disabled={viewingResponse.status === 'APPROVED'}
+                                >
+                                    <CheckCircle2 className="mr-2 h-5 w-5" />
+                                    Approve Registration
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl h-12 font-bold text-base"
+                                    onClick={() => {
+                                        updateStatus(viewingResponse.id, 'REJECTED');
+                                        setViewingResponse(null);
+                                    }}
+                                    disabled={viewingResponse.status === 'REJECTED'}
+                                >
+                                    <XCircle className="mr-2 h-5 w-5" />
+                                    Reject Application
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

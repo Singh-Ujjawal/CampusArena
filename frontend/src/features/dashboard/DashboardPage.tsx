@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
-import { type Event, type Contest } from '@/types';
-import { Calendar, Clock, Search, Plus } from 'lucide-react';
+import { type Event, type Contest, type Club } from '@/types';
+import { Calendar, Clock, Search, Plus, Building2, Sparkles } from 'lucide-react';
 
-import { CLUBS } from '@/lib/constants';
 import { DashboardSkeleton } from '@/components/skeleton';
 
 const IST_TZ = 'Asia/Kolkata';
@@ -83,6 +82,7 @@ export default function DashboardPage() {
     const { user, isAdmin } = useAuth();
     const [events, setEvents] = useState<Event[]>([]);
     const [contests, setContests] = useState<Contest[]>([]);
+    const [clubs, setClubs] = useState<Club[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>('All');
     const [search, setSearch] = useState('');
@@ -90,12 +90,14 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchAll = async () => {
             try {
-                const [eventsRes, contestsRes] = await Promise.all([
+                const [eventsRes, contestsRes, clubsRes] = await Promise.all([
                     api.get('/api/events').catch(() => ({ data: [] })),
                     api.get('/api/contests').catch(() => ({ data: [] })),
+                    api.get('/api/clubs').catch(() => ({ data: [] })),
                 ]);
                 setEvents(eventsRes.data || []);
                 setContests(contestsRes.data || []);
+                setClubs(clubsRes.data || []);
             } finally {
                 setIsLoading(false);
             }
@@ -132,11 +134,39 @@ export default function DashboardPage() {
         return matchesSearch && matchesFilter;
     });
 
-    // Grouping logic
-    const clubsWithContent = CLUBS.map(club => ({
+    // Grouping logic: Organize items into clubs
+    const clubMap = new Map<string, EventCardProps[]>();
+    
+    // Initialize map with all clubs
+    clubs.forEach(club => {
+        clubMap.set(club.id, []);
+    });
+
+    // Assign items to clubs
+    const orphanedItems: EventCardProps[] = [];
+    
+    filtered.forEach(item => {
+        // Try to match by clubId first, then by legacy 'club' field if it's an ID or name
+        const rawClubId = item.clubId || (item as any).club;
+        
+        let targetClub = clubs.find(c => c.id === rawClubId);
+        
+        // If no ID match, try matching by name (case-insensitive)
+        if (!targetClub && typeof rawClubId === 'string') {
+            targetClub = clubs.find(c => c.name.toLowerCase() === rawClubId.toLowerCase());
+        }
+
+        if (targetClub) {
+            clubMap.get(targetClub.id)?.push(item);
+        } else {
+            orphanedItems.push(item);
+        }
+    });
+
+    const clubsWithContent = clubs.map(club => ({
         ...club,
-        items: filtered.filter(item => item.clubId === club.id)
-    })).filter(club => club.items.length > 0 || !search); // Show all clubs if not searching, or only those with matches
+        items: clubMap.get(club.id) || []
+    })).filter(club => club.items.length > 0 || !search);
 
 
 
@@ -209,16 +239,19 @@ export default function DashboardPage() {
                 {clubsWithContent.map(club => (
                     <section key={club.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center gap-3 mb-8">
-                            <div className="h-15 w-15 bg-white dark:bg-gray-800 rounded-2xl shadow-md flex items-center justify-center border border-blue-50 dark:border-blue-900 flex-shrink-0">
-                                <img
-                                    src={`/${club.id}.png`}
-                                    alt={club.name}
-                                    className="h-full w-full object-contain"
-                                    onError={(e) => {
-                                        // Fallback if logo is not found
-                                        e.currentTarget.style.display = 'none';
-                                    }}
-                                />
+                            <div className="h-16 w-16 bg-white dark:bg-gray-800 rounded-2xl shadow-md flex items-center justify-center border border-blue-50 dark:border-blue-900 flex-shrink-0 p-1">
+                                {club.image ? (
+                                    <img
+                                        src={club.image}
+                                        alt={club.name}
+                                        className="h-full w-full object-contain rounded-xl"
+                                        onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                        }}
+                                    />
+                                ) : (
+                                    <Building2 className="h-8 w-8 text-blue-600" />
+                                )}
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100 tracking-tight">{club.name}</h2>
@@ -243,6 +276,27 @@ export default function DashboardPage() {
                         )}
                     </section>
                 ))}
+
+                {orphanedItems.length > 0 && (
+                    <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="h-16 w-16 bg-white dark:bg-gray-800 rounded-2xl shadow-md flex items-center justify-center border border-blue-50 dark:border-blue-900 flex-shrink-0 p-1">
+                                <Sparkles className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100 tracking-tight">General Campus Activities</h2>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Open to all students</p>
+                            </div>
+                            <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent ml-4"></div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {orphanedItems.map(card => (
+                                <EventCard key={card.id + card.type} {...card} />
+                            ))}
+                        </div>
+                    </section>
+                )}
 
 
                 {filtered.length === 0 && (
