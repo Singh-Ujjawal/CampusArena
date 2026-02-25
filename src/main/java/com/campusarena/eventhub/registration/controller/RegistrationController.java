@@ -42,14 +42,14 @@ public class RegistrationController {
     }
 
     @GetMapping("/responses/check")
-    public ResponseEntity<Boolean> checkRegistrationStatus(
+    public ResponseEntity<String> checkRegistrationStatus(
             @RequestParam(required = false) String eventId,
             @RequestParam(required = false) String contestId,
             @RequestParam String userId) {
         if (eventId != null) {
-            return ResponseEntity.ok(responseService.isUserRegisteredForEvent(eventId, userId));
+            return ResponseEntity.ok(responseService.getRegistrationStatusForEvent(eventId, userId));
         } else if (contestId != null) {
-            return ResponseEntity.ok(responseService.isUserRegisteredForContest(contestId, userId));
+            return ResponseEntity.ok(responseService.getRegistrationStatusForContest(contestId, userId));
         }
         return ResponseEntity.badRequest().build();
     }
@@ -59,7 +59,7 @@ public class RegistrationController {
             @PathVariable String id,
             @RequestParam(required = false) String userId,
             org.springframework.web.multipart.MultipartHttpServletRequest request) throws IOException {
-        
+
         Map<String, String[]> parameterMap = request.getParameterMap();
         Map<String, String> textAnswers = new java.util.HashMap<>();
         parameterMap.forEach((key, values) -> {
@@ -67,7 +67,7 @@ public class RegistrationController {
                 textAnswers.put(key, values[0]);
             }
         });
-        
+
         return ResponseEntity.ok(responseService.submitWithFiles(id, userId, textAnswers, request.getFileMap()));
     }
 }

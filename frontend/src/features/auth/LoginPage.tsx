@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Zap, Award, Users } from 'lucide-react';
+import { Zap, Award, Users, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
     userId: z.string().min(1, 'User ID is required'),
@@ -20,6 +20,7 @@ export default function LoginPage() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
         resolver: zodResolver(loginSchema),
@@ -111,14 +112,23 @@ export default function LoginPage() {
 
                                 <div>
                                     <label htmlFor="password" style={{ color: '#E8F4F8' }} className="text-sm font-medium block mb-2">Password</label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        placeholder="Enter your password"
-                                        style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
-                                        {...register('password')}
-                                        error={errors.password?.message}
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            id="password"
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="Enter your password"
+                                            style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040', paddingRight: '40px' }}
+                                            {...register('password')}
+                                            error={errors.password?.message}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                                        >
+                                            {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center justify-between">

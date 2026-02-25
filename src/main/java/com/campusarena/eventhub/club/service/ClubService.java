@@ -23,7 +23,8 @@ public class ClubService {
                 .orElseThrow(() -> new ResourceNotFoundException("Club not found with id: " + clubId));
         
         club.setName(newClub.getName());
-        club.setClubCoordinatorName(newClub.getClubCoordinatorName());
+        club.setImage(newClub.getImage());
+        club.setClubCoordinatorId(newClub.getClubCoordinatorId());
         return clubRepository.save(club);
     }
 

@@ -19,7 +19,8 @@ export interface User {
 export interface Club {
     id: string;
     name: string;
-    clubCoordinatorName: string;
+    image: string;
+    clubCoordinatorId: string;
 }
 
 export interface Faculty extends User {

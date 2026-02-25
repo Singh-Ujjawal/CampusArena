@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/axios';
-import { type Club } from '@/types';
+import { type Club, type Faculty } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import {
     Plus, Trash2, Edit, Search, Building2,
     User as UserIcon, X, Loader2, Sparkles,
-    Shield
+    Shield, Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -14,8 +15,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminClubsPage() {
     const [clubs, setClubs] = useState<Club[]>([]);
+    const [faculties, setFaculties] = useState<Faculty[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClub, setEditingClub] = useState<Club | null>(null);
@@ -23,11 +26,14 @@ export default function AdminClubsPage() {
     // Form states
     const [formData, setFormData] = useState({
         name: '',
-        clubCoordinatorName: ''
+        image: '',
+        clubCoordinatorId: ''
     });
+    const [imagePreview, setImagePreview] = useState<string>('');
 
     useEffect(() => {
         fetchClubs();
+        fetchFaculties();
     }, []);
 
     const fetchClubs = async () => {
@@ -38,6 +44,54 @@ export default function AdminClubsPage() {
             toast.error('Failed to load clubs');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchFaculties = async () => {
+        try {
+            const response = await api.get('/api/faculty');
+            setFaculties(response.data);
+        } catch (error) {
+            toast.error('Failed to load faculties');
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image size must be less than 5MB');
+            return;
+        }
+
+        setIsUploadingImage(true);
+        try {
+            const formDataUpload = new FormData();
+            formDataUpload.append('file', file);
+
+            const response = await api.post('/api/upload', formDataUpload, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response.data.path) {
+                setFormData(prev => ({ ...prev, image: response.data.path }));
+                setImagePreview(response.data.path);
+                toast.success('Image uploaded successfully');
+            }
+        } catch (error) {
+            toast.error('Failed to upload image');
+        } finally {
+            setIsUploadingImage(false);
         }
     };
 
@@ -76,21 +130,25 @@ export default function AdminClubsPage() {
         setEditingClub(club);
         setFormData({
             name: club.name,
-            clubCoordinatorName: club.clubCoordinatorName
+            image: club.image,
+            clubCoordinatorId: club.clubCoordinatorId
         });
+        setImagePreview(club.image);
         setIsModalOpen(true);
     };
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingClub(null);
-        setFormData({ name: '', clubCoordinatorName: '' });
+        setFormData({ name: '', image: '', clubCoordinatorId: '' });
+        setImagePreview('');
     };
 
-    const filteredClubs = clubs.filter(club =>
-        club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        club.clubCoordinatorName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredClubs = clubs.filter(club => {
+        const coordinatorName = faculties.find(f => f.id === club.clubCoordinatorId)?.firstName || '';
+        return club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            coordinatorName.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
     return (
         <div className="min-h-screen bg-gray-50/30 dark:bg-[#0B0F1A] py-12 px-4 sm:px-6 lg:px-8">
@@ -127,7 +185,7 @@ export default function AdminClubsPage() {
                         </div>
                         <Input
                             type="text"
-                            placeholder="Search clubs by name or coordinator..."
+                            placeholder="Search clubs by name or faculty coordinator..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-14 h-16 bg-white dark:bg-gray-800/50 border-none shadow-xl shadow-gray-200/50 dark:shadow-none rounded-3xl text-lg font-bold focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-gray-400"
@@ -166,8 +224,12 @@ export default function AdminClubsPage() {
                                         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                         <CardContent className="p-8">
                                             <div className="flex items-start justify-between mb-8">
-                                                <div className="h-16 w-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                                                    <Building2 className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                                                <div className="h-16 w-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 overflow-hidden">
+                                                    {club.image ? (
+                                                        <img src={club.image} alt={club.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Building2 className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                                                    )}
                                                 </div>
                                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Button
@@ -197,9 +259,17 @@ export default function AdminClubsPage() {
                                                     <UserIcon className="h-5 w-5 text-gray-400" />
                                                     <div>
                                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Coordinator</p>
-                                                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{club.clubCoordinatorName}</p>
+                                                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                            {faculties.find(f => f.id === club.clubCoordinatorId)?.firstName || 'Unknown'}
+                                                        </p>
                                                     </div>
                                                 </div>
+                                                {club.image && (
+                                                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Club Image</p>
+                                                        <img src={club.image} alt={club.name} className="w-full h-32 object-cover rounded-lg" />
+                                                    </div>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -257,13 +327,67 @@ export default function AdminClubsPage() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
+                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-4">Club Image</label>
+                                                <div className="space-y-3">
+                                                    <div className="relative">
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={handleImageUpload}
+                                                            disabled={isUploadingImage}
+                                                            className="hidden"
+                                                            id="image-upload"
+                                                        />
+                                                        <label
+                                                            htmlFor="image-upload"
+                                                            className="flex items-center justify-center h-16 px-6 bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl cursor-pointer hover:border-indigo-500 transition-colors"
+                                                        >
+                                                            {isUploadingImage ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+                                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Uploading...</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Upload className="h-5 w-5 text-gray-400" />
+                                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                                        {formData.image ? 'Change Image' : 'Select Image'}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </label>
+                                                    </div>
+                                                    {(formData.image || imagePreview) && (
+                                                        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Preview</p>
+                                                            <div className="relative w-full h-40 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-900">
+                                                                <img 
+                                                                    src={imagePreview || formData.image} 
+                                                                    alt="Preview" 
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            </div>
+                                                            {formData.image && (
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate">
+                                                                    {formData.image}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
                                                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-4">Club Coordinator</label>
-                                                <Input
-                                                    required
-                                                    value={formData.clubCoordinatorName}
-                                                    onChange={e => setFormData({ ...formData, clubCoordinatorName: e.target.value })}
-                                                    placeholder="Full name of coordinator..."
-                                                    className="h-16 px-6 bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-indigo-500 rounded-2xl text-lg font-bold transition-all"
+                                                <Select
+                                                    id="coordinator"
+                                                    value={formData.clubCoordinatorId}
+                                                    onChange={e => setFormData({ ...formData, clubCoordinatorId: e.target.value })}
+                                                    options={faculties.map(faculty => ({
+                                                        value: faculty.id,
+                                                        label: `${faculty.firstName} ${faculty.lastName || ''}`
+                                                    }))}
+                                                    className="dark:bg-gray-900 dark:text-gray-100"
+                                                    style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
                                                 />
                                             </div>
                                         </div>

@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
-import { type Contest, type Problem } from '@/types';
+import { type Contest, type Problem, type Club } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash, Check, Users, X, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
-import { CLUBS } from '@/lib/constants';
 import { AdminContestsPageSkeleton } from '@/components/skeleton';
 
 /**
@@ -80,6 +79,7 @@ export default function AdminContestsPage() {
     const navigate = useNavigate();
     const [contests, setContests] = useState<Contest[]>([]);
     const [allProblems, setAllProblems] = useState<Problem[]>([]); // Store all problems
+    const [clubs, setClubs] = useState<Club[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [currentContest, setCurrentContest] = useState<Partial<Contest>>({});
@@ -88,6 +88,7 @@ export default function AdminContestsPage() {
     useEffect(() => {
         fetchContests();
         fetchProblems(); // Fetch problems on load
+        fetchClubs();
         fetchRegistrationForms();
     }, []);
 
@@ -97,6 +98,15 @@ export default function AdminContestsPage() {
             setRegistrationForms(response.data);
         } catch (error) {
             console.error('Failed to load registration forms');
+        }
+    };
+
+    const fetchClubs = async () => {
+        try {
+            const response = await api.get('/api/clubs');
+            setClubs(response.data);
+        } catch (error) {
+            console.error('Failed to load clubs');
         }
     };
 
@@ -239,7 +249,7 @@ export default function AdminContestsPage() {
                             label="Club"
                             value={currentContest.clubId || ''}
                             onChange={e => setCurrentContest({ ...currentContest, clubId: e.target.value })}
-                            options={CLUBS.map(c => ({ value: c.id, label: c.name }))}
+                            options={clubs.map(c => ({ value: c.id, label: c.name }))}
                         />
 
                         <Input
@@ -337,11 +347,11 @@ export default function AdminContestsPage() {
                                     </Link>
                                     <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600" onClick={() => { setCurrentContest(contest); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
                                     {registrationForms.find(f => f.contestId === contest.id) ? (
-                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20" onClick={() => navigate(`/admin/registration/edit/${registrationForms.find(f => f.contestId === contest.id).id}`)}>
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200 bg-indigo-50 dark:bg-indigo-900/20" onClick={() => navigate(`/admin/registration/edit/${registrationForms.find(f => f.contestId === contest.id).id}?contestId=${contest.id}&clubId=${contest.clubId}`)}>
                                             <ClipboardCheck className="h-4 w-4 mr-1 text-indigo-600 dark:text-indigo-400" />Edit Form
                                         </Button>
                                     ) : (
-                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => navigate(`/admin/registration/create?contestId=${contest.id}`)}>
+                                        <Button size="sm" variant="outline" className="dark:border-gray-700 dark:text-gray-200" onClick={() => navigate(`/admin/registration/create?contestId=${contest.id}&clubId=${contest.clubId}`)}>
                                             <ClipboardCheck className="h-4 w-4 mr-1" />Reg. Form
                                         </Button>
                                     )}

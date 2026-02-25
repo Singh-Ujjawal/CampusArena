@@ -25,7 +25,7 @@ export default function ContestDetailsPage() {
     const [hasAccess, setHasAccess] = useState(false);
     const [passwordEntry, setPasswordEntry] = useState('');
     const [isValidating, setIsValidating] = useState(false);
-    const [isRegistered, setIsRegistered] = useState(false);
+    const [isRegistered, setIsRegistered] = useState<string | null>(null);
     const [regFormId, setRegFormId] = useState<string | null>(null);
     const [isCheckingReg, setIsCheckingReg] = useState(true);
 
@@ -77,7 +77,7 @@ export default function ContestDetailsPage() {
                         const regRes = await api.get(`/api/registration/responses/check`, {
                             params: { contestId, userId: user.id }
                         });
-                        setIsRegistered(regRes.data);
+                        setIsRegistered(regRes.data); // Status string from backend
 
                         if (!regRes.data) {
                             const formRes = await api.get(`/api/registration/forms/contest/${contestId}`);
@@ -227,10 +227,16 @@ export default function ContestDetailsPage() {
                                     <p className="text-xs text-blue-500 dark:text-blue-400 mt-2 font-medium">Register before the contest begins!</p>
                                 </div>
                             )}
-                            {!isCheckingReg && contest.registrationRequired && isRegistered && (
+                            {!isCheckingReg && contest.registrationRequired && isRegistered === 'APPROVED' && (
                                 <div className="pt-4 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-bold">
                                     <CheckCircle2 className="h-5 w-5" />
                                     <span>You are registered!</span>
+                                </div>
+                            )}
+                            {!isCheckingReg && contest.registrationRequired && isRegistered && isRegistered !== 'APPROVED' && (
+                                <div className="pt-4 flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
+                                    <Clock className="h-5 w-5" />
+                                    <span>Registration {isRegistered === 'PENDING' ? 'Pending Approval' : 'Rejected'}</span>
                                 </div>
                             )}
                         </div>
@@ -243,22 +249,37 @@ export default function ContestDetailsPage() {
                             </div>
                             <div>
                                 <h2 className="text-3xl font-black text-gray-900 dark:text-white">
-                                    {contest.registrationRequired && !isRegistered ? 'Register for Contest' : 'Join the Contest'}
+                                    {contest.registrationRequired && isRegistered !== 'APPROVED' 
+                                        ? (isRegistered === 'PENDING' ? 'Registration Pending Approval' : 
+                                           isRegistered === 'REJECTED' ? 'Registration Rejected' : 'Register for Contest')
+                                        : 'Join the Contest'}
                                 </h2>
                                 <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">
-                                    {contest.registrationRequired && !isRegistered
-                                        ? 'You must register using the official form before you can access the contest problems.'
+                                    {contest.registrationRequired && isRegistered !== 'APPROVED'
+                                        ? (isRegistered === 'PENDING' ? 'Your registration is being reviewed. Please wait for an admin to approve it.' :
+                                           isRegistered === 'REJECTED' ? 'Your registration was rejected. You cannot participate in this contest.' :
+                                           'You must register using the official form before you can access the contest problems.')
                                         : 'Enter the 6-digit access code to see the problems and start coding.'}
                                 </p>
                             </div>
                             <div className="space-y-4">
-                                {contest.registrationRequired && !isRegistered ? (
-                                    <Button
-                                        onClick={() => regFormId ? navigate(`/registration/forms/${regFormId}`) : toast.error('Registration form not found')}
-                                        className="w-full max-w-[240px] py-6 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
-                                    >
-                                        Register Now
-                                    </Button>
+                                {contest.registrationRequired && isRegistered !== 'APPROVED' ? (
+                                    isRegistered && isRegistered !== 'REJECTED' ? (
+                                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-2xl text-amber-800 dark:text-amber-300 font-bold">
+                                            Status: {isRegistered}
+                                        </div>
+                                    ) : isRegistered === 'REJECTED' ? (
+                                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-2xl text-red-800 dark:text-red-300 font-bold">
+                                            Status: Rejected
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            onClick={() => regFormId ? navigate(`/registration/forms/${regFormId}`) : toast.error('Registration form not found')}
+                                            className="w-full max-w-[240px] py-6 text-lg font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
+                                        >
+                                            Register Now
+                                        </Button>
+                                    )
                                 ) : (
                                     <>
                                         <div className="relative max-w-[240px] mx-auto">

@@ -70,11 +70,12 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
 
-        Optional<McqSubmission> existingSubmission =
-                submissionRepository.findTopByUserIdAndEventIdOrderByStartTimeDesc(userId, eventId);
+        Optional<McqSubmission> existingSubmission = submissionRepository
+                .findTopByUserIdAndEventIdOrderByStartTimeDesc(userId, eventId);
 
         // If no submission yet, we MUST check password
-        if (existingSubmission.isEmpty() && event.getAccessPassword() != null && !event.getAccessPassword().equals(enteredPassword)) {
+        if (existingSubmission.isEmpty() && event.getAccessPassword() != null
+                && !event.getAccessPassword().equals(enteredPassword)) {
             throw new ApiException("Invalid access password");
         }
 
@@ -94,13 +95,22 @@ public class EventService {
         if (event.getRegistrationRequired() != null && event.getRegistrationRequired()) {
             Optional<RegistrationForm> regForm = registrationFormRepository.findByEventId(eventId);
             if (regForm.isPresent()) {
-                boolean isRegistered = registrationResponseRepository.existsByFormIdAndUserId(regForm.get().getId(), userId);
-                if (!isRegistered) {
+                Optional<com.campusarena.eventhub.registration.model.RegistrationResponse> regResponse = registrationResponseRepository
+                        .findByFormIdAndUserId(regForm.get().getId(), userId);
+
+                if (regResponse.isEmpty()) {
                     throw new ApiException("You must register for this event before participating.");
+                }
+
+                if (!"APPROVED".equals(regResponse.get().getStatus())) {
+                    String status = regResponse.get().getStatus();
+                    throw new ApiException("Your registration status is " + status
+                            + ". You can only participate once it is APPROVED by an admin.");
                 }
             } else {
                 // If registration is required but no form has been created yet
-                throw new ApiException("Registration is required for this event, but the registration form is not yet available.");
+                throw new ApiException(
+                        "Registration is required for this event, but the registration form is not yet available.");
             }
         }
 
@@ -130,8 +140,7 @@ public class EventService {
                         q.getQuestionText(),
                         q.getOptions(),
                         q.getMarks(),
-                        q.getNegativeMarks()
-                ))
+                        q.getNegativeMarks()))
                 .collect(Collectors.toList());
     }
 
@@ -165,10 +174,12 @@ public class EventService {
 
         if (request != null && request.getAnswers() != null) {
             for (Answer ans : request.getAnswers()) {
-                if (ans == null || ans.getQuestionId() == null) continue;
+                if (ans == null || ans.getQuestionId() == null)
+                    continue;
                 attempted++;
                 McqQuestion question = questionMap.get(ans.getQuestionId());
-                if (question == null) continue;
+                if (question == null)
+                    continue;
 
                 if (Objects.equals(ans.getSelectedOption(), question.getCorrectOption())) {
                     totalScore += Optional.ofNullable(question.getMarks()).orElse(0.0);
@@ -193,7 +204,8 @@ public class EventService {
     }
 
     private int calculateRank(String eventId, String userId) {
-        List<McqSubmission> submissions = submissionRepository.findByEventIdOrderByTotalScoreDescSubmittedAtAsc(eventId);
+        List<McqSubmission> submissions = submissionRepository
+                .findByEventIdOrderByTotalScoreDescSubmittedAtAsc(eventId);
         for (int i = 0; i < submissions.size(); i++) {
             if (userId.equals(submissions.get(i).getUserId())) {
                 return i + 1;
@@ -211,8 +223,7 @@ public class EventService {
                 submission.getTotalScore(),
                 submission.getCorrectCount(),
                 submission.getWrongCount(),
-                calculateRank(eventId, userId)
-        );
+                calculateRank(eventId, userId));
     }
 
     public RemainingTimeResponseDTO getRemainingTime(String userId, String eventId) {
@@ -241,7 +252,8 @@ public class EventService {
         McqSubmission submission = submissionOpt.get();
 
         if ("COMPLETED".equals(submission.getStatus()) || "AUTO_SUBMITTED".equals(submission.getStatus())) {
-            return new RemainingTimeResponseDTO(0, submission.getStatus(), submission.getStartTime(), event.getEndTime());
+            return new RemainingTimeResponseDTO(0, submission.getStatus(), submission.getStartTime(),
+                    event.getEndTime());
         }
 
         long totalAllowedSeconds = (long) Optional.ofNullable(event.getDurationInMinutes()).orElse(0) * 60;
@@ -261,7 +273,8 @@ public class EventService {
             submissionRepository.save(submission);
         }
 
-        return new RemainingTimeResponseDTO(remaining, submission.getStatus(), submission.getStartTime(), event.getEndTime());
+        return new RemainingTimeResponseDTO(remaining, submission.getStatus(), submission.getStartTime(),
+                event.getEndTime());
     }
 
     public AdminEventAnalyticsDTO getEventAnalytics(String eventId) {
@@ -269,7 +282,8 @@ public class EventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         long totalRegistrations = registrationRepository.countByEventId(eventId);
-        List<McqSubmission> submissions = submissionRepository.findByEventIdOrderByTotalScoreDescSubmittedAtAsc(eventId);
+        List<McqSubmission> submissions = submissionRepository
+                .findByEventIdOrderByTotalScoreDescSubmittedAtAsc(eventId);
         long totalAttempts = submissions.size();
         long totalAbsent = Math.max(0, totalRegistrations - totalAttempts);
 
@@ -295,12 +309,13 @@ public class EventService {
                     user != null ? user.getUsername() : "Unknown",
                     user != null ? user.getRollNumber() : "N/A",
                     s.getTotalScore(),
-                    i + 1
-            ));
+                    i + 1));
         }
 
-        return new AdminEventAnalyticsDTO(totalRegistrations, totalAttempts, totalAbsent, average, highest, lowest, passPercentage, topPerformers);
+        return new AdminEventAnalyticsDTO(totalRegistrations, totalAttempts, totalAbsent, average, highest, lowest,
+                passPercentage, topPerformers);
     }
+
     public Event updateEvent(String id, Event updatedEvent) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
@@ -316,7 +331,8 @@ public class EventService {
         event.setAccessPassword(updatedEvent.getAccessPassword());
         event.setFacultyCoordinators(updatedEvent.getFacultyCoordinators());
         event.setStudentCoordinators(updatedEvent.getStudentCoordinators());
-        event.setRegistrationRequired(updatedEvent.getRegistrationRequired() != null ? updatedEvent.getRegistrationRequired() : true);
+        event.setRegistrationRequired(
+                updatedEvent.getRegistrationRequired() != null ? updatedEvent.getRegistrationRequired() : true);
 
         updateStatus(event);
         return eventRepository.save(event);

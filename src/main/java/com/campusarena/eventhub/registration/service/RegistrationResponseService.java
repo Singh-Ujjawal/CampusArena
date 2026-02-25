@@ -38,10 +38,11 @@ public class RegistrationResponseService {
         RegistrationForm form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found"));
         Instant now = Instant.now();
-        if (!form.isActive() || now.isBefore(form.getStartTime()) || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
+        if (!form.isActive() || now.isBefore(form.getStartTime())
+                || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
             throw new RuntimeException("Registration form is closed");
         }
-        
+
         if (response.getUserId() != null && responseRepository.existsByFormIdAndUserId(formId, response.getUserId())) {
             throw new RuntimeException("You have already registered using this form");
         }
@@ -52,15 +53,17 @@ public class RegistrationResponseService {
         return responseRepository.save(response);
     }
 
-    public RegistrationResponse submitWithFiles(String formId, String userId, Map<String, String> textAnswers, Map<String, MultipartFile> files) throws IOException {
+    public RegistrationResponse submitWithFiles(String formId, String userId, Map<String, String> textAnswers,
+            Map<String, MultipartFile> files) throws IOException {
         RegistrationForm form = formRepository.findById(formId)
                 .orElseThrow(() -> new RuntimeException("Form not found"));
         Instant now = Instant.now();
-        
-        if (!form.isActive() || now.isBefore(form.getStartTime()) || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
+
+        if (!form.isActive() || now.isBefore(form.getStartTime())
+                || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
             throw new RuntimeException("Registration form is closed");
         }
-        
+
         if (userId != null && responseRepository.existsByFormIdAndUserId(formId, userId)) {
             throw new RuntimeException("You have already registered using this form");
         }
@@ -99,10 +102,10 @@ public class RegistrationResponseService {
                 .submittedAt(now)
                 .status("PENDING")
                 .build();
-                
+
         return responseRepository.save(response);
     }
-    
+
     public RegistrationResponse updateStatus(String id, String status) {
         RegistrationResponse response = responseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Response not found"));
@@ -113,16 +116,18 @@ public class RegistrationResponseService {
     public List<RegistrationResponse> getResponsesForForm(String formId) {
         return responseRepository.findByFormId(formId);
     }
-    
-    public boolean isUserRegisteredForEvent(String eventId, String userId) {
+
+    public String getRegistrationStatusForEvent(String eventId, String userId) {
         return formRepository.findByEventId(eventId)
-                .map(form -> responseRepository.existsByFormIdAndUserId(form.getId(), userId))
-                .orElse(false); // If registration is required but no form exists, they can't be registered
+                .flatMap(form -> responseRepository.findByFormIdAndUserId(form.getId(), userId)
+                        .map(RegistrationResponse::getStatus))
+                .orElse(null);
     }
-    
-    public boolean isUserRegisteredForContest(String contestId, String userId) {
+
+    public String getRegistrationStatusForContest(String contestId, String userId) {
         return formRepository.findByContestId(contestId)
-                .map(form -> responseRepository.existsByFormIdAndUserId(form.getId(), userId))
-                .orElse(false);
+                .flatMap(form -> responseRepository.findByFormIdAndUserId(form.getId(), userId)
+                        .map(RegistrationResponse::getStatus))
+                .orElse(null);
     }
 }

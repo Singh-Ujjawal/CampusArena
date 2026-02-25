@@ -37,7 +37,7 @@ export default function AdminCreateRegistrationForm() {
     const [isActive, setIsActive] = useState(true);
     const [paymentRequired, setPaymentRequired] = useState(false);
     const [paymentFees, setPaymentFees] = useState('');
-    const [clubId, setClubId] = useState('');
+    const [clubId, setClubId] = useState(searchParams.get('clubId') || '');
     const [eventId, setEventId] = useState(linkedEventId || '');
     const [contestId, setContestId] = useState(linkedContestId || '');
 
@@ -415,55 +415,57 @@ export default function AdminCreateRegistrationForm() {
                             </div>
 
                             <div className="space-y-4 pt-4 border-t border-gray-50 dark:border-gray-700">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Associate with Club</label>
-                                        <select
-                                            className="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-                                            value={clubId}
-                                            onChange={(e) => setClubId(e.target.value)}
-                                        >
-                                            <option value="">None</option>
-                                            {clubs.map(club => (
-                                                <option key={club.id} value={club.id}>{club.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                {!linkedEventId && !linkedContestId && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Associate with Club</label>
+                                            <select
+                                                className="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
+                                                value={clubId}
+                                                onChange={(e) => setClubId(e.target.value)}
+                                            >
+                                                <option value="">None</option>
+                                                {clubs.map(club => (
+                                                    <option key={club.id} value={club.id}>{club.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Associate with Event (Quiz)</label>
-                                        <select
-                                            className="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-                                            value={eventId}
-                                            onChange={(e) => {
-                                                setEventId(e.target.value);
-                                                if (e.target.value) setContestId('');
-                                            }}
-                                        >
-                                            <option value="">None</option>
-                                            {events.map(event => (
-                                                <option key={event.id} value={event.id}>{event.title}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Associate with Event (Quiz)</label>
+                                            <select
+                                                className="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
+                                                value={eventId}
+                                                onChange={(e) => {
+                                                    setEventId(e.target.value);
+                                                    if (e.target.value) setContestId('');
+                                                }}
+                                            >
+                                                <option value="">None</option>
+                                                {events.map(event => (
+                                                    <option key={event.id} value={event.id}>{event.title}</option>
+                                                ))}
+                                            </select>
+                                        </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Associate with Contest (Coding)</label>
-                                        <select
-                                            className="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-                                            value={contestId}
-                                            onChange={(e) => {
-                                                setContestId(e.target.value);
-                                                if (e.target.value) setEventId('');
-                                            }}
-                                        >
-                                            <option value="">None</option>
-                                            {contests.map(contest => (
-                                                <option key={contest.id} value={contest.id}>{contest.title}</option>
-                                            ))}
-                                        </select>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Associate with Contest (Coding)</label>
+                                            <select
+                                                className="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
+                                                value={contestId}
+                                                onChange={(e) => {
+                                                    setContestId(e.target.value);
+                                                    if (e.target.value) setEventId('');
+                                                }}
+                                            >
+                                                <option value="">None</option>
+                                                {contests.map(contest => (
+                                                    <option key={contest.id} value={contest.id}>{contest.title}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-xl cursor-pointer">
                                     <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Active Status</span>
