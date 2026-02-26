@@ -18,10 +18,11 @@ import java.util.List;
 public class SubmissionController {
 
     private final SubmissionService submissionService;
+    private final com.campusarena.eventhub.user.service.SecurityService securityService;
     
     @GetMapping
-    public ResponseEntity<List<SubmissionResponse>> getAllSubmissions() {
-        return ResponseEntity.ok(submissionService.getAllSubmissions());
+    public ResponseEntity<List<SubmissionResponse>> getAllSubmissions(@RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(submissionService.getAllSubmissions(securityService.getCurrentUser(auth)));
     }
 
     @PostMapping
@@ -35,19 +36,20 @@ public class SubmissionController {
     }
 
     @GetMapping("/contest/{contestId}")
-    public ResponseEntity<List<SubmissionResponse>> getSubmissionsByContest(@PathVariable String contestId) {
-        return ResponseEntity.ok(submissionService.getSubmissionsByContest(contestId));
+    public ResponseEntity<List<SubmissionResponse>> getSubmissionsByContest(@PathVariable String contestId, @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(submissionService.getSubmissionsByContest(contestId, securityService.getCurrentUser(auth)));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<SubmissionResponse>> getSubmissionsByUser(@PathVariable String userId) {
-        return ResponseEntity.ok(submissionService.getSubmissionsByUser(userId));
+    public ResponseEntity<List<SubmissionResponse>> getSubmissionsByUser(@PathVariable String userId, @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(submissionService.getSubmissionsByUser(userId, securityService.getCurrentUser(auth)));
     }
 
     @GetMapping("/contest/{contestId}/user/{userId}")
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByContestAndUser(
             @PathVariable String contestId, 
-            @PathVariable String userId) {
-        return ResponseEntity.ok(submissionService.getSubmissionsByContestAndUser(contestId, userId));
+            @PathVariable String userId,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(submissionService.getSubmissionsByContestAndUser(contestId, userId, securityService.getCurrentUser(auth)));
     }
 }

@@ -26,8 +26,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import com.campusarena.eventhub.user.model.User;
+import com.campusarena.eventhub.user.model.Roles;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -176,22 +179,67 @@ public class SubmissionService {
                 .build();
     }
 
-    public List<SubmissionResponse> getSubmissionsByContest(String contestId) {
+    public List<SubmissionResponse> getSubmissionsByContest(String contestId, User currentUser) {
+        Contest contest = contestRepository.findById(contestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Contest not found"));
+
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(contest.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only view submissions for your own contests.");
+            }
+        }
         return submissionRepository.findByContestId(contestId).stream().map(this::mapToResponse).toList();
     }
 
-    public List<SubmissionResponse> getSubmissionsByUser(String userId) {
-        return submissionRepository.findByUserId(userId).stream().map(this::mapToResponse).toList();
+    public List<SubmissionResponse> getSubmissionsByUser(String userId, User currentUser) {
+        List<Submission> submissions = submissionRepository.findByUserId(userId);
+        
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY && !currentUser.getId().equals(userId)) {
+            // Find contests owned by the faculty
+            List<Contest> myContests = contestRepository.findAll().stream()
+                    .filter(c -> currentUser.getUsername().equals(c.getCreatedBy()))
+                    .toList();
+            Set<String> myContestIds = myContests.stream().map(Contest::getId).collect(Collectors.toSet());
+            
+            return submissions.stream()
+                    .filter(s -> myContestIds.contains(s.getContestId()))
+                    .map(this::mapToResponse)
+                    .toList();
+        }
+        
+        return submissions.stream().map(this::mapToResponse).toList();
     }
 
-    public List<SubmissionResponse> getSubmissionsByContestAndUser(String contestId, String userId) {
+    public List<SubmissionResponse> getSubmissionsByContestAndUser(String contestId, String userId, User currentUser) {
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY && !currentUser.getId().equals(userId)) {
+            Contest contest = contestRepository.findById(contestId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Contest not found"));
+            if (!currentUser.getUsername().equals(contest.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only view submissions for your own contests.");
+            }
+        }
         return submissionRepository.findByContestIdAndUserId(contestId, userId).stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    public List<SubmissionResponse> getAllSubmissions() {
-        return submissionRepository.findAll().stream().map(this::mapToResponse).toList();
+    public List<SubmissionResponse> getAllSubmissions(User currentUser) {
+        List<Submission> allSubmissions = submissionRepository.findAll();
+        
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            // Find contests owned by the faculty
+            List<Contest> myContests = contestRepository.findAll().stream()
+                    .filter(c -> currentUser.getUsername().equals(c.getCreatedBy()))
+                    .toList();
+            Set<String> myContestIds = myContests.stream().map(Contest::getId).collect(Collectors.toSet());
+            
+            return allSubmissions.stream()
+                    .filter(s -> myContestIds.contains(s.getContestId()))
+                    .map(this::mapToResponse)
+                    .toList();
+        }
+        
+        return allSubmissions.stream().map(this::mapToResponse).toList();
     }
 
     private SubmissionResponse mapToResponse(Submission s) {

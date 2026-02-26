@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
+import { useAuth } from '@/context/AuthContext';
+
 interface LcQuestion {
     id: string;
     title: string;
@@ -16,6 +18,7 @@ interface LcQuestion {
 const EMPTY_FORM = { title: '', url: '', difficulty: 'Easy', topic: '' };
 
 export default function AdminLeetCodePage() {
+    const { isAdmin } = useAuth();
     const [questions, setQuestions] = useState<LcQuestion[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,9 +121,10 @@ export default function AdminLeetCodePage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-3' : ''} gap-8`}>
                 {/* ── Side form: Add New / Edit ─────────────────────────── */}
-                <div className="lg:col-span-1">
+                {isAdmin && (
+                    <div className="lg:col-span-1">
                     <div className={`bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-sm border sticky top-24 transition-colors ${isEditing
                             ? 'border-blue-300 dark:border-blue-600 ring-2 ring-blue-500/20'
                             : 'border-gray-100 dark:border-gray-700'
@@ -234,11 +238,12 @@ export default function AdminLeetCodePage() {
                                 </Button>
                             </div>
                         </form>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* ── Question list ─────────────────────────────────────── */}
-                <div className="lg:col-span-2">
+                <div className={isAdmin ? 'lg:col-span-2' : ''}>
                     <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                         <div className="p-8 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Existing Questions</h2>
@@ -254,7 +259,7 @@ export default function AdminLeetCodePage() {
                                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Question</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Difficulty</th>
                                         <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Topic</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                        {isAdmin && <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
@@ -290,24 +295,26 @@ export default function AdminLeetCodePage() {
                                             <td className="px-6 py-4">
                                                 <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{q.topic}</span>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <button
-                                                        onClick={() => startEdit(q)}
-                                                        title="Edit question"
-                                                        className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(q.id)}
-                                                        title="Delete question"
-                                                        className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            {isAdmin && (
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button
+                                                            onClick={() => startEdit(q)}
+                                                            title="Edit question"
+                                                            className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(q.id)}
+                                                            title="Delete question"
+                                                            className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>

@@ -98,28 +98,30 @@ function App() {
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/leetcode/leaderboard" element={<LeetCodeLeaderboardPage />} />
                 <Route path="/admin/leetcode" element={<AdminLeetCodePage />} />
-              </Route>
-            </Route>
-
-            {/* Admin Routes */}
-            <Route element={<ProtectedRoute requireAdmin />}>
-              <Route element={<DashboardLayout />}>
+                
+                {/* Moved from Admin only for Faculty access */}
                 <Route path="/admin/events" element={<AdminEventsPage />} />
                 <Route path="/admin/events/:eventId/questions" element={<AdminQuestionsPage />} />
                 <Route path="/admin/events/:eventId/analytics" element={<AdminEventAnalyticsPage />} />
                 <Route path="/admin/contests" element={<AdminContestsPage />} />
                 <Route path="/admin/contests/:contestId/participants" element={<AdminContestParticipantsPage />} />
                 <Route path="/admin/problems" element={<AdminProblemsPage />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/admin/users/:userId" element={<ProfilePage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                 <Route path="/admin/submissions" element={<AdminSubmissionsPage />} />
-                <Route path="/admin/clubs" element={<AdminClubsPage />} />
-                <Route path="/admin/faculty" element={<AdminFacultyPage />} />
                 <Route path="/admin/registration" element={<AdminRegistrationHub />} />
                 <Route path="/admin/registration/create" element={<AdminCreateRegistrationForm />} />
                 <Route path="/admin/registration/edit/:id" element={<AdminCreateRegistrationForm />} />
                 <Route path="/admin/registration/forms/:id/responses" element={<AdminRegistrationResponses />} />
+              </Route>
+            </Route>
+
+            {/* Admin Routes */}
+            <Route element={<ProtectedRoute requireAdmin />}>
+              <Route element={<DashboardLayout />}>
+                <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/users/:userId" element={<ProfilePage />} />
+                <Route path="/admin/faculty" element={<AdminFacultyPage />} />
+                <Route path="/admin/clubs" element={<AdminClubsPage />} />
               </Route>
             </Route>
 

@@ -10,31 +10,23 @@ export const api = axios.create({
     baseURL,
 });
 
-// Request interceptor to add Basic Auth header
+// Request interceptor to add Bearer Token header
 api.interceptors.request.use(
     (config) => {
-        const jsonStr = localStorage.getItem('auth_credentials');
-        if (jsonStr) {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        // Also set userId header for legacy/specific endpoints if needed
+        const userStr = localStorage.getItem('auth_user');
+        if (userStr) {
             try {
-                const { username, password } = JSON.parse(jsonStr);
-                if (username && password) {
-                    const token = btoa(`${username}:${password}`);
-                    config.headers.Authorization = `Basic ${token}`;
-
-                    // Also set studentId header for endpoints that need it
-                    // We assume usage of userId in localStorage as well
-                    const userStr = localStorage.getItem('auth_user');
-                    if (userStr) {
-                        const user = JSON.parse(userStr);
-                        if (user.id) {
-                            config.headers['userId'] = user.id;
-                        }
-
-                    }
+                const user = JSON.parse(userStr);
+                if (user.id) {
+                    config.headers['userId'] = user.id;
                 }
-            } catch (e) {
-                console.error("Error parsing auth credentials", e);
-            }
+            } catch (e) {}
         }
         return config;
     },

@@ -12,9 +12,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import com.campusarena.eventhub.user.model.User;
+import com.campusarena.eventhub.user.model.Roles;
+import com.campusarena.eventhub.exception.ApiException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +30,7 @@ public class RegistrationFormService {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    public RegistrationForm createForm(RegistrationForm form, MultipartFile image) throws IOException {
+    public RegistrationForm createForm(RegistrationForm form, MultipartFile image, User creator) throws IOException {
         if (image != null && !image.isEmpty()) {
             String fileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
             Path filePath = Paths.get(uploadDir, fileName);
@@ -39,6 +43,9 @@ public class RegistrationFormService {
         if (form.getPaymentRequired() == null || !form.getPaymentRequired()) {
             form.setPaymentFees(null);
         }
+        if (creator != null) {
+            form.setCreatedBy(creator.getUsername());
+        }
         return formRepository.save(form);
     }
 
@@ -47,13 +54,25 @@ public class RegistrationFormService {
                 .orElseThrow(() -> new RuntimeException("Registration form not found"));
     }
 
-    public List<RegistrationForm> getAllForms() {
-        return formRepository.findAllByOrderByCreatedAtDesc();
+    public List<RegistrationForm> getAllForms(User currentUser) {
+        List<RegistrationForm> allForms = formRepository.findAllByOrderByCreatedAtDesc();
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            return allForms.stream()
+                    .filter(f -> currentUser.getUsername().equals(f.getCreatedBy()))
+                    .collect(Collectors.toList());
+        }
+        return allForms;
     }
 
-    public RegistrationForm updateForm(String id, RegistrationForm updatedForm, MultipartFile image) throws IOException {
+    public RegistrationForm updateForm(String id, RegistrationForm updatedForm, MultipartFile image, User currentUser) throws IOException {
         RegistrationForm existing = formRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Registration form not found"));
+        
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(existing.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only update forms you created.");
+            }
+        }
         existing.setTitle(updatedForm.getTitle());
         existing.setDescription(updatedForm.getDescription());
         existing.setQuestions(updatedForm.getQuestions());
@@ -80,10 +99,16 @@ public class RegistrationFormService {
         return formRepository.save(existing);
     }
 
-    public void deleteForm(String id) {
+    public void deleteForm(String id, User currentUser) {
         RegistrationForm form = formRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Registration form not found"));
-        // Potentially delete files if needed logic here (as in regform/FormService)
+        
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(form.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only delete forms you created.");
+            }
+        }
+        
         formRepository.delete(form);
     }
 

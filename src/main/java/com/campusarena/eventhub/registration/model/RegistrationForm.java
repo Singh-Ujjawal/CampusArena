@@ -35,4 +35,5 @@ public class RegistrationForm {
     private String clubId;
     private String eventId;    // Link to MCQ event
     private String contestId;  // Link to Coding contest
+    private String createdBy;
 }

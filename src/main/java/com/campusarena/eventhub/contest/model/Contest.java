@@ -29,5 +29,6 @@ public class Contest {
     private List<String> facultyCoordinators;
     private List<String> studentCoordinators;
     private Boolean registrationRequired = true;
+    private String createdBy;
 }
 

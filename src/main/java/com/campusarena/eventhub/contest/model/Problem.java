@@ -21,4 +21,5 @@ public class Problem {
     private String description;
     private String difficulty;
     private List<TestCase> testCases;
+    private String createdBy;
 }

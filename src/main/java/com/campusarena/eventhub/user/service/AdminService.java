@@ -8,6 +8,7 @@ import com.campusarena.eventhub.user.model.Roles;
 import com.campusarena.eventhub.user.model.User;
 import com.campusarena.eventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
@@ -51,7 +53,7 @@ public class AdminService {
         User user = new User();
         user.setRole(Roles.FACULTY);
         user.setUsername(facultyRequest.getUsername());
-        user.setPassword(facultyRequest.getPassword());
+        user.setPassword(passwordEncoder.encode(facultyRequest.getPassword()));
         user.setEmail(facultyRequest.getEmail());
         user.setFirstName(facultyRequest.getFirstName());
         user.setLastName(facultyRequest.getLastName());
@@ -96,7 +98,7 @@ public class AdminService {
         UserResponse userResponse = new UserResponse();
         userResponse.setId(user.getId());
         userResponse.setUsername(user.getUsername());
-        userResponse.setPassword(user.getPassword());
+        userResponse.setPassword(null);
         userResponse.setEmail(user.getEmail());
         userResponse.setFirstName(user.getFirstName());
         userResponse.setLastName(user.getLastName());

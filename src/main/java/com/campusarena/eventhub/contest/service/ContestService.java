@@ -12,6 +12,8 @@ import com.campusarena.eventhub.registration.repository.RegistrationResponseRepo
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.campusarena.eventhub.user.model.User;
+import com.campusarena.eventhub.user.model.Roles;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,7 +26,7 @@ public class ContestService {
     private final RegistrationFormRepository registrationFormRepository;
     private final RegistrationResponseRepository registrationResponseRepository;
 
-    public ContestResponse createContest(ContestRequest request) {
+    public ContestResponse createContest(ContestRequest request, User creator) {
         if (request.getStartTime().isAfter(request.getEndTime())) {
             throw new ApiException("Start time must be before end time");
         }
@@ -40,15 +42,24 @@ public class ContestService {
                 .studentCoordinators(request.getStudentCoordinators())
                 .registrationRequired(
                         request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true)
+                .createdBy(creator != null ? creator.getUsername() : null)
                 .build();
 
         Contest savedContest = contestRepository.save(contest);
         return mapToResponse(savedContest);
     }
 
-    public List<ContestResponse> getAllContests() {
-        return contestRepository.findAll()
-                .stream()
+    public List<ContestResponse> getAllContests(User currentUser) {
+        List<Contest> allContests = contestRepository.findAll();
+        
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            return allContests.stream()
+                    .filter(c -> currentUser.getUsername().equals(c.getCreatedBy()))
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+        }
+        
+        return allContests.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -68,16 +79,28 @@ public class ContestService {
         return "LIVE";
     }
 
-    public void deleteContest(String id) {
-        if (!contestRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Contest not found with id: " + id);
+    public void deleteContest(String id, User currentUser) {
+        Contest contest = contestRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Contest not found with id: " + id));
+        
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(contest.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only delete contests you created.");
+            }
         }
+        
         contestRepository.deleteById(id);
     }
 
-    public ContestResponse updateContest(ContestRequest request, String id) {
+    public ContestResponse updateContest(ContestRequest request, String id, User currentUser) {
         Contest contest = contestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contest not found with id: " + id));
+
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(contest.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only update contests you created.");
+            }
+        }
 
         if (request.getStartTime().isAfter(request.getEndTime())) {
             throw new ApiException("Start time must be before end time");

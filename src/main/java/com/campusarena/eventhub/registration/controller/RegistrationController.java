@@ -20,10 +20,11 @@ public class RegistrationController {
 
     private final RegistrationFormService formService;
     private final RegistrationResponseService responseService;
+    private final com.campusarena.eventhub.user.service.SecurityService securityService;
 
     @GetMapping("/forms")
-    public ResponseEntity<List<RegistrationForm>> getAllForms() {
-        return ResponseEntity.ok(formService.getAllForms());
+    public ResponseEntity<List<RegistrationForm>> getAllForms(@RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(formService.getAllForms(securityService.getCurrentUser(auth)));
     }
 
     @GetMapping("/forms/{id}")

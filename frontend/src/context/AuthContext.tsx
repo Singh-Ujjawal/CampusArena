@@ -24,15 +24,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const initializeAuth = async () => {
             const storedUser = localStorage.getItem('auth_user');
-            const storedCreds = localStorage.getItem('auth_credentials');
+            const storedToken = localStorage.getItem('auth_token');
 
-            if (storedUser && storedCreds) {
+            if (storedUser && storedToken) {
                 try {
                     setUser(JSON.parse(storedUser));
                 } catch (e) {
                     console.error("Failed to parse stored user", e);
                     localStorage.removeItem('auth_user');
-                    localStorage.removeItem('auth_credentials');
+                    localStorage.removeItem('auth_token');
                 }
             }
             setIsLoading(false);
@@ -44,23 +44,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const login = async ({ userId, password }: { userId: string; password: string }) => {
         setIsLoading(true);
         try {
-            // Store credentials temporarily to make the request
-            // Note: We use the input 'userId' as 'username' for Basic Auth
-            const tempCreds = JSON.stringify({ username: userId, password });
-            localStorage.setItem('auth_credentials', tempCreds);
+            // userId here is treated as 'username' in our backend
+            const response = await api.post('/api/auth/login', { username: userId, password });
+            
+            const { token } = response.data;
+            localStorage.setItem('auth_token', token);
 
-            // Verify credentials by fetching current user details
-            // The interceptor will attach the Basic Auth header automatically
-            const response = await api.get('/user/me');
-
-            const userData = response.data;
+            // Fetch full profile info now that we have the token
+            const meRes = await api.get('/user/me');
+            const userData = meRes.data;
+            
             setUser(userData);
             localStorage.setItem('auth_user', JSON.stringify(userData));
 
             toast.success('Logged in successfully');
         } catch (error) {
             console.error(error);
-            localStorage.removeItem('auth_credentials');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
             throw error;
         } finally {
             setIsLoading(false);
@@ -70,9 +71,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const logout = () => {
         setUser(null);
         localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_credentials');
+        localStorage.removeItem('auth_token');
         toast.info('Logged out');
-        // window.location.href = '/login'; // handled by router usually
     };
 
     const value = {

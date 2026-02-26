@@ -14,6 +14,10 @@ server:
 
 
 
+app:
+  jwtSecret: CampusArenaSecretKeyCampusArenaSecretKeyCampusArenaSecretKeyCampusArenaSecretKey
+  jwtExpirationMs: 86400000
+
 file:
   upload-dir: uploads
   max-size: 2097152 # 2MB
