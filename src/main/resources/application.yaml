@@ -8,7 +8,7 @@ spring:
       max-request-size: 10MB
   data:
     mongodb:
-      uri: ${MONGO_URI}
+      uri: 
 server:
   port: 8080
 
