@@ -5,6 +5,8 @@ import com.campusarena.eventhub.contest.repository.ContestRepository;
 import com.campusarena.eventhub.event.model.Event;
 import com.campusarena.eventhub.event.repository.EventRepository;
 import com.campusarena.eventhub.exception.ApiException;
+import com.campusarena.eventhub.user.model.User;
+import com.campusarena.eventhub.user.model.Roles;
 import com.campusarena.eventhub.registration.model.Question;
 import com.campusarena.eventhub.registration.model.QuestionType;
 import com.campusarena.eventhub.registration.model.RegistrationForm;
@@ -122,14 +124,33 @@ public class RegistrationResponseService {
         return responseRepository.save(response);
     }
 
-    public RegistrationResponse updateStatus(String id, String status) {
+    public RegistrationResponse updateStatus(String id, String status, User currentUser) {
         RegistrationResponse response = responseRepository.findById(id)
                 .orElseThrow(() -> new ApiException("Response not found"));
+        
+        RegistrationForm form = formRepository.findById(response.getFormId())
+                .orElseThrow(() -> new ApiException("Form not found"));
+
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(form.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only update response status for forms you created.");
+            }
+        }
+        
         response.setStatus(status);
         return responseRepository.save(response);
     }
 
-    public List<RegistrationResponse> getResponsesForForm(String formId) {
+    public List<RegistrationResponse> getResponsesForForm(String formId, User currentUser) {
+        RegistrationForm form = formRepository.findById(formId)
+                .orElseThrow(() -> new ApiException("Form not found"));
+
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(form.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only view responses for forms you created.");
+            }
+        }
+
         List<RegistrationResponse> responses = responseRepository.findByFormId(formId);
         for (RegistrationResponse response : responses) {
             if (response.getUserId() != null) {

@@ -23,21 +23,22 @@ public class EventController {
     private final EventService eventService;
     private final EventRegistrationService registrationService;
     private final PdfExportService pdfExportService;
+    private final com.campusarena.eventhub.user.service.SecurityService securityService;
 
 
     @PostMapping
-    public ResponseEntity<Event> createEvent(@Valid @RequestBody Event event) {
-        return ResponseEntity.ok(eventService.createEvent(event));
+    public ResponseEntity<Event> createEvent(@Valid @RequestBody Event event, @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(eventService.createEvent(event, securityService.getCurrentUser(auth)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Event> updateEvent(@PathVariable String id, @Valid @RequestBody Event event) {
-        return ResponseEntity.ok(eventService.updateEvent(id, event));
+    public ResponseEntity<Event> updateEvent(@PathVariable String id, @Valid @RequestBody Event event, @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(eventService.updateEvent(id, event, securityService.getCurrentUser(auth)));
     }
 
     @GetMapping
-    public ResponseEntity<List<Event>> getAllEvents() {
-        return ResponseEntity.ok(eventService.getAllEvents());
+    public ResponseEntity<List<Event>> getAllEvents(@RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(eventService.getAllEvents(securityService.getCurrentUser(auth)));
     }
 
     @GetMapping("/{id}")
@@ -46,8 +47,16 @@ public class EventController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEvent(@PathVariable String id) {
-        if (!eventRepository.existsById(id)) throw new ResourceNotFoundException("Event not found");
+    public ResponseEntity<Void> deleteEvent(@PathVariable String id, @RequestHeader(value = "Authorization", required = false) String auth) {
+        com.campusarena.eventhub.user.model.User user = securityService.getCurrentUser(auth);
+        Event event = eventRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        
+        if (user != null && user.getRole() == com.campusarena.eventhub.user.model.Roles.FACULTY) {
+            if (!user.getUsername().equals(event.getCreatedBy())) {
+                throw new com.campusarena.eventhub.exception.ApiException("Access Denied: You can only delete events you created.");
+            }
+        }
+        
         eventRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
@@ -77,14 +86,15 @@ public class EventController {
     }
 
     @GetMapping("/{id}/analytics")
-    public ResponseEntity<AdminEventAnalyticsDTO> getAnalytics(@PathVariable String id) {
-        return ResponseEntity.ok(eventService.getEventAnalytics(id));
+    public ResponseEntity<AdminEventAnalyticsDTO> getAnalytics(@PathVariable String id, @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(eventService.getEventAnalytics(id, securityService.getCurrentUser(auth)));
     }
 
     @GetMapping("/{id}/analytics/pdf")
-    public ResponseEntity<byte[]> getAnalyticsPdf(@PathVariable String id) {
+    public ResponseEntity<byte[]> getAnalyticsPdf(@PathVariable String id, @RequestHeader(value = "Authorization", required = false) String auth) {
+        com.campusarena.eventhub.user.model.User user = securityService.getCurrentUser(auth);
         Event event = eventRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Event not found"));
-        AdminEventAnalyticsDTO analytics = eventService.getEventAnalytics(id);
+        AdminEventAnalyticsDTO analytics = eventService.getEventAnalytics(id, user);
         java.io.ByteArrayInputStream bis = pdfExportService.generateAnalyticsPdf(analytics, event.getTitle());
 
         return ResponseEntity.ok()

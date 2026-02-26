@@ -9,7 +9,7 @@ import { GlassmorphismCard } from './components/GlassmorphismCard';
 import { StatCard } from './components/StatCard';
 
 export default function AdminDashboard() {
-    const { isAdmin } = useAuth();
+    const { isAdmin, isFaculty, isStaff } = useAuth();
     const [events, setEvents] = useState([]);
     const [contests, setContests] = useState([]);
     const [totalUsers, setTotalUsers] = useState(0);
@@ -17,7 +17,7 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!isAdmin) return; // Only Admin can fetch global stats
+            if (!isAdmin && !isFaculty) return; // Only Staff can fetch stats
             try {
                 const eventsResponse = await api.get('/api/events');
                 setEvents(eventsResponse.data);
@@ -46,21 +46,21 @@ export default function AdminDashboard() {
             href: '/admin/events',
             icon: Trophy,
             gradientBg: 'from-blue-500 to-cyan-500',
-            adminOnly: true,
+            staffOnly: true,
         },
         {
             name: 'Contest Studio',
             href: '/admin/contests',
             icon: Code2,
             gradientBg: 'from-indigo-500 to-purple-500',
-            adminOnly: true,
+            staffOnly: true,
         },
         {
             name: 'Manage Problems',
             href: '/admin/problems',
             icon: FileText,
             gradientBg: 'from-amber-500 to-orange-500',
-            adminOnly: true,
+            staffOnly: true,
         },
         {
             name: 'Manage Users',
@@ -88,21 +88,21 @@ export default function AdminDashboard() {
             href: '/admin/analytics',
             icon: BarChart3,
             gradientBg: 'from-violet-500 to-fuchsia-500',
-            adminOnly: true,
+            staffOnly: true,
         },
         {
             name: 'All Submissions',
             href: '/admin/submissions',
             icon: ClipboardList,
             gradientBg: 'from-orange-500 to-red-500',
-            adminOnly: true,
+            staffOnly: true,
         },
         {
             name: 'Registration Hub',
             href: '/admin/registration',
             icon: ClipboardList,
             gradientBg: 'from-pink-500 to-rose-500',
-            adminOnly: true,
+            staffOnly: true,
         },
         {
             name: 'LeetCode Questions',
@@ -113,7 +113,11 @@ export default function AdminDashboard() {
         },
     ];
 
-    const links = allLinks.filter(link => !link.adminOnly || isAdmin);
+    const links = allLinks.filter(link => {
+        if (link.adminOnly) return isAdmin;
+        if (link.staffOnly) return isStaff;
+        return true;
+    });
 
     const stats = [
         { icon: Trophy, label: 'Total Quizzes', value: events.length, color: 'text-blue-700 dark:text-blue-400' },
@@ -172,7 +176,7 @@ export default function AdminDashboard() {
                     </motion.div>
 
                     {/* Stats Grid - Responsive - Only for Admin */}
-                    {isAdmin && (
+                    {isStaff && (
                         <motion.div
                             variants={containerVariants}
                             initial="hidden"

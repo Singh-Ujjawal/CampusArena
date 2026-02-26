@@ -10,6 +10,7 @@ import com.campusarena.eventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,6 +18,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public UserResponse insertUser(UserRequest userRequest) {
         validateUniqueness(userRequest, null);
@@ -91,7 +93,7 @@ public class UserService {
         target.setLastName(source.getLastName());
         target.setEmail(source.getEmail());
         if (source.getPassword() != null && !source.getPassword().isBlank()) {
-            target.setPassword(source.getPassword());
+            target.setPassword(passwordEncoder.encode(source.getPassword()));
         }
         target.setBranch(source.getBranch());
         target.setUsername(source.getUsername());
@@ -108,7 +110,7 @@ public class UserService {
         UserResponse userResponse = new UserResponse();
         userResponse.setId(user.getId());
         userResponse.setUsername(user.getUsername());
-        userResponse.setPassword(user.getPassword());
+        userResponse.setPassword(null);
         userResponse.setEmail(user.getEmail());
         userResponse.setFirstName(user.getFirstName());
         userResponse.setLastName(user.getLastName());

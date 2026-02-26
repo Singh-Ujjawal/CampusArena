@@ -34,16 +34,26 @@ public class EventService {
     private final RegistrationFormRepository registrationFormRepository;
     private final RegistrationResponseRepository registrationResponseRepository;
 
-    public Event createEvent(Event event) {
+    public Event createEvent(Event event, User creator) {
+        if (creator != null) {
+            event.setCreatedBy(creator.getUsername());
+        }
         event.setStatus("UPCOMING");
         Event savedEvent = eventRepository.save(event);
         return savedEvent;
     }
 
-    public List<Event> getAllEvents() {
-        return eventRepository.findAll().stream()
+    public List<Event> getAllEvents(User currentUser) {
+        List<Event> allEvents = eventRepository.findAll().stream()
                 .peek(this::updateStatus)
                 .collect(Collectors.toList());
+
+        if (currentUser != null && currentUser.getRole() == com.campusarena.eventhub.user.model.Roles.FACULTY) {
+            return allEvents.stream()
+                    .filter(e -> currentUser.getUsername().equals(e.getCreatedBy()))
+                    .collect(Collectors.toList());
+        }
+        return allEvents;
     }
 
     public Event getEventById(String id) {
@@ -279,9 +289,15 @@ public class EventService {
                 event.getEndTime());
     }
 
-    public AdminEventAnalyticsDTO getEventAnalytics(String eventId) {
+    public AdminEventAnalyticsDTO getEventAnalytics(String eventId, User currentUser) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+
+        if (currentUser != null && currentUser.getRole() == com.campusarena.eventhub.user.model.Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(event.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only view analytics for events you created.");
+            }
+        }
 
         // Count registrations from the new RegistrationForm/RegistrationResponse system
         long totalRegistrations = 0;
@@ -329,9 +345,15 @@ public class EventService {
                 passPercentage, topPerformers);
     }
 
-    public Event updateEvent(String id, Event updatedEvent) {
+    public Event updateEvent(String id, Event updatedEvent, User currentUser) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
+
+        if (currentUser != null && currentUser.getRole() == com.campusarena.eventhub.user.model.Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(event.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only update events you created.");
+            }
+        }
 
         event.setTitle(updatedEvent.getTitle());
         event.setDescription(updatedEvent.getDescription());

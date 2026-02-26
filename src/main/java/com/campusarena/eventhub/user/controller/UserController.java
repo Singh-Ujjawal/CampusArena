@@ -57,24 +57,13 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getMe(@RequestHeader("Authorization") String auth) {
-        // Basic auth decoding
-        String base64Credentials = auth.substring("Basic ".length()).trim();
-        byte[] credDecoded = java.util.Base64.getDecoder().decode(base64Credentials);
-        String credentials = new String(credDecoded, java.nio.charset.StandardCharsets.UTF_8);
-        final String[] values = credentials.split(":", 2);
-        String username = values[0];
-        
-        return ResponseEntity.ok(userService.getUserByUsername(username));
+    public ResponseEntity<UserResponse> getMe(java.security.Principal principal) {
+        return ResponseEntity.ok(userService.getUserByUsername(principal.getName()));
     }
 
     @GetMapping("/activity")
-    public ResponseEntity<UserActivityDTO> getMyActivity(@RequestHeader("Authorization") String auth) {
-        String base64Credentials = auth.substring("Basic ".length()).trim();
-        byte[] credDecoded = java.util.Base64.getDecoder().decode(base64Credentials);
-        String credentials = new String(credDecoded, java.nio.charset.StandardCharsets.UTF_8);
-        String username = credentials.split(":", 2)[0];
-        UserResponse user = userService.getUserByUsername(username);
+    public ResponseEntity<UserActivityDTO> getMyActivity(java.security.Principal principal) {
+        UserResponse user = userService.getUserByUsername(principal.getName());
         return ResponseEntity.ok(userActivityService.getUserActivity(user.getId()));
     }
 
