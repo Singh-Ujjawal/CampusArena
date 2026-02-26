@@ -106,6 +106,11 @@ public class ContestService {
             return false;
         }
 
+        Instant now = Instant.now();
+        if (now.isBefore(contest.getStartTime())) {
+            throw new ApiException("Contest has not started yet.");
+        }
+
         if (contest.getRegistrationRequired() != null && contest.getRegistrationRequired()) {
             java.util.Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(id);
             if (regForm.isPresent()) {

@@ -17,6 +17,14 @@ interface RegistrationResponse {
     id: string;
     formId: string;
     userId: string;
+    username?: string;
+    rollNumber?: string;
+    name?: string;
+    email?: string;
+    phoneNumber?: string;
+    course?: string;
+    branch?: string;
+    section?: string;
     submittedAt: string;
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     answers: Record<string, any>;
@@ -119,6 +127,56 @@ export default function AdminRegistrationResponses() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <Button 
+                        onClick={() => {
+                            if (!form || responses.length === 0) return;
+                            
+                            const headers = [
+                                'Username', 'Roll Number', 'Name', 'Email', 
+                                'Phone', 'Course', 'Branch', 'Section', 'Status', 'Submitted At'
+                            ];
+                            
+                            const questionHeaders = form.questions.map(q => q.label);
+                            const allHeaders = [...headers, ...questionHeaders];
+                            
+                            const csvData = responses.map(res => {
+                                const baseData = [
+                                    res.username || '',
+                                    res.rollNumber || '',
+                                    res.name || '',
+                                    res.email || '',
+                                    res.phoneNumber || '',
+                                    res.course || '',
+                                    res.branch || '',
+                                    res.section || '',
+                                    res.status,
+                                    new Date(res.submittedAt).toLocaleString()
+                                ];
+                                
+                                const answerData = form.questions.map(q => {
+                                    const ans = res.answers[q.id];
+                                    if (ans === undefined || ans === null) return '';
+                                    if (Array.isArray(ans)) return ans.join('|');
+                                    return String(ans);
+                                });
+                                
+                                return [...baseData, ...answerData].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+                            });
+                            
+                            const csvContent = [allHeaders.join(','), ...csvData].join('\n');
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.setAttribute('download', `${form.title}_Responses.csv`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-2"
+                    >
+                        <Download className="h-4 w-4" /> Download CSV
+                    </Button>
                     <div className="bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-100 dark:border-gray-700 flex gap-1">
                         {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(s => (
                             <button
@@ -174,7 +232,9 @@ export default function AdminRegistrationResponses() {
                                                 </div>
                                                 <div>
                                                     <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Participant</p>
-                                                    <p className="font-bold text-gray-900 dark:text-white truncate max-w-[140px]">User {res.userId.slice(-6)}</p>
+                                                    <p className="font-bold text-gray-900 dark:text-white truncate max-w-[140px]">{res.name || res.username || `User ${res.userId.slice(-6)}`}</p>
+                                                    {res.rollNumber && <p className="text-[10px] font-medium text-gray-500">{res.rollNumber}</p>}
+                                                    {res.email && <p className="text-[10px] font-medium text-gray-400 line-clamp-1">{res.email}</p>}
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-2">
@@ -318,7 +378,7 @@ export default function AdminRegistrationResponses() {
                                         {!Object.values(form?.questions || []).some(q => q.type === 'IMAGE_UPLOAD') && (
                                             <div className="py-12 text-center bg-gray-50 dark:bg-gray-800/40 rounded-3xl border-2 border-dashed border-gray-100 dark:border-gray-800">
                                                 <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                                                <p className="text-sm text-gray-400 font-medium">No proof upload required<br/>for this form</p>
+                                                <p className="text-sm text-gray-400 font-medium">No proof upload required<br />for this form</p>
                                             </div>
                                         )}
                                     </div>

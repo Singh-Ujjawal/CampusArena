@@ -1,11 +1,17 @@
 package com.campusarena.eventhub.registration.service;
 
+import com.campusarena.eventhub.contest.model.Contest;
+import com.campusarena.eventhub.contest.repository.ContestRepository;
+import com.campusarena.eventhub.event.model.Event;
+import com.campusarena.eventhub.event.repository.EventRepository;
+import com.campusarena.eventhub.exception.ApiException;
 import com.campusarena.eventhub.registration.model.Question;
 import com.campusarena.eventhub.registration.model.QuestionType;
 import com.campusarena.eventhub.registration.model.RegistrationForm;
 import com.campusarena.eventhub.registration.model.RegistrationResponse;
 import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
 import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
+import com.campusarena.eventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,18 +39,25 @@ public class RegistrationResponseService {
 
     private final RegistrationFormRepository formRepository;
     private final RegistrationResponseRepository responseRepository;
+    private final EventRepository eventRepository;
+    private final ContestRepository contestRepository;
+    private final UserRepository userRepository;
 
     public RegistrationResponse submit(String formId, RegistrationResponse response) {
         RegistrationForm form = formRepository.findById(formId)
-                .orElseThrow(() -> new RuntimeException("Form not found"));
+                .orElseThrow(() -> new ApiException("Form not found"));
         Instant now = Instant.now();
+
+        // Check if event or contest has started
+        checkIfStarted(form, now);
+
         if (!form.isActive() || now.isBefore(form.getStartTime())
                 || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
-            throw new RuntimeException("Registration form is closed");
+            throw new ApiException("Registration form is closed");
         }
 
         if (response.getUserId() != null && responseRepository.existsByFormIdAndUserId(formId, response.getUserId())) {
-            throw new RuntimeException("You have already registered using this form");
+            throw new ApiException("You have already registered using this form");
         }
 
         response.setFormId(formId);
@@ -56,16 +69,19 @@ public class RegistrationResponseService {
     public RegistrationResponse submitWithFiles(String formId, String userId, Map<String, String> textAnswers,
             Map<String, MultipartFile> files) throws IOException {
         RegistrationForm form = formRepository.findById(formId)
-                .orElseThrow(() -> new RuntimeException("Form not found"));
+                .orElseThrow(() -> new ApiException("Form not found"));
         Instant now = Instant.now();
+
+        // Check if event or contest has started
+        checkIfStarted(form, now);
 
         if (!form.isActive() || now.isBefore(form.getStartTime())
                 || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
-            throw new RuntimeException("Registration form is closed");
+            throw new ApiException("Registration form is closed");
         }
 
         if (userId != null && responseRepository.existsByFormIdAndUserId(formId, userId)) {
-            throw new RuntimeException("You have already registered using this form");
+            throw new ApiException("You have already registered using this form");
         }
 
         Map<String, Object> finalAnswers = new HashMap<>();
@@ -74,11 +90,11 @@ public class RegistrationResponseService {
             if (question.getType() == QuestionType.IMAGE_UPLOAD) {
                 MultipartFile file = (files != null) ? files.get(qId) : null;
                 if (question.isRequired() && (file == null || file.isEmpty())) {
-                    throw new RuntimeException("Required image missing: " + question.getLabel());
+                    throw new ApiException("Required image missing: " + question.getLabel());
                 }
                 if (file != null && !file.isEmpty()) {
                     if (file.getSize() > maxFileSize) {
-                        throw new RuntimeException("File size exceeds limit (Max 2MB)");
+                        throw new ApiException("File size exceeds limit (Max 2MB)");
                     }
                     String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
                     Path path = Paths.get(uploadDir, fileName);
@@ -89,7 +105,7 @@ public class RegistrationResponseService {
             } else {
                 String value = textAnswers.get(qId);
                 if (question.isRequired() && (value == null || value.trim().isEmpty())) {
-                    throw new RuntimeException("Required question missing: " + question.getLabel());
+                    throw new ApiException("Required question missing: " + question.getLabel());
                 }
                 finalAnswers.put(qId, value);
             }
@@ -108,13 +124,29 @@ public class RegistrationResponseService {
 
     public RegistrationResponse updateStatus(String id, String status) {
         RegistrationResponse response = responseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Response not found"));
+                .orElseThrow(() -> new ApiException("Response not found"));
         response.setStatus(status);
         return responseRepository.save(response);
     }
 
     public List<RegistrationResponse> getResponsesForForm(String formId) {
-        return responseRepository.findByFormId(formId);
+        List<RegistrationResponse> responses = responseRepository.findByFormId(formId);
+        for (RegistrationResponse response : responses) {
+            if (response.getUserId() != null) {
+                userRepository.findById(response.getUserId()).ifPresent(user -> {
+                    response.setUsername(user.getUsername());
+                    response.setRollNumber(user.getRollNumber());
+                    response.setName((user.getFirstName() != null ? user.getFirstName() : "") + " " + 
+                                     (user.getLastName() != null ? user.getLastName() : ""));
+                    response.setEmail(user.getEmail());
+                    response.setPhoneNumber(user.getPhoneNumber());
+                    response.setCourse(user.getCourse() != null ? user.getCourse().name() : "");
+                    response.setBranch(user.getBranch() != null ? user.getBranch().name() : "");
+                    response.setSection(user.getSection());
+                });
+            }
+        }
+        return responses;
     }
 
     public String getRegistrationStatusForEvent(String eventId, String userId) {
@@ -129,5 +161,22 @@ public class RegistrationResponseService {
                 .flatMap(form -> responseRepository.findByFormIdAndUserId(form.getId(), userId)
                         .map(RegistrationResponse::getStatus))
                 .orElse(null);
+    }
+
+    private void checkIfStarted(RegistrationForm form, Instant now) {
+        if (form.getContestId() != null) {
+            contestRepository.findById(form.getContestId()).ifPresent(contest -> {
+                if (contest.getStartTime() != null && !now.isBefore(contest.getStartTime())) {
+                    throw new ApiException("Registration closed. Contest " + contest.getTitle() + " has already started.");
+                }
+            });
+        }
+        if (form.getEventId() != null) {
+            eventRepository.findById(form.getEventId()).ifPresent(event -> {
+                if (event.getStartTime() != null && !now.isBefore(event.getStartTime())) {
+                    throw new ApiException("Registration closed. Quiz/Event " + event.getTitle() + " has already started.");
+                }
+            });
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.campusarena.eventhub.event.repository.*;
 import com.campusarena.eventhub.exception.ApiException;
 import com.campusarena.eventhub.exception.ResourceNotFoundException;
 import com.campusarena.eventhub.registration.model.RegistrationForm;
+import com.campusarena.eventhub.registration.model.RegistrationResponse;
 import com.campusarena.eventhub.user.model.User;
 import com.campusarena.eventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -70,15 +71,39 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + eventId));
 
+        // 1. Check Registration First (Mandatory if required)
+        if (event.getRegistrationRequired() != null && event.getRegistrationRequired()) {
+            Optional<RegistrationForm> regForm = registrationFormRepository.findByEventId(eventId);
+            if (regForm.isPresent()) {
+                Optional<RegistrationResponse> regResponse = registrationResponseRepository
+                        .findByFormIdAndUserId(regForm.get().getId(), userId);
+
+                if (regResponse.isEmpty()) {
+                    throw new ApiException("Access Denied: You must register for this event before participating.");
+                }
+
+                if (!"APPROVED".equals(regResponse.get().getStatus())) {
+                    String status = regResponse.get().getStatus();
+                    throw new ApiException("Access Denied: Your registration status is " + status
+                            + ". You can only participate once it is APPROVED by an admin.");
+                }
+            } else {
+                throw new ApiException(
+                        "Access Denied: Registration is required for this event, but the registration form is not yet available.");
+            }
+        }
+
         Optional<McqSubmission> existingSubmission = submissionRepository
                 .findTopByUserIdAndEventIdOrderByStartTimeDesc(userId, eventId);
 
-        // If no submission yet, we MUST check password
-        if (existingSubmission.isEmpty() && event.getAccessPassword() != null
-                && !event.getAccessPassword().equals(enteredPassword)) {
-            throw new ApiException("Invalid access password");
+        // 2. Check Password (Always required for first-time enterers)
+        if (existingSubmission.isEmpty()) {
+            if (event.getAccessPassword() != null && !event.getAccessPassword().equals(enteredPassword)) {
+                throw new ApiException("Invalid access password. Please enter the correct 6-digit password.");
+            }
         }
 
+        // 3. Timing Checks
         if (event.getStartTime() == null || event.getEndTime() == null) {
             throw new ApiException("Event timing not configured properly");
         }
@@ -89,29 +114,6 @@ public class EventService {
         }
         if (now.isAfter(event.getEndTime())) {
             throw new ApiException("Event has ended");
-        }
-
-        // Check registration via the new Registration Form system
-        if (event.getRegistrationRequired() != null && event.getRegistrationRequired()) {
-            Optional<RegistrationForm> regForm = registrationFormRepository.findByEventId(eventId);
-            if (regForm.isPresent()) {
-                Optional<com.campusarena.eventhub.registration.model.RegistrationResponse> regResponse = registrationResponseRepository
-                        .findByFormIdAndUserId(regForm.get().getId(), userId);
-
-                if (regResponse.isEmpty()) {
-                    throw new ApiException("You must register for this event before participating.");
-                }
-
-                if (!"APPROVED".equals(regResponse.get().getStatus())) {
-                    String status = regResponse.get().getStatus();
-                    throw new ApiException("Your registration status is " + status
-                            + ". You can only participate once it is APPROVED by an admin.");
-                }
-            } else {
-                // If registration is required but no form has been created yet
-                throw new ApiException(
-                        "Registration is required for this event, but the registration form is not yet available.");
-            }
         }
 
         if (existingSubmission.isPresent()) {
@@ -281,7 +283,18 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
-        long totalRegistrations = registrationRepository.countByEventId(eventId);
+        // Count registrations from the new RegistrationForm/RegistrationResponse system
+        long totalRegistrations = 0;
+        Optional<RegistrationForm> regForm = registrationFormRepository.findByEventId(eventId);
+        if (regForm.isPresent()) {
+            List<com.campusarena.eventhub.registration.model.RegistrationResponse> responses =
+                    registrationResponseRepository.findByFormId(regForm.get().getId());
+            // Count only APPROVED registrations
+            totalRegistrations = responses.stream()
+                    .filter(r -> "APPROVED".equals(r.getStatus()))
+                    .count();
+        }
+
         List<McqSubmission> submissions = submissionRepository
                 .findByEventIdOrderByTotalScoreDescSubmittedAtAsc(eventId);
         long totalAttempts = submissions.size();

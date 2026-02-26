@@ -63,6 +63,8 @@ public class RegistrationFormService {
         existing.setPaymentRequired(updatedForm.getPaymentRequired());
         existing.setPaymentFees(updatedForm.getPaymentFees());
         existing.setClubId(updatedForm.getClubId());
+        existing.setEventId(updatedForm.getEventId());
+        existing.setContestId(updatedForm.getContestId());
         
         if (existing.getPaymentRequired() == null || !existing.getPaymentRequired()) {
             existing.setPaymentFees(null);

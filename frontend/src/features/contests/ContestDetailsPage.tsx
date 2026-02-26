@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
-import { type Contest, type Problem } from '@/types';
+import { type Contest, type Problem, type Submission } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, CheckCircle2, Clock, Users, Lock, Key } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock, Users, Lock, Key, LayoutGrid, ClipboardList, History } from 'lucide-react';
 import { toast } from 'sonner';
-
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { ContestDetailsSkeleton } from '@/components/skeleton';
 
@@ -28,6 +27,10 @@ export default function ContestDetailsPage() {
     const [isRegistered, setIsRegistered] = useState<string | null>(null);
     const [regFormId, setRegFormId] = useState<string | null>(null);
     const [isCheckingReg, setIsCheckingReg] = useState(true);
+    const [activeTab, setActiveTab] = useState<'problems' | 'submissions'>('problems');
+    const [mySubmissions, setMySubmissions] = useState<Submission[]>([]);
+    const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+    const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
 
     useEffect(() => {
         if (contestId && sessionStorage.getItem(`contest_access_${contestId}`)) {
@@ -50,7 +53,7 @@ export default function ContestDetailsPage() {
             });
             if (response.data === true) {
                 setHasAccess(true);
-                sessionStorage.setItem(`contest_access_${contestId}`, 'true');
+                sessionStorage.setItem(`contest_access_${contestId}`, passwordEntry);
                 toast.success('Access granted!');
             } else {
                 toast.error('Invalid password');
@@ -105,25 +108,30 @@ export default function ContestDetailsPage() {
         if (contestId) fetchContestAndProblems();
     }, [contestId, user]);
 
-    // Fetch user's accepted submissions for this contest
+    // Fetch user's submissions for this contest
     useEffect(() => {
-        const fetchSolvedProblems = async () => {
+        const fetchSubmissions = async () => {
             if (!user || !contestId) return;
+            setIsLoadingSubmissions(true);
             try {
-                const response = await api.get(`/api/submissions/user/${user.id}`);
-                const submissions: Array<{ problemId: string; contestId: string; verdict: string }> = response.data;
+                const response = await api.get(`/api/submissions/contest/${contestId}/user/${user.id}`);
+                const submissions: Submission[] = response.data;
+                setMySubmissions(submissions.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
+                
                 const solved = new Set(
                     submissions
-                        .filter(s => s.contestId === contestId && s.verdict === 'ACCEPTED')
+                        .filter(s => s.verdict === 'ACCEPTED')
                         .map(s => s.problemId)
                 );
                 setSolvedProblemIds(solved);
             } catch {
                 // silently ignore
+            } finally {
+                setIsLoadingSubmissions(false);
             }
         };
-        fetchSolvedProblems();
-    }, [user, contestId]);
+        fetchSubmissions();
+    }, [user, contestId, activeTab]);
 
     if (isLoading) return <ContestDetailsSkeleton />;
     if (!contest) return <div className="text-gray-900 dark:text-gray-100">Contest not found</div>;
@@ -198,8 +206,32 @@ export default function ContestDetailsPage() {
                 </div>
             )}
 
+            {/* Tabs for Problems and Submissions */}
+            <div className="flex bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 w-fit">
+                <button
+                    onClick={() => setActiveTab('problems')}
+                    className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'problems'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none scale-105'
+                            : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                >
+                    <LayoutGrid className="h-4 w-4" /> Problems
+                </button>
+                <button
+                    onClick={() => setActiveTab('submissions')}
+                    className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'submissions'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none scale-105'
+                            : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                >
+                    <History className="h-4 w-4" /> My Submissions
+                </button>
+            </div>
+
             <div className="grid gap-4">
-                {status === 'UPCOMING' ? (
+                {activeTab === 'problems' ? (
+                    <>
+                        {status === 'UPCOMING' ? (
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-[2rem] p-12 text-center">
                         <div className="max-w-md mx-auto space-y-4">
                             <div className="bg-white dark:bg-gray-800 h-16 w-16 rounded-2xl shadow-sm flex items-center justify-center mx-auto text-blue-600 dark:text-blue-400 mb-6">
@@ -356,6 +388,104 @@ export default function ContestDetailsPage() {
                 ) : (
                     <div className="bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700 rounded-[2rem] p-12 text-center">
                         <p className="text-gray-400 dark:text-gray-500 font-bold italic">The problems are being prepared. Stay tuned!</p>
+                    </div>
+                )}
+                    </>
+                ) : (
+                    // Submissions Tab Content
+                    <div className="space-y-4">
+                        {isLoadingSubmissions ? (
+                            <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-20 text-center shadow-sm border border-gray-100 dark:border-gray-700">
+                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                                <p className="text-gray-500 font-medium">Loading your submissions...</p>
+                            </div>
+                        ) : mySubmissions.length === 0 ? (
+                            <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-20 text-center shadow-sm border border-gray-100 dark:border-gray-700 border-2 border-dashed">
+                                <ClipboardList className="h-16 w-16 text-gray-200 dark:text-gray-700 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">No submissions yet</h3>
+                                <p className="text-gray-500 mt-1 max-w-xs mx-auto">Pick a problem and start coding to see your history here!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {mySubmissions.map((sub) => {
+                                    const problem = problems.find(p => p.id === sub.problemId);
+                                    const isExpanded = expandedSubmissionId === sub.id;
+                                    const isAccepted = sub.verdict === 'ACCEPTED';
+                                    
+                                    return (
+                                        <div 
+                                            key={sub.id} 
+                                            className={`bg-white dark:bg-gray-800 rounded-[1.5rem] shadow-sm border transition-all ${isAccepted ? 'border-green-100 dark:border-green-900/30' : 'border-gray-100 dark:border-gray-700'}`}
+                                        >
+                                            <button
+                                                onClick={() => setExpandedSubmissionId(isExpanded ? null : sub.id)}
+                                                className="w-full text-left p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black ${isAccepted ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>
+                                                        {isAccepted ? <CheckCircle2 className="h-6 w-6" /> : <Clock className="h-6 w-6" />}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                            {problem?.title || 'Unknown Problem'}
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-widest ${isAccepted ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                {sub.verdict.replace(/_/g, ' ')}
+                                                            </span>
+                                                        </h4>
+                                                        <div className="flex items-center gap-4 mt-1">
+                                                            <div className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                                                                <Clock className="h-3 w-3" />
+                                                                {new Date(sub.submittedAt).toLocaleString('en-IN', { timeZone: IST_TZ })}
+                                                            </div>
+                                                            <div className="text-xs text-gray-400 font-bold uppercase tracking-widest">{sub.language}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between md:justify-end gap-8 border-t md:border-t-0 pt-4 md:pt-0 mt-2 md:mt-0">
+                                                    <div className="text-right">
+                                                        <div className="text-lg font-black text-gray-900 dark:text-white">{sub.score} <span className="text-[10px] text-gray-400">pts</span></div>
+                                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Score</div>
+                                                    </div>
+                                                    <div className="bg-gray-50 dark:bg-gray-900 px-4 py-2 rounded-xl text-indigo-600 dark:text-indigo-400 font-bold text-xs">
+                                                        View Code
+                                                    </div>
+                                                </div>
+                                            </button>
+                                            
+                                            {isExpanded && (
+                                                <div className="px-6 pb-6 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                    <div className="relative group">
+                                                        <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="secondary" 
+                                                                className="h-8 text-xs font-bold rounded-lg shadow-sm"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(sub.code);
+                                                                    toast.success('Code copied!');
+                                                                }}
+                                                            >
+                                                                Copy Code
+                                                            </Button>
+                                                        </div>
+                                                        <pre className="bg-gray-900 text-gray-300 p-6 rounded-2xl overflow-x-auto text-sm font-mono border border-gray-800 leading-relaxed">
+                                                            {sub.code}
+                                                        </pre>
+                                                    </div>
+                                                    <div className="mt-4 flex justify-end">
+                                                        <Link to={`/contests/${contestId}/problem/${sub.problemId}`}>
+                                                            <Button size="sm" className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
+                                                                Open in Editor
+                                                            </Button>
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

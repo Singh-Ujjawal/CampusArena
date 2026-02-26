@@ -139,3 +139,15 @@ export interface ContestActivity {
     lastSubmissionTime?: string;
     rank?: number;
 }
+
+export interface RegistrationForm {
+    id: string;
+    title: string;
+    description: string;
+    startTime?: string;
+    endTime?: string;
+    clubId: string;
+    eventId?: string;
+    contestId?: string;
+    active: boolean;
+}

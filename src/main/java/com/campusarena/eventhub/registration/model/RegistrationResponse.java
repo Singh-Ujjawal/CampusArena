@@ -20,6 +20,14 @@ public class RegistrationResponse {
     private String id;
     private String formId;
     private String userId;
+    private String username;
+    private String rollNumber;
+    private String name; // firstname + lastname
+    private String email;
+    private String phoneNumber;
+    private String course;
+    private String branch;
+    private String section;
     private Map<String, Object> answers;
     private Instant submittedAt;
     private String paymentProofUrl; // If payment was required

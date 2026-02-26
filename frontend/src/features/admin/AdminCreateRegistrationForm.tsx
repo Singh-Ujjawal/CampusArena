@@ -13,6 +13,34 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
+// IST timezone identifier
+const IST_TZ = 'Asia/Kolkata';
+
+/**
+ * Convert a UTC ISO string to a datetime-local input value displayed in IST.
+ * Uses Intl to format the date correctly in IST, avoiding double-offset bugs.
+ */
+function toISTInput(isoString: string): string {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: IST_TZ,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(date);
+    const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+}
+
+/**
+ * Convert a datetime-local input value (IST) to a UTC ISO string.
+ * Appends +05:30 explicitly so it's always treated as IST regardless of browser locale.
+ */
+function fromISTInput(localValue: string): string {
+    if (!localValue) return '';
+    return new Date(localValue + ':00+05:30').toISOString();
+}
+
 interface Question {
     id: string;
     label: string;
@@ -77,9 +105,9 @@ export default function AdminCreateRegistrationForm() {
             const data = response.data;
             setTitle(data.title);
             setDescription(data.description);
-            // Format Instant to datetime-local string (YYYY-MM-DDTHH:MM)
-            setStartTime(data.startTime ? new Date(data.startTime).toISOString().slice(0, 16) : '');
-            setEndTime(data.endTime ? new Date(data.endTime).toISOString().slice(0, 16) : '');
+            // Convert UTC ISO → IST datetime-local string (avoids double-offset bug)
+            setStartTime(data.startTime ? toISTInput(data.startTime) : '');
+            setEndTime(data.endTime ? toISTInput(data.endTime) : '');
             setIsActive(data.active);
             setPaymentRequired(data.paymentRequired || false);
             setPaymentFees(data.paymentFees?.toString() || '');
@@ -138,8 +166,9 @@ export default function AdminCreateRegistrationForm() {
         const formObj: any = {
             title,
             description,
-            startTime: startTime ? new Date(startTime).toISOString() : null,
-            endTime: endTime ? new Date(endTime).toISOString() : null,
+            // Use fromISTInput so the IST datetime-local value is correctly converted to UTC
+            startTime: startTime ? fromISTInput(startTime) : null,
+            endTime: endTime ? fromISTInput(endTime) : null,
             active: isActive,
             paymentRequired,
             paymentFees: paymentRequired && paymentFees ? parseFloat(paymentFees) : null,

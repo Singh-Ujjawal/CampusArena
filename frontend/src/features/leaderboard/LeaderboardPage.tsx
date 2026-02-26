@@ -5,6 +5,7 @@ import { type LeaderboardEntry } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Medal, RefreshCw, Trophy, Clock, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
 
 const POLL_INTERVAL_MS = 30000; // refresh every 30 seconds
 
@@ -39,12 +40,15 @@ export default function LeaderboardPage() {
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const { user } = useAuth();
     const fetchLeaderboard = useCallback(async (silent = false) => {
-        if (!contestId) return;
+        if (!contestId || !user?.id) return;
         if (!silent) setIsRefreshing(true);
         try {
-            // Fixed: added /api/ prefix
-            const response = await api.get(`/api/leaderboard/${contestId}`);
+            // Added userId param
+            const response = await api.get(`/api/leaderboard/${contestId}`, {
+                params: { userId: user.id }
+            });
             const data: LeaderboardEntry[] = response.data || [];
             // Sort: highest score first, then earliest last submission time
             const sorted = [...data].sort((a, b) => {

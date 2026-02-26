@@ -1,18 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
-import { type Problem } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Play, CheckCircle2, XCircle, Clock, AlertTriangle,
-    Zap, Code2, Terminal, Database, Trophy, ChevronLeft
+    Zap, Code2, Terminal, Database, Trophy, ChevronLeft,
+    ArrowRight, Users, Lock, Key, ListFilter, ClipboardList, History
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { toast } from 'sonner';
 import { CountdownTimer } from '@/components/CountdownTimer';
-import { type Contest } from '@/types';
+import { type Contest, type Problem, type Submission } from '@/types';
 import { ProblemDetailsSkeleton } from '@/components/skeleton';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -213,6 +213,7 @@ function ResultPanel({ result, isRun }: { result: ExecutionResult; isRun: boolea
 export default function ProblemDetailsPage() {
     const { contestId, problemId } = useParams();
     const { user } = useAuth();
+    const navigate = useNavigate();
 
     const [problem, setProblem] = useState<Problem | null>(null);
     const [contest, setContest] = useState<Contest | null>(null);
@@ -223,8 +224,40 @@ export default function ProblemDetailsPage() {
     const [runResult, setRunResult] = useState<ExecutionResult | null>(null);
     const [submitResult, setSubmitResult] = useState<ExecutionResult | null>(null);
     const [alreadySolved, setAlreadySolved] = useState(false);
+    const [activeTab, setActiveTab] = useState<'description' | 'submissions'>('description');
+    const [mySubmissions, setMySubmissions] = useState<Submission[]>([]);
+    const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+    const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
+
+    const [isLoadingAccess, setIsLoadingAccess] = useState(true);
 
     // ── Fetch problem & contest ───────────────────────────────────────────────
+
+    useEffect(() => {
+        if (!contestId) return;
+        const checkAccess = () => {
+            const hasAccess = sessionStorage.getItem(`contest_access_${contestId}`);
+            if (!hasAccess) {
+                // If it's live, we MUST have a password. 
+                // We'll let the user fetch the contest first to see if it's LIVE.
+            }
+        };
+        checkAccess();
+    }, [contestId]);
+
+    useEffect(() => {
+        if (contest && contest.status === 'LIVE') {
+            const hasAccess = sessionStorage.getItem(`contest_access_${contestId}`);
+            if (!hasAccess) {
+                toast.error('Please enter the contest password first.');
+                navigate(`/contests/${contestId}`);
+            } else {
+                setIsLoadingAccess(false);
+            }
+        } else if (contest) {
+            setIsLoadingAccess(false);
+        }
+    }, [contest, contestId, navigate]);
 
     useEffect(() => {
         const fetchProblem = async () => {
@@ -251,16 +284,22 @@ export default function ProblemDetailsPage() {
     useEffect(() => {
         const check = async () => {
             if (!user || !problemId || !contestId) return;
+            setIsLoadingSubmissions(true);
             try {
-                const res = await api.get(`/api/submissions/user/${user.id}`);
-                const solved = (res.data as any[]).some(
-                    s => s.problemId === problemId && s.contestId === contestId && s.verdict === 'ACCEPTED'
-                );
+                const res = await api.get(`/api/submissions/contest/${contestId}/user/${user.id}`);
+                const allSubs: Submission[] = res.data;
+                const problemSubs = allSubs.filter(s => s.problemId === problemId);
+                setMySubmissions(problemSubs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
+                
+                const solved = problemSubs.some(s => s.verdict === 'ACCEPTED');
                 setAlreadySolved(solved);
-                if (solved) {
-                    setSubmitResult({ verdict: 'ACCEPTED', score: 100, executionTime: null, passedTestCases: null, totalTestCases: null, failedTestCase: null, compileError: null, stderr: null });
+                if (solved && !submitResult) {
+                    // Try to find the first accepted one to show initial "Solved" result if needed
+                    // But maybe just keeping alreadySolved is enough
                 }
-            } catch { /* ignore */ }
+            } catch { /* ignore */ } finally {
+                setIsLoadingSubmissions(false);
+            }
         };
         check();
     }, [user, problemId, contestId]);
@@ -338,6 +377,10 @@ export default function ProblemDetailsPage() {
             } else {
                 toast.error(`${d.verdict.replace(/_/g, ' ')}`);
             }
+            // Refresh submissions list
+            const subRes = await api.get(`/api/submissions/contest/${contestId}/user/${user.id}`);
+            const allSubs: Submission[] = subRes.data;
+            setMySubmissions(allSubs.filter(s => s.problemId === problemId).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
         } catch (error: any) {
             if (error?.response?.status === 409) {
                 setAlreadySolved(true);
@@ -355,7 +398,7 @@ export default function ProblemDetailsPage() {
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    if (!problem) return <ProblemDetailsSkeleton />;
+    if (!problem || !contest || isLoadingAccess) return <ProblemDetailsSkeleton />;
 
     const monacoLang = LANGUAGES.find(l => l.value === language)?.monaco ?? 'cpp';
 
@@ -383,38 +426,144 @@ export default function ProblemDetailsPage() {
                 {/* ── Problem Description ── */}
                 <div className="md:w-1/2 flex flex-col overflow-hidden">
                     <Card className="h-full flex flex-col bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                        <CardHeader>
-                            <CardTitle className="flex justify-between items-center text-gray-900 dark:text-gray-100">
-                                <span>{problem.title}</span>
-                                <span className={`text-sm px-2 py-1 rounded font-semibold ${problem.difficulty === 'EASY' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' :
-                                    problem.difficulty === 'MEDIUM' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300' :
-                                        'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300'
-                                    }`}>
-                                    {problem.difficulty}
-                                </span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto prose dark:prose-invert max-w-none text-gray-900 dark:text-gray-100">
-                            <div dangerouslySetInnerHTML={{ __html: problem.description.replace(/\n/g, '<br />') }} />
+                        {/* Tab Headers */}
+                        <div className="flex border-b border-gray-100 dark:border-gray-700">
+                            <button
+                                onClick={() => setActiveTab('description')}
+                                className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'description'
+                                        ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30'
+                                        : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                    }`}
+                            >
+                                <Code2 className="h-4 w-4" /> Description
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('submissions')}
+                                className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'submissions'
+                                        ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30'
+                                        : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                    }`}
+                            >
+                                <History className="h-4 w-4" /> My Submissions
+                                {mySubmissions.length > 0 && (
+                                    <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-full text-[10px]">
+                                        {mySubmissions.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
 
-                            {problem.testCases && problem.testCases.filter(tc => !tc.hidden).length > 0 && (
-                                <div className="mt-6 space-y-4">
-                                    <h4 className="font-bold text-gray-900 dark:text-gray-100">Example Test Cases</h4>
-                                    {problem.testCases?.filter(tc => !tc.hidden).map((tc, idx) => (
-                                        <div key={idx} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md text-sm font-mono border border-gray-200 dark:border-gray-600">
-                                            <div className="mb-2">
-                                                <span className="text-gray-500 dark:text-gray-400 text-xs uppercase block mb-1">Input:</span>
-                                                <pre className="whitespace-pre-wrap break-words">{tc.input}</pre>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500 dark:text-gray-400 text-xs uppercase block mb-1">Expected Output:</span>
-                                                <pre className="whitespace-pre-wrap break-words">{tc.expectedOutput}</pre>
-                                            </div>
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {activeTab === 'description' ? (
+                                <div className="prose dark:prose-invert max-w-none text-gray-900 dark:text-gray-100">
+                                    <h3 className="text-2xl font-black mb-4 flex justify-between items-center">
+                                        {problem.title}
+                                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-widest ${problem.difficulty === 'EASY' ? 'bg-green-100 text-green-700' :
+                                                problem.difficulty === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-red-100 text-red-700'
+                                            }`}>
+                                            {problem.difficulty}
+                                        </span>
+                                    </h3>
+                                    <div dangerouslySetInnerHTML={{ __html: problem.description.replace(/\n/g, '<br />') }} />
+
+                                    {problem.testCases && problem.testCases.filter(tc => !tc.hidden).length > 0 && (
+                                        <div className="mt-8 space-y-4">
+                                            <h4 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                                <Terminal className="h-4 w-4 text-gray-400" /> Example Test Cases
+                                            </h4>
+                                            {problem.testCases?.filter(tc => !tc.hidden).map((tc, idx) => (
+                                                <div key={idx} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl text-sm font-mono border border-gray-100 dark:border-gray-700">
+                                                    <div className="mb-3">
+                                                        <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-bold tracking-widest block mb-1">Input</span>
+                                                        <pre className="whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200">{tc.input}</pre>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-bold tracking-widest block mb-1">Expected Output</span>
+                                                        <pre className="whitespace-pre-wrap break-words text-green-600 dark:text-green-400">{tc.expectedOutput}</pre>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="font-bold text-gray-900 dark:text-gray-100">Pervious Submissions</h4>
+                                    </div>
+                                    {isLoadingSubmissions ? (
+                                        <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
+                                            <p className="text-sm">Loading history...</p>
+                                        </div>
+                                    ) : mySubmissions.length === 0 ? (
+                                        <div className="text-center py-20 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                                            <ClipboardList className="h-12 w-12 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
+                                            <p className="text-gray-500 dark:text-gray-400 font-medium italic">No submissions yet. Start coding!</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {mySubmissions.map((sub) => {
+                                                const subCfg = getVerdictCfg(sub.verdict);
+                                                const isExpanded = expandedSubmissionId === sub.id;
+                                                return (
+                                                    <div key={sub.id} className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                                        <button
+                                                            onClick={() => setExpandedSubmissionId(isExpanded ? null : sub.id)}
+                                                            className="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-4">
+                                                                <div className={`p-2 rounded-lg ${subCfg.bgClass} ${subCfg.textClass}`}>
+                                                                    {subCfg.icon}
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <div className={`font-bold text-sm ${subCfg.textClass}`}>{subCfg.label}</div>
+                                                                    <div className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                                                        <Clock className="h-3 w-3" />
+                                                                        {new Date(sub.submittedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="text-right">
+                                                                    <div className="text-xs font-bold text-gray-700 dark:text-gray-200">{sub.score} pts</div>
+                                                                    <div className="text-[10px] text-gray-400 dark:text-gray-500">{sub.language}</div>
+                                                                </div>
+                                                                <ChevronLeft className={`h-4 w-4 text-gray-400 transition-transform ${isExpanded ? '-rotate-90' : 'rotate-180'}`} />
+                                                            </div>
+                                                        </button>
+                                                        {isExpanded && (
+                                                            <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                                <div className="flex justify-between items-center mb-2">
+                                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Source Code</span>
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="sm" 
+                                                                        className="h-7 text-[10px] py-0 px-2 text-indigo-600 hover:text-indigo-700"
+                                                                        onClick={() => {
+                                                                            setCode(sub.code);
+                                                                            setLanguage(sub.language.toLowerCase());
+                                                                            setActiveTab('description'); // Go back to description to see the editor easily
+                                                                            toast.success('Code restored to editor');
+                                                                        }}
+                                                                    >
+                                                                        Restore to Editor
+                                                                    </Button>
+                                                                </div>
+                                                                <pre className="text-xs p-3 bg-gray-900 text-gray-300 rounded-lg overflow-x-auto whitespace-pre font-mono border border-gray-800">
+                                                                    {sub.code}
+                                                                </pre>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             )}
-                        </CardContent>
+                        </div>
                     </Card>
                 </div>
 

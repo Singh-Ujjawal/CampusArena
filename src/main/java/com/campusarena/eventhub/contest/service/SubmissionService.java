@@ -10,6 +10,9 @@ import com.campusarena.eventhub.contest.model.Submission;
 import com.campusarena.eventhub.contest.repository.ContestRepository;
 import com.campusarena.eventhub.contest.repository.ProblemRepository;
 import com.campusarena.eventhub.contest.repository.SubmissionRepository;
+import com.campusarena.eventhub.registration.model.RegistrationForm;
+import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
+import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
 import com.campusarena.eventhub.execution.dto.ExecutionRequest;
 import com.campusarena.eventhub.execution.dto.ExecutionResponse;
 import com.campusarena.eventhub.execution.dto.ExecutionTestCase;
@@ -38,6 +41,8 @@ public class SubmissionService {
     private final UserRepository userRepository;
     private final CodeExecutionService codeExecutionService;
     private final RateLimitService rateLimitService;
+    private final RegistrationFormRepository registrationFormRepository;
+    private final RegistrationResponseRepository registrationResponseRepository;
 
     public SubmissionResponse submitCode(SubmissionRequest request) {
         rateLimitService.checkRateLimit(request.getUserId(), request.getProblemId());
@@ -48,6 +53,28 @@ public class SubmissionService {
         Instant now = Instant.now();
         if (now.isBefore(contest.getStartTime())) throw new ApiException("Contest has not started yet");
         if (now.isAfter(contest.getEndTime())) throw new ApiException("Contest has ended");
+
+        // Check registration
+        if (contest.getRegistrationRequired() != null && contest.getRegistrationRequired()) {
+            java.util.Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(request.getContestId());
+            if (regForm.isPresent()) {
+                java.util.Optional<com.campusarena.eventhub.registration.model.RegistrationResponse> regResponse = registrationResponseRepository
+                        .findByFormIdAndUserId(regForm.get().getId(), request.getUserId());
+
+                if (regResponse.isEmpty()) {
+                    throw new ApiException("You must register for this contest before participating.");
+                }
+
+                if (!"APPROVED".equals(regResponse.get().getStatus())) {
+                    String status = regResponse.get().getStatus();
+                    throw new ApiException("Your registration status is " + status
+                            + ". You can only participate once it is APPROVED by an admin.");
+                }
+            } else {
+                throw new ApiException(
+                        "Registration is required for this contest, but the registration form is not yet available.");
+            }
+        }
 
         Problem problem = problemRepository.findById(request.getProblemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Problem not found"));
@@ -155,6 +182,12 @@ public class SubmissionService {
 
     public List<SubmissionResponse> getSubmissionsByUser(String userId) {
         return submissionRepository.findByUserId(userId).stream().map(this::mapToResponse).toList();
+    }
+
+    public List<SubmissionResponse> getSubmissionsByContestAndUser(String contestId, String userId) {
+        return submissionRepository.findByContestIdAndUserId(contestId, userId).stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     public List<SubmissionResponse> getAllSubmissions() {

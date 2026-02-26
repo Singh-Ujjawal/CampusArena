@@ -43,4 +43,11 @@ public class SubmissionController {
     public ResponseEntity<List<SubmissionResponse>> getSubmissionsByUser(@PathVariable String userId) {
         return ResponseEntity.ok(submissionService.getSubmissionsByUser(userId));
     }
+
+    @GetMapping("/contest/{contestId}/user/{userId}")
+    public ResponseEntity<List<SubmissionResponse>> getSubmissionsByContestAndUser(
+            @PathVariable String contestId, 
+            @PathVariable String userId) {
+        return ResponseEntity.ok(submissionService.getSubmissionsByContestAndUser(contestId, userId));
+    }
 }

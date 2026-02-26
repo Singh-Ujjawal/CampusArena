@@ -21,10 +21,12 @@ export default function EventDetailsPage() {
     const [isRegistered, setIsRegistered] = useState<string | null>(null);
     const [regFormId, setRegFormId] = useState<string | null>(null);
     const [isCheckingReg, setIsCheckingReg] = useState(true);
-    // Need to know if already registered? 
-    // API doesn't allow checking registration status easily without failing?
-    // We'll treat the "Register" button as idempotent or handle error "Already registered".
-    // Actually, we can check if user is allowed to start.
+    const [hasAccess, setHasAccess] = useState(false);
+    useEffect(() => {
+        if (eventId && sessionStorage.getItem(`event_access_${eventId}`)) {
+            setHasAccess(true);
+        }
+    }, [eventId]);
 
     useEffect(() => {
         const fetchEvent = async () => {
@@ -67,7 +69,12 @@ export default function EventDetailsPage() {
     };
 
     const handleStartTest = () => {
-        setShowPasswordModal(true);
+        if (hasAccess) {
+            const pass = sessionStorage.getItem(`event_access_${eventId}`);
+            navigate(`/test/${eventId}?pass=${pass}`);
+        } else {
+            setShowPasswordModal(true);
+        }
     };
 
     const handlePasswordSubmit = async () => {
@@ -83,6 +90,9 @@ export default function EventDetailsPage() {
                 params: { userId: user?.id, accessPassword: passwordEntry }
             });
             // If success, navigate to test page
+            sessionStorage.setItem(`event_access_${eventId}`, passwordEntry);
+            setHasAccess(true);
+            setShowPasswordModal(false);
             navigate(`/test/${event?.id}?pass=${passwordEntry}`);
         } catch (error: any) {
             const msg = error.response?.data?.message || 'Invalid password';

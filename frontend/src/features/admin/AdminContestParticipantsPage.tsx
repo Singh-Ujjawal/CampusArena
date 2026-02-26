@@ -50,7 +50,7 @@ export default function AdminContestParticipantsPage() {
             const submissionsRes = await api.get(`/api/submissions/contest/${contestId}`);
             const submissions: Submission[] = submissionsRes.data;
 
-            // 3. Fetch All Users to get details (or fetch individually if needed, but getAll is simpler for now)
+            // 3. Fetch All Users to get details
             const usersRes = await api.get('/user');
             const allUsers: User[] = usersRes.data;
             const usersMap = new Map(allUsers.map(u => [u.id, u]));
@@ -67,23 +67,52 @@ export default function AdminContestParticipantsPage() {
                 });
             });
 
-            // 5. Build Participant List
+            // 5. Fetch registered users from the Registration Form system
+            const registeredUserIds = new Set<string>();
+            try {
+                const regFormsRes = await api.get('/api/registration/forms');
+                const allForms = regFormsRes.data;
+                const contestForm = allForms.find((f: any) => f.contestId === contestId);
+                if (contestForm) {
+                    const responsesRes = await api.get(`/api/admin/registration/forms/${contestForm.id}/responses`);
+                    const responses = responsesRes.data;
+                    // Include only APPROVED registrations
+                    responses.forEach((r: any) => {
+                        if (r.status === 'APPROVED' && r.userId) {
+                            registeredUserIds.add(r.userId);
+                        }
+                    });
+                }
+            } catch (e) {
+                // Registration form may not exist for this contest
+            }
+
+            // 6. Merge: all registered users + all users who submitted code
+            const allParticipantIds = new Set<string>([...registeredUserIds, ...userSubmissions.keys()]);
+
+            // 7. Build Participant List
             const participantList: ParticipantData[] = [];
-            userSubmissions.forEach((data, userId) => {
+            allParticipantIds.forEach(userId => {
                 const user = usersMap.get(userId);
                 if (user) {
+                    const subData = userSubmissions.get(userId);
                     participantList.push({
                         user,
-                        submissionCount: data.count,
-                        lastSubmission: data.last,
-                        bestScore: data.best,
-                        status: 'SUBMITTED'
+                        submissionCount: subData?.count || 0,
+                        lastSubmission: subData?.last || '',
+                        bestScore: subData?.best || 0,
+                        status: subData ? 'SUBMITTED' : 'ACTIVE'
                     });
                 }
             });
 
-            // Sort by best score descending
-            setParticipants(participantList.sort((a, b) => b.bestScore - a.bestScore));
+            // Sort by best score descending, then registered-only users at end
+            setParticipants(participantList.sort((a, b) => {
+                // Users with submissions first, then by best score
+                if (a.submissionCount > 0 && b.submissionCount === 0) return -1;
+                if (a.submissionCount === 0 && b.submissionCount > 0) return 1;
+                return b.bestScore - a.bestScore;
+            }));
         } catch (error) {
             console.error(error);
             toast.error('Failed to load participant data');
@@ -145,7 +174,7 @@ export default function AdminContestParticipantsPage() {
                     </h1>
                     <p className="text-gray-500 dark:text-gray-300 font-medium flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        {contest?.title} • {participants.length} Active Participants
+                        {contest?.title} • {participants.length} Registered Participants
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -161,14 +190,23 @@ export default function AdminContestParticipantsPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
                     <div className="h-14 w-14 bg-blue-50 rounded-2xl flex items-center justify-center">
                         <Users className="h-7 w-7 text-blue-600" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total Participants</p>
+                        <p className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Registered</p>
                         <p className="text-2xl font-black text-gray-900 dark:text-gray-100">{participants.length}</p>
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">
+                    <div className="h-14 w-14 bg-green-50 rounded-2xl flex items-center justify-center">
+                        <CheckCircle2 className="h-7 w-7 text-green-600" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Submitted Code</p>
+                        <p className="text-2xl font-black text-gray-900 dark:text-gray-100">{participants.filter(p => p.submissionCount > 0).length}</p>
                     </div>
                 </div>
                 <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-4">

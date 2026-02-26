@@ -5,7 +5,12 @@ import com.campusarena.eventhub.contest.model.Contest;
 import com.campusarena.eventhub.contest.model.Submission;
 import com.campusarena.eventhub.contest.repository.ContestRepository;
 import com.campusarena.eventhub.contest.repository.SubmissionRepository;
+import com.campusarena.eventhub.exception.ApiException;
 import com.campusarena.eventhub.exception.ResourceNotFoundException;
+import com.campusarena.eventhub.registration.model.RegistrationForm;
+import com.campusarena.eventhub.registration.model.RegistrationResponse;
+import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
+import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
 import com.campusarena.eventhub.user.model.User;
 import com.campusarena.eventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,17 +26,32 @@ public class LeaderboardService {
     private final SubmissionRepository submissionRepository;
     private final ContestRepository contestRepository;
     private final UserRepository userRepository;
+    private final RegistrationFormRepository registrationFormRepository;
+    private final RegistrationResponseRepository registrationResponseRepository;
 
-    public List<LeaderboardEntry> getLeaderboard(String contestId) {
-        if (!contestRepository.existsById(contestId)) {
-            throw new ResourceNotFoundException("Contest not found");
+    public List<LeaderboardEntry> getLeaderboard(String contestId, String userId) {
+        Contest contest = contestRepository.findById(contestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Contest not found"));
+
+        // Check registration for leaderboard access
+        if (contest.getRegistrationRequired() != null && contest.getRegistrationRequired()) {
+            Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(contestId);
+            if (regForm.isPresent()) {
+                Optional<RegistrationResponse> regResponse = registrationResponseRepository
+                        .findByFormIdAndUserId(regForm.get().getId(), userId);
+
+                if (regResponse.isEmpty() || !"APPROVED".equals(regResponse.get().getStatus())) {
+                    throw new ApiException("Access Denied: Only users with an APPROVED registration can view the leaderboard.");
+                }
+            } else {
+                throw new ApiException("Access Denied: Registration is required, but registration system is not yet configured for this contest.");
+            }
         }
 
         List<Submission> submissions = submissionRepository.findByContestId(contestId);
         Map<String, Map<String, Submission>> bestSubmissions = new HashMap<>();
 
         for (Submission sub : submissions) {
-            // Skip submissions with missing keys to avoid NPE
             if (sub.getUserId() == null || sub.getProblemId() == null) continue;
             bestSubmissions.computeIfAbsent(sub.getUserId(), k -> new HashMap<>());
             Map<String, Submission> userProblems = bestSubmissions.get(sub.getUserId());
@@ -43,8 +63,8 @@ public class LeaderboardService {
         }
 
         List<LeaderboardEntry> leaderboard = new ArrayList<>();
-        for (String userId : bestSubmissions.keySet()) {
-            Map<String, Submission> userProblems = bestSubmissions.get(userId);
+        for (String participantId : bestSubmissions.keySet()) {
+            Map<String, Submission> userProblems = bestSubmissions.get(participantId);
             int totalScore = 0;
             int solved = 0;
             Instant lastTime = null;
@@ -58,9 +78,9 @@ public class LeaderboardService {
                 }
             }
 
-            User user = userRepository.findById(userId).orElse(null);
+            User user = userRepository.findById(participantId).orElse(null);
             leaderboard.add(LeaderboardEntry.builder()
-                    .userId(userId)
+                    .userId(participantId)
                     .username(user != null ? user.getUsername() : "Unknown")
                     .rollNumber(user != null ? user.getRollNumber() : "N/A")
                     .totalScore(totalScore)

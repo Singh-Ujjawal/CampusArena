@@ -34,7 +34,10 @@ export default function TestInterface() {
     useEffect(() => {
         const startTest = async () => {
             const searchParams = new URLSearchParams(window.location.search);
-            const pass = searchParams.get('pass');
+            let pass = searchParams.get('pass');
+            if (!pass) {
+                pass = sessionStorage.getItem(`event_access_${eventId}`);
+            }
             try {
                 const response = await api.post(`/api/events/${eventId}/start`, null, {
                     params: { userId: user?.id, accessPassword: pass }
@@ -89,7 +92,7 @@ export default function TestInterface() {
 
     const [targetEndTime, setTargetEndTime] = useState<number | null>(null);
 
-    // Sync Timer — runs after questions are loaded
+    // 1. Initial Sync Effect
     useEffect(() => {
         if (!eventId || !user?.id || isLoading) return;
 
@@ -100,16 +103,19 @@ export default function TestInterface() {
                 const end = Date.now() + (Number(time) * 1000);
                 setTargetEndTime(end);
                 setRemainingTime(Math.max(0, Math.floor((end - Date.now()) / 1000)));
-            } catch {
-                // Silently ignore
-            }
+            } catch { /* ignore */ }
         };
 
-        syncTime(); // Initial sync
+        syncTime();
+        const syncInterval = setInterval(syncTime, 30000);
+        return () => clearInterval(syncInterval);
+    }, [eventId, user?.id, isLoading]);
+
+    // 2. Ticking Effect
+    useEffect(() => {
+        if (targetEndTime === null) return;
 
         const interval = setInterval(() => {
-            if (targetEndTime === null) return;
-
             const now = Date.now();
             const diff = Math.max(0, Math.floor((targetEndTime - now) / 1000));
             setRemainingTime(diff);
@@ -123,14 +129,8 @@ export default function TestInterface() {
             }
         }, 1000);
 
-        // Sync with server every 30s
-        const syncInterval = setInterval(syncTime, 30000);
-
-        return () => {
-            clearInterval(interval);
-            clearInterval(syncInterval);
-        };
-    }, [eventId, user?.id, isLoading, targetEndTime, handleSubmit]);
+        return () => clearInterval(interval);
+    }, [targetEndTime, handleSubmit]);
 
     if (isLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
     if (!questions.length) return <div className="p-10">No questions found.</div>;

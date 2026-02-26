@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
-import { type Event, type Contest, type Club } from '@/types';
+import { type Event, type Contest, type Club, type RegistrationForm } from '@/types';
 import { Calendar, Clock, Search, Plus, Building2, Sparkles } from 'lucide-react';
 
 import { DashboardSkeleton } from '@/components/skeleton';
@@ -26,7 +26,7 @@ function formatDate(iso: string) {
 interface EventCardProps {
     id: string;
     title: string;
-    type: 'MCQ' | 'Coding';
+    type: 'MCQ' | 'Coding' | 'Registration';
     startTime: string;
     endTime: string;
     href: string;
@@ -38,7 +38,9 @@ function EventCard({ title, type, startTime, endTime, href }: EventCardProps) {
         <Link to={href} className="group block">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 h-full border border-gray-100 dark:border-gray-800">
                 {/* Card Top — gradient */}
-                <div className={`${type === 'MCQ' ? 'from-blue-600 to-indigo-600' : 'from-purple-600 to-pink-600'
+                <div className={`${type === 'MCQ' ? 'from-blue-600 to-indigo-600' : 
+                    type === 'Coding' ? 'from-purple-600 to-pink-600' : 
+                    'from-emerald-500 to-teal-600'
                     } bg-gradient-to-r p-6 relative min-h-[120px] flex flex-col justify-between`}>
                     {/* Badge + heart */}
                     <div className="flex justify-end items-start gap-2">
@@ -76,13 +78,14 @@ function EventCard({ title, type, startTime, endTime, href }: EventCardProps) {
 
 // ─── Dashboard Page ──────────────────────────────────────────────────────────
 
-type FilterType = 'All' | 'MCQ' | 'Coding';
+type FilterType = 'All' | 'MCQ' | 'Coding' | 'Registration';
 
 export default function DashboardPage() {
     const { user, isAdmin } = useAuth();
     const [events, setEvents] = useState<Event[]>([]);
     const [contests, setContests] = useState<Contest[]>([]);
     const [clubs, setClubs] = useState<Club[]>([]);
+    const [forms, setForms] = useState<RegistrationForm[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>('All');
     const [search, setSearch] = useState('');
@@ -90,14 +93,16 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchAll = async () => {
             try {
-                const [eventsRes, contestsRes, clubsRes] = await Promise.all([
+                const [eventsRes, contestsRes, clubsRes, formsRes] = await Promise.all([
                     api.get('/api/events').catch(() => ({ data: [] })),
                     api.get('/api/contests').catch(() => ({ data: [] })),
                     api.get('/api/clubs').catch(() => ({ data: [] })),
+                    api.get('/api/registration/forms').catch(() => ({ data: [] })),
                 ]);
                 setEvents(eventsRes.data || []);
                 setContests(contestsRes.data || []);
                 setClubs(clubsRes.data || []);
+                setForms(formsRes.data || []);
             } finally {
                 setIsLoading(false);
             }
@@ -126,7 +131,19 @@ export default function DashboardPage() {
         clubId: c.clubId
     }));
 
-    const allCards = [...mcqCards, ...codingCards];
+    const registrationCards: EventCardProps[] = forms
+        .filter(f => f.active && !f.eventId && !f.contestId)
+        .map(f => ({
+            id: f.id,
+            title: f.title,
+            type: 'Registration' as const,
+            startTime: f.startTime || new Date().toISOString(),
+            endTime: f.endTime || new Date(Date.now() + 864000000).toISOString(),
+            href: `/registration/forms/${f.id}`,
+            clubId: f.clubId
+        }));
+
+    const allCards = [...mcqCards, ...codingCards, ...registrationCards];
 
     const filtered = allCards.filter(card => {
         const matchesSearch = card.title.toLowerCase().includes(search.toLowerCase());
@@ -218,7 +235,7 @@ export default function DashboardPage() {
 
                     {/* ── Filter Buttons ───────────────────────────────────── */}
                     <div className="flex bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-md space-x-1">
-                        {(['All', 'MCQ', 'Coding'] as FilterType[]).map(f => (
+                        {(['All', 'MCQ', 'Coding', 'Registration'] as FilterType[]).map(f => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
