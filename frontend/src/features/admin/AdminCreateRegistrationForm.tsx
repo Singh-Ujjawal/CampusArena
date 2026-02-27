@@ -5,13 +5,14 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
     Plus, Trash2, Image as ImageIcon, X, ChevronLeft,
     Save, Layout, Settings, FileQuestion, BadgeDollarSign,
-    Calendar, Clock
+    Calendar, Clock, Loader2
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { uploadToCloudinary } from '@/utils/cloudinary';
 
 // IST timezone identifier
 const IST_TZ = 'Asia/Kolkata';
@@ -69,8 +70,12 @@ export default function AdminCreateRegistrationForm() {
     const [eventId, setEventId] = useState(linkedEventId || '');
     const [contestId, setContestId] = useState(linkedContestId || '');
 
-    const [image, setImage] = useState<File | null>(null);
+    // Cloudinary image state
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [imagePublicId, setImagePublicId] = useState<string | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+
     const [questions, setQuestions] = useState<Question[]>([]);
     const [clubs, setClubs] = useState<any[]>([]);
     const [events, setEvents] = useState<any[]>([]);
@@ -115,7 +120,12 @@ export default function AdminCreateRegistrationForm() {
             setEventId(data.eventId || '');
             setContestId(data.contestId || '');
             setQuestions(data.questions || []);
-            if (data.paymentQrUrl) setImagePreview(data.paymentQrUrl);
+            // Load Cloudinary image if it exists
+            if (data.imageUrl) {
+                setImageUrl(data.imageUrl);
+                setImagePublicId(data.imagePublicId || null);
+                setImagePreview(data.imageUrl);
+            }
         } catch (error) {
             toast.error('Failed to load form data');
         }
@@ -140,13 +150,33 @@ export default function AdminCreateRegistrationForm() {
         setQuestions(questions.map((q) => (q.id === qId ? { ...q, ...updates } : q)));
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    /**
+     * Handle image selection and upload to Cloudinary
+     */
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        setIsUploadingImage(true);
+        try {
+            // Upload to Cloudinary
+            const result = await uploadToCloudinary(file);
+
+            if (result.error) {
+                toast.error(result.error);
+                return;
+            }
+
+            // Store Cloudinary data
+            setImageUrl(result.secure_url);
+            setImagePublicId(result.public_id);
+            setImagePreview(result.secure_url);
+            toast.success('Image uploaded successfully!');
+        } catch (error) {
+            toast.error('Failed to upload image');
+            console.error('Upload error:', error);
+        } finally {
+            setIsUploadingImage(false);
         }
     };
 
@@ -162,7 +192,7 @@ export default function AdminCreateRegistrationForm() {
         }
 
         setIsSaving(true);
-        const formData = new FormData();
+
         const formObj: any = {
             title,
             description,
@@ -175,27 +205,26 @@ export default function AdminCreateRegistrationForm() {
             clubId: clubId || null,
             eventId: eventId || null,
             contestId: contestId || null,
-            questions
+            questions,
+            imageUrl: imageUrl || null,
+            imagePublicId: imagePublicId || null,
         };
-
-        // Spring Controller expects @RequestParam("form")
-        formData.append('form', JSON.stringify(formObj));
-        if (image) formData.append('image', image);
 
         try {
             if (isEdit) {
-                await api.put(`/api/admin/registration/forms/${id}`, formData);
+                await api.put(`/api/admin/registration/forms/${id}`, formObj);
                 toast.success('Form updated successfully!');
             } else {
-                await api.post('/api/admin/registration/forms', formData);
+                await api.post('/api/admin/registration/forms', formObj);
                 toast.success('Registration form published!');
             }
             // Navigate back to the originating page
             if (linkedEventId) navigate('/admin/events');
             else if (linkedContestId) navigate('/admin/contests');
             else navigate('/admin/registration');
-        } catch (error) {
-            toast.error('Failed to save form');
+        } catch (error: any) {
+            console.error('Form submission error:', error);
+            toast.error(error.response?.data?.message || 'Failed to save form');
         } finally {
             setIsSaving(false);
         }
@@ -549,25 +578,37 @@ export default function AdminCreateRegistrationForm() {
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-gray-600 dark:text-gray-400">Poster / QR Attachment</label>
                                 <div className="border-2 border-dashed border-gray-100 dark:border-gray-700 rounded-2xl p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer relative min-h-[140px] flex flex-col items-center justify-center">
-                                    {imagePreview ? (
+                                    {isUploadingImage && (
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+                                            <p className="text-xs text-gray-500">Uploading to Cloudinary...</p>
+                                        </div>
+                                    )}
+                                    {!isUploadingImage && imagePreview ? (
                                         <div className="relative w-full h-full min-h-[100px]">
                                             <img src={imagePreview} alt="Preview" className="w-full h-full object-contain rounded-xl" />
                                             <Button
                                                 variant="danger"
                                                 size="sm"
                                                 className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 shadow-lg"
-                                                onClick={(e) => { e.preventDefault(); setImage(null); setImagePreview(null); }}
+                                                onClick={(e) => { e.preventDefault(); setImageUrl(null); setImagePublicId(null); setImagePreview(null); }}
                                             >
                                                 <X className="h-4 w-4" />
                                             </Button>
                                         </div>
-                                    ) : (
+                                    ) : !isUploadingImage ? (
                                         <>
                                             <ImageIcon className="h-8 w-8 text-gray-300 mb-2" />
-                                            <p className="text-xs text-gray-400 px-4">Upload a banner or payment QR code (Max 2MB)</p>
-                                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleImageChange} accept="image/*" />
+                                            <p className="text-xs text-gray-400 px-4">Upload a banner or payment QR code (Max 2MB, JPG/PNG)</p>
+                                            <input 
+                                                type="file" 
+                                                className="absolute inset-0 opacity-0 cursor-pointer" 
+                                                onChange={handleImageChange} 
+                                                accept="image/jpeg,image/jpg,image/png"
+                                                disabled={isUploadingImage}
+                                            />
                                         </>
-                                    )}
+                                    ) : null}
                                 </div>
                             </div>
                         </CardContent>
