@@ -25,7 +25,8 @@ public class RegistrationForm {
     private List<Question> questions;
     private Instant startTime;
     private Instant endTime;
-    private String paymentQrUrl;
+    private String imageUrl;        // Cloudinary secure URL (HTTPS)
+    private String imagePublicId;   // Cloudinary public ID for deletion
     private Boolean paymentRequired;
     private BigDecimal paymentFees;
     private boolean active;

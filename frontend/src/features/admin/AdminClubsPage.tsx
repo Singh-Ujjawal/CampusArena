@@ -264,12 +264,12 @@ export default function AdminClubsPage() {
                                                         </p>
                                                     </div>
                                                 </div>
-                                                {club.image && (
+                                                {/* {club.image && (
                                                     <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
                                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Club Image</p>
                                                         <img src={club.image} alt={club.name} className="w-full h-32 object-cover rounded-lg" />
                                                     </div>
-                                                )}
+                                                )} */}
                                             </div>
                                         </CardContent>
                                     </Card>

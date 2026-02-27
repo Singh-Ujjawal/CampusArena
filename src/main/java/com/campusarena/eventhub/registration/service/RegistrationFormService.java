@@ -3,21 +3,14 @@ package com.campusarena.eventhub.registration.service;
 import com.campusarena.eventhub.registration.model.RegistrationForm;
 import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
 import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
+import com.campusarena.eventhub.upload.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import com.campusarena.eventhub.user.model.User;
 import com.campusarena.eventhub.user.model.Roles;
 import com.campusarena.eventhub.exception.ApiException;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,19 +18,12 @@ import java.util.stream.Collectors;
 public class RegistrationFormService {
 
     private final RegistrationFormRepository formRepository;
-    private final RegistrationResponseRepository responseRepository;
+    private final CloudinaryService cloudinaryService;
 
-    @Value("${file.upload-dir}")
-    private String uploadDir;
-
-    public RegistrationForm createForm(RegistrationForm form, MultipartFile image, User creator) throws IOException {
-        if (image != null && !image.isEmpty()) {
-            String fileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir, fileName);
-            Files.createDirectories(filePath.getParent());
-            Files.copy(image.getInputStream(), filePath);
-            form.setPaymentQrUrl("/files/" + fileName);
-        }
+    /**
+     * Create a new registration form with Cloudinary image URL
+     */
+    public RegistrationForm createForm(RegistrationForm form, User creator) {
         form.setCreatedAt(Instant.now());
         form.setActive(true);
         if (form.getPaymentRequired() == null || !form.getPaymentRequired()) {
@@ -64,7 +50,11 @@ public class RegistrationFormService {
         return allForms;
     }
 
-    public RegistrationForm updateForm(String id, RegistrationForm updatedForm, MultipartFile image, User currentUser) throws IOException {
+    /**
+     * Update an existing registration form
+     * If a new image is provided, delete the old image from Cloudinary
+     */
+    public RegistrationForm updateForm(String id, RegistrationForm updatedForm, User currentUser) {
         RegistrationForm existing = formRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Registration form not found"));
         
@@ -73,6 +63,14 @@ public class RegistrationFormService {
                 throw new ApiException("Access Denied: You can only update forms you created.");
             }
         }
+
+        // Delete old image from Cloudinary if a new one is provided
+        if (updatedForm.getImageUrl() != null && !updatedForm.getImageUrl().isEmpty() 
+                && !updatedForm.getImageUrl().equals(existing.getImageUrl())
+                && existing.getImagePublicId() != null) {
+            cloudinaryService.deleteImage(existing.getImagePublicId());
+        }
+
         existing.setTitle(updatedForm.getTitle());
         existing.setDescription(updatedForm.getDescription());
         existing.setQuestions(updatedForm.getQuestions());
@@ -84,21 +82,20 @@ public class RegistrationFormService {
         existing.setClubId(updatedForm.getClubId());
         existing.setEventId(updatedForm.getEventId());
         existing.setContestId(updatedForm.getContestId());
+        existing.setImageUrl(updatedForm.getImageUrl());
+        existing.setImagePublicId(updatedForm.getImagePublicId());
         
         if (existing.getPaymentRequired() == null || !existing.getPaymentRequired()) {
             existing.setPaymentFees(null);
         }
         
-        if (image != null && !image.isEmpty()) {
-            String fileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir, fileName);
-            Files.createDirectories(filePath.getParent());
-            Files.copy(image.getInputStream(), filePath);
-            existing.setPaymentQrUrl("/files/" + fileName);
-        }
         return formRepository.save(existing);
     }
 
+    /**
+     * Delete a registration form
+     * Also deletes the associated image from Cloudinary
+     */
     public void deleteForm(String id, User currentUser) {
         RegistrationForm form = formRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Registration form not found"));
@@ -108,7 +105,12 @@ public class RegistrationFormService {
                 throw new ApiException("Access Denied: You can only delete forms you created.");
             }
         }
-        
+
+        // Delete image from Cloudinary before deleting the form
+        if (form.getImagePublicId() != null && !form.getImagePublicId().isEmpty()) {
+            cloudinaryService.deleteImage(form.getImagePublicId());
+        }
+
         formRepository.delete(form);
     }
 

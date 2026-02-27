@@ -8,7 +8,7 @@ spring:
       max-request-size: 10MB
   data:
     mongodb:
-      uri: ${MONGO_URI}
+      uri: mongodb+srv://abhi:abhi123@cluster0.jaoirfq.mongodb.net/eventdb?retryWrites=true&w=majority
 server:
   port: 8080
 
@@ -22,5 +22,9 @@ file:
   upload-dir: uploads
   max-size: 2097152 # 2MB
 
+cloudinary:
+  cloud-name: dixwsvwfk
+  api-key: 373627216171653
+  api-secret: JOect5FwDTL5eP8IJzWarnzl8TY
 
 

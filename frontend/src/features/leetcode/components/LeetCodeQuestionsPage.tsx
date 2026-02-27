@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/axios';
-import { ExternalLink, Loader2, Code2, Search, AlertCircle, Trophy, BrainCircuit } from 'lucide-react';
+import { ExternalLink, Loader2, Code2, Search, AlertCircle, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 interface LcQuestion {
     id: string;
@@ -43,120 +44,154 @@ export default function LeetCodeQuestionsPage() {
 
     if (isLoading) {
         return (
-            <div className="flex justify-center py-20">
-                <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-indigo-600 dark:text-indigo-400" />
+                    <p className="text-slate-600 dark:text-slate-300 font-medium">Loading LeetCode questions...</p>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 pb-20">
             {/* Header */}
-            <div className="bg-gradient-to-br from-indigo-700 via-blue-600 to-blue-700 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
-                    <Code2 className="h-64 w-64 rotate-12" />
-                </div>
-
-                <div className="relative z-10 space-y-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="space-y-2">
-                            <h1 className="text-4xl md:text-5xl font-black tracking-tight flex items-center gap-3">
-                                <Code2 className="h-10 w-10 text-blue-200" />
-                                LeetCode Arena
-                            </h1>
-                            <p className="text-blue-100/80 text-lg font-medium max-w-2xl">
-                                Master your coding skills. Solve these hand-picked problems on LeetCode and track your progress.
-                            </p>
-                        </div>
-
-                        <div className="flex gap-3">
-                            {isStaff && (
-                                <Link to="/admin/leetcode">
-                                    <Button className="bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md rounded-xl font-bold">
-                                        Manage Questions
-                                    </Button>
-                                </Link>
-                            )}
-                            {isStaff && (
-                                <Link to="/leetcode/leaderboard">
-                                    <Button className="bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-bold shadow-lg">
-                                        <Trophy className="h-4 w-4 mr-2" />
-                                        Leaderboard
-                                    </Button>
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="relative max-w-md">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-300" />
-                        <Input
-                            type="text"
-                            placeholder="Search by title or topic..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl py-6 pl-12 pr-4 text-white placeholder:text-blue-200 focus:ring-2 focus:ring-white/30 transition-all font-medium border-none"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Questions Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredQuestions.map((q) => (
-                    <div
-                        key={q.id}
-                        className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all group flex flex-col justify-between"
+            <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700 dark:from-indigo-700 dark:via-blue-700 dark:to-indigo-800">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="space-y-8"
                     >
-                        <div className="space-y-4">
-                            <div className="flex items-start justify-between">
-                                <div className={`p-3 rounded-2xl bg-opacity-10 dark:bg-opacity-20 ${q.difficulty === 'Easy' ? 'bg-green-500 text-green-600' :
-                                    q.difficulty === 'Medium' ? 'bg-yellow-500 text-yellow-600' :
-                                        'bg-red-500 text-red-600'
-                                    }`}>
-                                    <BrainCircuit className="h-6 w-6" />
+                        {/* Title Section */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="space-y-3">
+                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 dark:bg-white/10 rounded-full backdrop-blur-md border border-white/20">
+                                    <Code2 className="h-5 w-5 text-white" />
+                                    <span className="text-white font-bold text-sm uppercase tracking-widest">LeetCode Practice</span>
                                 </div>
-                                <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${q.difficulty === 'Easy' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                    q.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                    }`}>
-                                    {q.difficulty}
-                                </span>
+                                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                                    LeetCode Arena
+                                </h1>
+                                <p className="text-indigo-100 text-lg font-medium max-w-2xl">
+                                    Master your coding skills by solving hand-picked problems from LeetCode
+                                </p>
                             </div>
 
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">
-                                    {q.title}
-                                </h3>
-                                <div className="mt-2 flex items-center gap-2">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{q.topic}</span>
-                                </div>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                {isStaff && (
+                                    <Link to="/admin/leetcode">
+                                        <Button className="bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md rounded-lg font-bold transition-all h-11 px-6">
+                                            Manage Questions
+                                        </Button>
+                                    </Link>
+                                )}
+                                {isStaff && (
+                                    <Link to="/leetcode/leaderboard">
+                                        <Button className="bg-white text-indigo-600 hover:bg-indigo-50 rounded-lg font-bold h-11 px-6 transition-all">
+                                            <Trophy className="h-4 w-4 mr-2" />
+                                            Leaderboard
+                                        </Button>
+                                    </Link>
+                                )}
                             </div>
                         </div>
 
-                        <div className="mt-8">
-                            <a
-                                href={q.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="w-full flex items-center justify-center gap-2 bg-gray-50 dark:bg-gray-700/50 hover:bg-blue-600 hover:text-white text-gray-700 dark:text-gray-200 py-4 rounded-2xl font-bold transition-all"
-                            >
-                                Solve Problem <ExternalLink className="h-4 w-4" />
-                            </a>
+                        {/* Search Bar */}
+                        <div className="relative max-w-md">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-200" />
+                            <Input
+                                type="text"
+                                placeholder="Search by title or topic..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-indigo-200 focus:ring-2 focus:ring-white/50 transition-all font-medium"
+                            />
                         </div>
-                    </div>
-                ))}
+                    </motion.div>
+                </div>
             </div>
 
-            {filteredQuestions.length === 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-[3rem] p-20 text-center border border-gray-100 dark:border-gray-700">
-                    <AlertCircle className="h-16 w-16 text-gray-200 dark:text-gray-700 mx-auto mb-6" />
-                    <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-200">No questions found</h3>
-                    <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto font-medium">
-                        Try adjusting your search query or check back later for new challenges.
-                    </p>
-                </div>
-            )}
+            {/* Questions List */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                {filteredQuestions.length > 0 ? (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                Questions <span className="text-slate-500 dark:text-slate-400 text-lg font-semibold">({filteredQuestions.length})</span>
+                            </h2>
+                        </div>
+
+                        <div className="space-y-3">
+                            {filteredQuestions.map((q, index) => (
+                                <motion.div
+                                    key={q.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="group"
+                                >
+                                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-lg dark:hover:shadow-2xl dark:hover:shadow-indigo-900/30 transition-all duration-200 flex items-center justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-4 flex-wrap">
+                                                <div className="flex-1">
+                                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
+                                                        {q.title}
+                                                    </h3>
+                                                    <div className="mt-2 flex items-center gap-3">
+                                                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                                                            {q.topic}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${
+                                                        q.difficulty === 'Easy'
+                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                                            : q.difficulty === 'Medium'
+                                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                                    }`}>
+                                                        {q.difficulty}
+                                                    </span>
+
+                                                    <a
+                                                        href={q.url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-600 dark:hover:bg-indigo-600 hover:text-white dark:hover:text-white rounded-lg font-bold transition-all whitespace-nowrap"
+                                                    >
+                                                        <span className="hidden sm:inline">Solve</span>
+                                                        <ExternalLink className="h-4 w-4" />
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white dark:bg-slate-800 rounded-2xl p-16 text-center border border-slate-200 dark:border-slate-700"
+                    >
+                        <div className="flex justify-center mb-6">
+                            <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-full">
+                                <AlertCircle className="h-12 w-12 text-slate-400 dark:text-slate-500" />
+                            </div>
+                        </div>
+                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">No questions found</h3>
+                        <p className="text-slate-600 dark:text-slate-400 font-medium max-w-sm mx-auto">
+                            Try adjusting your search query or check back later for new challenges.
+                        </p>
+                    </motion.div>
+                )}
+            </main>
         </div>
     );
 }
