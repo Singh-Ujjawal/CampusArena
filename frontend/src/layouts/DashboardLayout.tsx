@@ -27,7 +27,7 @@ export default function DashboardLayout() {
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col transition-colors">
             {/* Top Navbar */}
             <nav className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 transition-colors">
-                <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between">
+                <div className="w-full h-20 px-4 sm:px-8 lg:px-12 flex items-center justify-between">
                     {/* Logo */}
                     <Link to="/dashboard" className="flex items-center gap-2 text-xl sm:text-4xl font-bold text-blue-600 dark:text-blue-400 tracking-tight transition-colors flex-shrink-0 -ml-2">
                         <img src="/main_logo.png" alt="CampusArena Logo" className="h-16 w-auto" />
@@ -112,7 +112,7 @@ export default function DashboardLayout() {
                 {/* Mobile Menu */}
                 {isMobileMenuOpen && (
                     <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-1 py-3">
+                        <div className="px-4 sm:px-6 mx-auto space-y-1 py-3">
                             {navLinks.map(link => {
                                 const Icon = link.icon;
                                 return (
@@ -142,7 +142,7 @@ export default function DashboardLayout() {
             </nav>
 
             {/* Page Content */}
-            <main className="flex-1 w-full mx-auto py-8 sm:py-12 px-6 sm:px-8 lg:px-12 max-w-7xl">
+            <main className="flex-1 w-full px-4 sm:px-8 lg:px-12 py-8 sm:py-12">
                 <div className="mx-auto">
                     <Outlet />
                 </div>
@@ -150,7 +150,7 @@ export default function DashboardLayout() {
 
             {/* Footer */}
             <footer className="bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 mt-12 transition-colors">
-                <div className="w-full mx-auto px-4 sm:px-6 py-8">
+                <div className="w-full px-4 sm:px-8 lg:px-12 py-8">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                             © 2026 <span className="font-semibold text-gray-800 dark:text-gray-200">Quantum Coders</span>. All rights reserved.

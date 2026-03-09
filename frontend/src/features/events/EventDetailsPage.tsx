@@ -119,7 +119,7 @@ export default function EventDetailsPage() {
     const isCompleted = status === 'COMPLETED';
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
             <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">

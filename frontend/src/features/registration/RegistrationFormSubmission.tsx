@@ -200,7 +200,7 @@ export default function RegistrationFormSubmission() {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
             {/* Header */}
             <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-700">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
                     <Button
                         variant="ghost"
                         onClick={() => navigate(-1)}
@@ -245,7 +245,7 @@ export default function RegistrationFormSubmission() {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+            <main className="w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Form Section */}
                     <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6">

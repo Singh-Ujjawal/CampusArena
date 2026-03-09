@@ -1,7 +1,5 @@
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
 import { useTheme } from '@/context/ThemeContext';
-import { AdminUserCardSkeleton } from './AdminUserCardSkeleton';
+import { AdminUserRowSkeleton } from './AdminUserRowSkeleton';
 
 export function AdminUsersPageSkeleton() {
     const { theme } = useTheme();
@@ -28,11 +26,24 @@ export function AdminUsersPageSkeleton() {
                 </div>
             </div>
 
-            {/* User Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                    <AdminUserCardSkeleton key={i} />
-                ))}
+            {/* User List Table Skeleton */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">User</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Contact</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Identification</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Academic</th>
+                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-gray-400 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {[...Array(8)].map((_, i) => (
+                            <AdminUserRowSkeleton key={i} />
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );

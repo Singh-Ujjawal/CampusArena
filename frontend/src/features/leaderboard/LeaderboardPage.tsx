@@ -103,7 +103,7 @@ export default function LeaderboardPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
             {/* Back button */}
             <Link to={`/contests/${contestId}`}>
                 <Button variant="ghost" className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600">

@@ -3,7 +3,7 @@ import { BookOpen } from 'lucide-react';
 
 export default function AuthLayout({ children, title, subtitle }: { children: ReactNode; title: string; subtitle?: string }) {
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="flex-1 w-full px-6 sm:px-10 flex flex-col justify-center py-12">
             <div className="w-full max-w-md space-y-8">
                 <div className="text-center">
                     <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
