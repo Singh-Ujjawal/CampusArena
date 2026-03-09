@@ -161,7 +161,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Main Content */}
-            <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8">
+            <div className="relative z-10 w-full">
                 {/* Main Content Area - Full Screen */}
                 <div className="py-8 sm:py-12 lg:py-16">
                     {/* Page Intro */}
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="mb-8 sm:mb-12 lg:mb-16 max-w-7xl mx-auto"
+                        className="mb-8 sm:mb-12 lg:mb-16 w-full"
                     >
                         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent mb-2">Admin Dashboard</h2>
                         <p className="text-sm sm:text-base text-slate-700 dark:text-slate-400">Manage your platform and monitor real-time activity</p>
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
                             variants={containerVariants}
                             initial="hidden"
                             animate="visible"
-                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12 lg:mb-16 max-w-7xl mx-auto"
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12 lg:mb-16 w-full"
                         >
                             {stats.map((stat, i) => (
                                 <StatCard
@@ -201,14 +201,14 @@ export default function AdminDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3, duration: 0.5 }}
-                        className="mb-8 sm:mb-12 max-w-7xl mx-auto"
+                        className="mb-8 sm:mb-12 w-full"
                     >
                         <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
                             <Zap className="h-5 sm:h-6 w-5 sm:w-6 text-yellow-500 dark:text-yellow-400" />
                             <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-800 dark:text-white">Quick Access Panels</h3>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-7xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
                             {links.map((link, index) => (
                                 <GlassmorphismCard
                                     key={link.name}
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.8, duration: 0.5 }}
-                        className="mt-12 sm:mt-16 lg:mt-20 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-300/60 dark:border-blue-900 p-6 sm:p-8 lg:p-10 text-center max-w-7xl mx-auto"
+                        className="mt-12 sm:mt-16 lg:mt-20 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-300/60 dark:border-blue-900 p-6 sm:p-8 lg:p-10 text-center w-full"
                     >
                         <Shield className="h-10 sm:h-12 lg:h-14 w-10 sm:w-12 lg:w-14 mx-auto mb-3 sm:mb-4 text-blue-700 dark:text-blue-400" />
                         <h3 className="text-lg sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent mb-2 sm:mb-3">Platform Overview</h3>

@@ -9,6 +9,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import LoginPage from '@/features/auth/LoginPage';
 import RegisterPage from '@/features/auth/RegisterPage';
 import DashboardPage from '@/features/dashboard/DashboardPage';
+import ClubEventsPage from '@/features/dashboard/ClubEventsPage';
 
 // Events
 import EventListPage from '@/features/events/EventListPage';
@@ -69,6 +70,7 @@ function App() {
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/club/:clubId/events" element={<ClubEventsPage />} />
 
                 {/* Event Routes */}
                 <Route path="/events" element={<EventListPage />} />

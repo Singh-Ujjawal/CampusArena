@@ -255,31 +255,37 @@ export default function DashboardPage() {
             <div className="space-y-16">
                 {clubsWithContent.map(club => (
                     <section key={club.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="h-16 w-16 bg-white dark:bg-gray-800 rounded-2xl shadow-md flex items-center justify-center border border-blue-50 dark:border-blue-900 flex-shrink-0 p-1">
-                                {club.image ? (
-                                    <img
-                                        src={club.image}
-                                        alt={club.name}
-                                        className="h-full w-full object-contain rounded-xl"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                        }}
-                                    />
-                                ) : (
-                                    <Building2 className="h-8 w-8 text-blue-600" />
-                                )}
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-3">
+                                <div className="h-16 w-16 bg-white dark:bg-gray-800 rounded-2xl shadow-md flex items-center justify-center border border-blue-50 dark:border-blue-900 flex-shrink-0 p-1">
+                                    {club.image ? (
+                                        <img
+                                            src={club.image}
+                                            alt={club.name}
+                                            className="h-full w-full object-contain rounded-xl"
+                                        />
+                                    ) : (
+                                        <Building2 className="h-8 w-8 text-blue-600" />
+                                    )}
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100 tracking-tight">{club.name}</h2>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Recent activities</p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100 tracking-tight">{club.name}</h2>
-                                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Recent and upcoming activities</p>
-                            </div>
-                            <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent ml-4"></div>
+                            
+                            <Link 
+                                to={`/club/${club.id}/events`}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all text-sm group"
+                            >
+                                View All
+                                <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
+                            </Link>
                         </div>
 
                         {club.items.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {club.items.map(card => (
+                                {club.items.slice(0, 3).map(card => (
                                     <EventCard key={card.id + card.type} {...card} />
                                 ))}
                             </div>
@@ -296,19 +302,28 @@ export default function DashboardPage() {
 
                 {orphanedItems.length > 0 && (
                     <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="h-16 w-16 bg-white dark:bg-gray-800 rounded-2xl shadow-md flex items-center justify-center border border-blue-50 dark:border-blue-900 flex-shrink-0 p-1">
-                                <Sparkles className="h-8 w-8 text-blue-600" />
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-3">
+                                <div className="h-16 w-16 bg-white dark:bg-gray-800 rounded-2xl shadow-md flex items-center justify-center border border-blue-50 dark:border-blue-900 flex-shrink-0 p-1">
+                                    <Sparkles className="h-8 w-8 text-blue-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100 tracking-tight">General Campus Activities</h2>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Open to all students</p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-black text-gray-800 dark:text-gray-100 tracking-tight">General Campus Activities</h2>
-                                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Open to all students</p>
-                            </div>
-                            <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent ml-4"></div>
+                            
+                            <Link 
+                                to="/events"
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all text-sm group"
+                            >
+                                View All
+                                <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
+                            </Link>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {orphanedItems.map(card => (
+                            {orphanedItems.slice(0, 3).map(card => (
                                 <EventCard key={card.id + card.type} {...card} />
                             ))}
                         </div>

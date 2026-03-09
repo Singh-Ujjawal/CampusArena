@@ -123,7 +123,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Right Side - Register Form */}
-            <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 sm:px-8 lg:px-16 overflow-y-auto" style={{ backgroundColor: '#1a1a1a' }}>
+            <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 sm:px-12 overflow-y-auto" style={{ backgroundColor: '#1a1a1a' }}>
                 <div className="w-full max-w-md">
                     <div className="text-center mb-8">
                         <h2 className="text-3xl font-bold mb-2" style={{ color: '#E8F4F8' }}>Create Account</h2>

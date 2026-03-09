@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { type Event } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, CheckCircle, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { EventCardSkeleton } from '@/components/skeleton';
-
 
 export default function EventListPage() {
     const [events, setEvents] = useState<Event[]>([]);
@@ -18,11 +16,9 @@ export default function EventListPage() {
         const fetchEvents = async () => {
             try {
                 const response = await api.get('/api/events');
-
                 setEvents(response.data);
             } catch (error) {
                 toast.error('Failed to load events');
-                // Error handling in interceptor
             } finally {
                 setIsLoading(false);
             }
@@ -36,16 +32,14 @@ export default function EventListPage() {
                 <div className="flex justify-between items-center">
                     <h1 className="text-3xl font-bold tracking-tight">Quiz Studio</h1>
                 </div>
-                {/* Filter Buttons Skeleton */}
                 <div className="flex gap-3 flex-wrap">
                     {[...Array(3)].map((_, i) => (
-                        <div key={i} className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                        <div key={i} className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
                     ))}
                 </div>
-                {/* Loading Cards Grid */}
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-4">
                     {[...Array(6)].map((_, i) => (
-                        <EventCardSkeleton key={i} />
+                        <div key={i} className="h-32 w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
                     ))}
                 </div>
             </div>
@@ -54,14 +48,13 @@ export default function EventListPage() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'LIVE': return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded text-xs font-bold';
-            case 'UPCOMING': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded text-xs font-bold';
-            case 'COMPLETED': return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded text-xs font-bold';
+            case 'LIVE': return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2.5 py-1 rounded-full text-xs font-bold border border-green-100 dark:border-green-800';
+            case 'UPCOMING': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1 rounded-full text-xs font-bold border border-blue-100 dark:border-blue-800';
+            case 'COMPLETED': return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2.5 py-1 rounded-full text-xs font-bold border border-gray-200 dark:border-gray-600';
             default: return 'text-gray-500 dark:text-gray-400';
         }
     };
 
-    // Filter events based on selected status
     const getEventStatus = (start: string, end: string): 'LIVE' | 'UPCOMING' | 'COMPLETED' => {
         const now = new Date();
         const startTime = new Date(start);
@@ -76,100 +69,86 @@ export default function EventListPage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight">Quiz Studio</h1>
-                {/* Admin Create Button could go here */}
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Quiz Studio</h1>
             </div>
 
-            {/* Filter Buttons */}
             <div className="flex gap-3 flex-wrap">
                 <Button
                     variant={activeFilter === 'LIVE' ? 'primary' : 'outline'}
                     onClick={() => setActiveFilter('LIVE')}
-                    className="px-6"
+                    className="px-6 rounded-full"
                 >
                     Live Events
                 </Button>
                 <Button
                     variant={activeFilter === 'UPCOMING' ? 'primary' : 'outline'}
                     onClick={() => setActiveFilter('UPCOMING')}
-                    className="px-6"
+                    className="px-6 rounded-full"
                 >
                     Upcoming Events
                 </Button>
                 <Button
                     variant={activeFilter === 'COMPLETED' ? 'primary' : 'outline'}
                     onClick={() => setActiveFilter('COMPLETED')}
-                    className="px-6"
+                    className="px-6 rounded-full"
                 >
                     Past Events
                 </Button>
             </div>
 
             {filteredEvents.length === 0 ? (
-                <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
+                <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">No events found</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Check back later for upcoming quizzes.</p>
                 </div>
             ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="flex flex-col gap-4">
                     {filteredEvents.map((event) => (
-                        <Card key={event.id} className="flex flex-col">
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <CardTitle className="text-xl line-clamp-1" title={event.title}>{event.title}</CardTitle>
-                                    <span className={getStatusColor(event.status)}>{event.status}</span>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1 space-y-3 text-sm text-gray-600 dark:text-gray-400">
-                                <div className="flex items-center">
-                                    <Calendar className="h-4 w-4 mr-2" />
-                                    {new Date(event.startTime).toLocaleString()}
-                                </div>
-                                <div className="flex items-center">
-                                    <Clock className="h-4 w-4 mr-2" />
-                                    {event.durationInMinutes} mins
-                                </div>
-                                <div className="flex items-center">
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    {event.totalMarks} Marks
-                                </div>
-                                {/* Coordinators */}
-                                {(event.facultyCoordinators?.length || event.studentCoordinators?.length) && (
-                                    <div className="pt-1 space-y-1.5">
-                                        {event.facultyCoordinators?.length ? (
-                                            <div>
-                                                <p className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1">
-                                                    <Users className="h-3 w-3" /> Faculty Coordinators
-                                                </p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {event.facultyCoordinators.map(fc => (
-                                                        <span key={fc} className="bg-blue-50 text-blue-700 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-blue-100">{fc}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : null}
-                                        {event.studentCoordinators?.length ? (
-                                            <div>
-                                                <p className="text-xs font-semibold text-gray-500 flex items-center gap-1 mb-1">
-                                                    <Users className="h-3 w-3" /> Student Coordinators
-                                                </p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {event.studentCoordinators.map(sc => (
-                                                        <span key={sc} className="bg-green-50 text-green-700 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-green-100">{sc}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : null}
+                        <Card key={event.id} className="overflow-hidden hover:shadow-md transition-shadow border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col md:flex-row">
+                                <div className="flex-1 p-5 space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{event.title}</h3>
+                                            <p className="text-sm text-gray-500 flex items-center mt-1">
+                                                <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                                                {new Date(event.startTime).toLocaleString('en-IN', {
+                                                    day: '2-digit',
+                                                    month: 'short',
+                                                    year: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </p>
+                                        </div>
+                                        <span className={getStatusColor(event.status)}>{event.status}</span>
                                     </div>
-                                )}
-                            </CardContent>
-                            <CardFooter>
-                                <Link to={`/events/${event.id}`} className="w-full">
-                                    <Button className="w-full" variant={event.status === 'COMPLETED' ? 'outline' : 'primary'}>
-                                        {event.status === 'LIVE' ? 'Join Now' : 'View Details'}
-                                    </Button>
-                                </Link>
-                            </CardFooter>
+
+                                    <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                        <div className="flex items-center">
+                                            <Clock className="h-4 w-4 mr-1.5 text-indigo-500" />
+                                            {event.durationInMinutes} mins
+                                        </div>
+                                        <div className="flex items-center">
+                                            <CheckCircle className="h-4 w-4 mr-1.5 text-indigo-500" />
+                                            {event.totalMarks} Marks
+                                        </div>
+                                        {(event.facultyCoordinators?.length || event.studentCoordinators?.length) && (
+                                            <div className="flex items-center">
+                                                <Users className="h-4 w-4 mr-1.5 text-indigo-500" />
+                                                {(event.facultyCoordinators?.length || 0) + (event.studentCoordinators?.length || 0)} Coordinators
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="bg-gray-50 dark:bg-gray-800/50 p-5 flex items-center justify-center border-t md:border-t-0 md:border-l border-gray-100 dark:border-gray-700 w-full md:w-48">
+                                    <Link to={`/events/${event.id}`} className="w-full">
+                                        <Button className="w-full shadow-sm" variant={event.status === 'LIVE' ? 'primary' : 'outline'}>
+                                            {event.status === 'LIVE' ? 'Join Now' : 'View Details'}
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
                         </Card>
                     ))}
                 </div>

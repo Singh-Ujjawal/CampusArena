@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/axios';
 import { type Club, type Faculty } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import {
     Plus, Trash2, Edit, Search, Building2,
@@ -12,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AdminClubsPageSkeleton } from '@/components/skeleton';
 
 export default function AdminClubsPage() {
     const [clubs, setClubs] = useState<Club[]>([]);
@@ -151,8 +151,8 @@ export default function AdminClubsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-gray-50/30 dark:bg-[#0B0F1A] py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto space-y-10">
+        <div className="w-full space-y-8">
+            <div className="w-full space-y-10 px-2">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                     <div className="space-y-4">
@@ -202,88 +202,88 @@ export default function AdminClubsPage() {
                     </div>
                 </div>
 
-                {/* Clubs Grid */}
+                {/* Clubs List */}
                 {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20 bg-white/50 dark:bg-gray-800/20 rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-gray-800">
-                        <Loader2 className="h-12 w-12 text-indigo-600 animate-spin" />
-                        <p className="mt-4 text-gray-500 font-black uppercase tracking-widest text-sm">Synchronizing Clubs...</p>
-                    </div>
+                    <AdminClubsPageSkeleton />
                 ) : filteredClubs.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="flex flex-col gap-4">
                         <AnimatePresence mode='popLayout'>
                             {filteredClubs.map((club, idx) => (
                                 <motion.div
                                     key={club.id}
                                     layout
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.4, delay: idx * 0.05 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                    className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all group"
                                 >
-                                    <Card className="group relative overflow-hidden border-none shadow-xl hover:shadow-2xl shadow-gray-200/50 dark:shadow-none bg-white dark:bg-gray-800 rounded-[2.5rem] transition-all duration-300">
-                                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                        <CardContent className="p-8">
-                                            <div className="flex items-start justify-between mb-8">
-                                                <div className="h-16 w-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 overflow-hidden">
-                                                    {club.image ? (
-                                                        <img src={club.image} alt={club.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <Building2 className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleEdit(club)}
-                                                        className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 p-0"
-                                                    >
-                                                        <Edit className="h-5 w-5" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(club.id)}
-                                                        className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/50 hover:text-red-600 p-0"
-                                                    >
-                                                        <Trash2 className="h-5 w-5" />
-                                                    </Button>
-                                                </div>
-                                            </div>
+                                    {/* Club Identity */}
+                                    <div className="flex items-center gap-6 w-1/3">
+                                        <div className="h-20 w-20 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center group-hover:rotate-3 transition-transform duration-500 overflow-hidden shadow-inner font-black text-indigo-600 dark:text-indigo-400">
+                                            {club.image ? (
+                                                <img src={club.image} alt={club.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Building2 className="h-10 w-10" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
+                                                {club.name}
+                                            </p>
+                                            <span className="inline-block mt-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100/50 dark:border-indigo-800/50">
+                                                Active Unit
+                                            </span>
+                                        </div>
+                                    </div>
 
-                                            <div className="space-y-4">
-                                                <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
-                                                    {club.name}
-                                                </h3>
-                                                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                                                    <UserIcon className="h-5 w-5 text-gray-400" />
-                                                    <div>
-                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Coordinator</p>
-                                                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                                            {faculties.find(f => f.id === club.clubCoordinatorId)?.firstName || 'Unknown'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                {/* {club.image && (
-                                                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Club Image</p>
-                                                        <img src={club.image} alt={club.name} className="w-full h-32 object-cover rounded-lg" />
-                                                    </div>
-                                                )} */}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                    {/* Coordinator Info */}
+                                    <div className="flex items-center gap-4 w-1/3">
+                                        <div className="h-12 w-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center border border-gray-100 dark:border-gray-700 shadow-sm">
+                                            <UserIcon className="h-6 w-6 text-indigo-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
+                                                Coordinator
+                                            </p>
+                                            <p className="text-lg font-black text-gray-900 dark:text-white">
+                                                {faculties.find(f => f.id === club.clubCoordinatorId)?.firstName || 'Unassigned'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex justify-end gap-3 w-1/4">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleEdit(club)}
+                                            className="h-12 w-12 p-0 rounded-2xl bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-800 transition-all hover:scale-105"
+                                            title="Edit Club"
+                                        >
+                                            <Edit className="h-5 w-5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDelete(club.id)}
+                                            className="h-12 w-12 p-0 rounded-2xl bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/50 hover:text-red-600 shadow-sm border border-gray-100 dark:border-gray-800 transition-all hover:scale-105"
+                                            title="Delete Club"
+                                        >
+                                            <Trash2 className="h-5 w-5" />
+                                        </Button>
+                                    </div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-gray-800 rounded-[3rem] border border-gray-100 dark:border-gray-700 text-center">
+                    <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-gray-800 rounded-[3rem] border border-gray-100 dark:border-gray-800 text-center shadow-sm">
                         <div className="h-24 w-24 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center mb-6">
-                            <Search className="h-12 w-12 text-gray-300" />
+                            <Search className="h-10 w-10 text-gray-300" />
                         </div>
                         <h3 className="text-2xl font-black text-gray-900 dark:text-white">No Clubs Found</h3>
-                        <p className="text-gray-500 mt-2 font-medium">Try adjusting your search or add a new club.</p>
+                        <p className="text-gray-500 mt-2 font-medium">Try adjusting your search or add a new club entity.</p>
                     </div>
                 )}
 
