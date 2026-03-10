@@ -10,7 +10,14 @@ import com.campusarena.eventhub.event.model.McqSubmission;
 import com.campusarena.eventhub.event.repository.EventRegistrationRepository;
 import com.campusarena.eventhub.event.repository.EventRepository;
 import com.campusarena.eventhub.event.repository.McqSubmissionRepository;
+import com.campusarena.eventhub.registration.model.RegistrationForm;
+import com.campusarena.eventhub.registration.model.RegistrationResponse;
+import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
+import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
+import com.campusarena.eventhub.user.dto.CollectiveActivityDTO;
 import com.campusarena.eventhub.user.dto.UserActivityDTO;
+import com.campusarena.eventhub.user.model.User;
+import com.campusarena.eventhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,43 +33,79 @@ public class UserActivityService {
     private final EventRepository eventRepository;
     private final SubmissionRepository submissionRepository;
     private final ContestRepository contestRepository;
+    private final RegistrationResponseRepository registrationResponseRepository;
+    private final RegistrationFormRepository registrationFormRepository;
+    private final UserRepository userRepository;
+
+    public CollectiveActivityDTO getCollectiveActivity(com.campusarena.eventhub.user.model.Course course, String session, String section) {
+        List<User> users;
+        if (section == null || section.isEmpty()) {
+            users = userRepository.findByCourseAndSession(course, session);
+        } else {
+            users = userRepository.findByCourseAndSessionAndSection(course, session, section);
+        }
+
+        List<CollectiveActivityDTO.UserWithActivityDTO> userActivities = users.stream()
+                .map(user -> {
+                    // Hide password for security
+                    user.setPassword(null);
+                    return new CollectiveActivityDTO.UserWithActivityDTO(user, getUserActivity(user.getId()));
+                })
+                .collect(Collectors.toList());
+
+        return new CollectiveActivityDTO(userActivities);
+    }
 
     public UserActivityDTO getUserActivity(String userId) {
         // ─── MCQ Activities ───────────────────────────────────────────────
         List<EventRegistration> registrations = registrationRepository.findByUserId(userId);
+        Map<String, EventRegistration> registrationByEvent = registrations.stream()
+                .collect(Collectors.toMap(EventRegistration::getEventId, r -> r, (a, b) -> a));
 
         // Map eventId -> submission (if exists)
         List<McqSubmission> submissions = mcqSubmissionRepository.findByUserId(userId);
         Map<String, McqSubmission> submissionByEvent = submissions.stream()
                 .collect(Collectors.toMap(McqSubmission::getEventId, s -> s, (a, b) -> a));
 
+        // Get all unique event IDs from both registrations and submissions
+        Set<String> allEventIds = new HashSet<>();
+        allEventIds.addAll(registrationByEvent.keySet());
+        allEventIds.addAll(submissionByEvent.keySet());
+
         // Map eventId -> event
-        Set<String> eventIds = registrations.stream()
-                .map(EventRegistration::getEventId).collect(Collectors.toSet());
-        Map<String, Event> eventsById = eventRepository.findAllById(eventIds).stream()
+        Map<String, Event> eventsById = eventRepository.findAllById(allEventIds).stream()
                 .collect(Collectors.toMap(Event::getId, e -> e));
 
         // Calculate rank for each submission
-        List<UserActivityDTO.McqActivityDTO> mcqActivities = registrations.stream()
-                .map(reg -> {
-                    Event event = eventsById.get(reg.getEventId());
-                    McqSubmission sub = submissionByEvent.get(reg.getEventId());
-                    String status = sub != null ? sub.getStatus() : "REGISTERED";
+        List<UserActivityDTO.McqActivityDTO> mcqActivities = allEventIds.stream()
+                .map(eventId -> {
+                    Event event = eventsById.get(eventId);
+                    EventRegistration reg = registrationByEvent.get(eventId);
+                    McqSubmission sub = submissionByEvent.get(eventId);
+
+                    String status = sub != null ? sub.getStatus() : (reg != null ? "REGISTERED" : "PARTICIPATED");
                     Double score = sub != null ? sub.getTotalScore() : null;
-                    Integer rank = sub != null ? calculateMcqRank(reg.getEventId(), userId) : null;
+                    Integer rank = sub != null ? calculateMcqRank(eventId, userId) : null;
                     String submittedAt = sub != null && sub.getSubmittedAt() != null
-                            ? sub.getSubmittedAt().toString() : null;
+                            ? sub.getSubmittedAt().toString() : "";
+                    String registeredAt = reg != null && reg.getRegisteredAt() != null
+                            ? reg.getRegisteredAt().toString() : "";
 
                     return new UserActivityDTO.McqActivityDTO(
-                            reg.getEventId(),
+                            eventId,
                             event != null ? event.getTitle() : "Unknown Event",
-                            reg.getRegisteredAt() != null ? reg.getRegisteredAt().toString() : "",
+                            registeredAt,
                             submittedAt,
                             status,
                             score,
                             event != null ? event.getTotalMarks() : null,
                             rank
                     );
+                })
+                .sorted((a, b) -> {
+                    String timeA = !a.getSubmittedAt().isEmpty() ? a.getSubmittedAt() : a.getRegisteredAt();
+                    String timeB = !b.getSubmittedAt().isEmpty() ? b.getSubmittedAt() : b.getRegisteredAt();
+                    return timeB.compareTo(timeA);
                 })
                 .collect(Collectors.toList());
 
@@ -118,7 +161,40 @@ public class UserActivityService {
                 })
                 .collect(Collectors.toList());
 
-        return new UserActivityDTO(mcqActivities, contestActivities);
+        // ─── Registration Activities ───────────────────────────────────
+        List<RegistrationResponse> formResponses = registrationResponseRepository.findByUserId(userId);
+        
+        // Map formId -> form
+        Set<String> formIds = formResponses.stream()
+                .map(RegistrationResponse::getFormId).collect(Collectors.toSet());
+        Map<String, RegistrationForm> formsById = registrationFormRepository.findAllById(formIds).stream()
+                .collect(Collectors.toMap(RegistrationForm::getId, f -> f));
+
+        List<UserActivityDTO.RegistrationActivityDTO> registrationActivities = formResponses.stream()
+                .map(response -> {
+                    RegistrationForm form = formsById.get(response.getFormId());
+                    // Skip coding contests and quizzes as they are handled in their own sections if needed,
+                    // but usually, MCQ events have registrationForms too.
+                    // The user said "except coding contest and quiz event, for all other event for which i create registration form"
+                    // So we should filter them out here if they are linked to an event/contest.
+                    if (form != null && (form.getEventId() != null || form.getContestId() != null)) {
+                        return null; 
+                    }
+
+                    return new UserActivityDTO.RegistrationActivityDTO(
+                            response.getFormId(),
+                            form != null ? form.getTitle() : "Unknown Event",
+                            response.getSubmittedAt() != null ? response.getSubmittedAt().toString() : "",
+                            response.getStatus(),
+                            response.getEvaluationStatus() != null ? response.getEvaluationStatus() : "PENDING",
+                            response.getTotalEvaluationMarks(),
+                            response.getMaxPossibleMarks()
+                    );
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        return new UserActivityDTO(mcqActivities, contestActivities, registrationActivities);
     }
 
     private int calculateMcqRank(String eventId, String userId) {

@@ -1,5 +1,6 @@
 package com.campusarena.eventhub.registration.service;
 
+import com.campusarena.eventhub.registration.model.EvaluationCriterion;
 import com.campusarena.eventhub.registration.model.RegistrationForm;
 import com.campusarena.eventhub.registration.repository.RegistrationFormRepository;
 import com.campusarena.eventhub.registration.repository.RegistrationResponseRepository;
@@ -84,6 +85,7 @@ public class RegistrationFormService {
         existing.setContestId(updatedForm.getContestId());
         existing.setImageUrl(updatedForm.getImageUrl());
         existing.setImagePublicId(updatedForm.getImagePublicId());
+        existing.setEvaluationCriteria(updatedForm.getEvaluationCriteria());
         
         if (existing.getPaymentRequired() == null || !existing.getPaymentRequired()) {
             existing.setPaymentFees(null);
@@ -122,5 +124,19 @@ public class RegistrationFormService {
     public RegistrationForm getFormByContestId(String contestId) {
         return formRepository.findByContestId(contestId)
                 .orElseThrow(() -> new RuntimeException("Form not found for contest"));
+    }
+
+    public RegistrationForm updateEvaluationCriteria(String formId, List<EvaluationCriterion> criteria, User currentUser) {
+        RegistrationForm form = formRepository.findById(formId)
+                .orElseThrow(() -> new ApiException("Form not found"));
+
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(form.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only update evaluation criteria for forms you created.");
+            }
+        }
+
+        form.setEvaluationCriteria(criteria);
+        return formRepository.save(form);
     }
 }

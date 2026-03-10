@@ -5,7 +5,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
     Plus, Trash2, Image as ImageIcon, X, ChevronLeft,
     Save, Layout, Settings, FileQuestion, BadgeDollarSign,
-    Calendar, Clock, Loader2
+    Calendar, Clock, Loader2, Trophy
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,12 @@ interface Question {
     options: string[];
 }
 
+interface EvaluationCriterion {
+    id: string;
+    name: string;
+    maxMarks: number;
+}
+
 
 export default function AdminCreateRegistrationForm() {
     const { id } = useParams(); // For Edit mode
@@ -77,6 +83,7 @@ export default function AdminCreateRegistrationForm() {
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     const [questions, setQuestions] = useState<Question[]>([]);
+    const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriterion[]>([]);
     const [clubs, setClubs] = useState<any[]>([]);
     const [events, setEvents] = useState<any[]>([]);
     const [contests, setContests] = useState<any[]>([]);
@@ -120,6 +127,7 @@ export default function AdminCreateRegistrationForm() {
             setEventId(data.eventId || '');
             setContestId(data.contestId || '');
             setQuestions(data.questions || []);
+            setEvaluationCriteria(data.evaluationCriteria || []);
             // Load Cloudinary image if it exists
             if (data.imageUrl) {
                 setImageUrl(data.imageUrl);
@@ -148,6 +156,23 @@ export default function AdminCreateRegistrationForm() {
 
     const updateQuestion = (qId: string, updates: Partial<Question>) => {
         setQuestions(questions.map((q) => (q.id === qId ? { ...q, ...updates } : q)));
+    };
+
+    const addCriterion = () => {
+        const newCriterion: EvaluationCriterion = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: '',
+            maxMarks: 10,
+        };
+        setEvaluationCriteria([...evaluationCriteria, newCriterion]);
+    };
+
+    const removeCriterion = (cId: string) => {
+        setEvaluationCriteria(evaluationCriteria.filter((c) => c.id !== cId));
+    };
+
+    const updateCriterion = (cId: string, updates: Partial<EvaluationCriterion>) => {
+        setEvaluationCriteria(evaluationCriteria.map((c) => (c.id === cId ? { ...c, ...updates } : c)));
     };
 
     /**
@@ -208,6 +233,7 @@ export default function AdminCreateRegistrationForm() {
             questions,
             imageUrl: imageUrl || null,
             imagePublicId: imagePublicId || null,
+            evaluationCriteria: (!eventId && !contestId) ? evaluationCriteria : null,
         };
 
         try {
@@ -433,6 +459,64 @@ export default function AdminCreateRegistrationForm() {
                             Add Question to Form
                         </Button>
                     </div>
+
+                    {/* Evaluation Criteria Area (Only for non-MCQ/Contest) */}
+                    {!eventId && !contestId && (
+                        <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex items-center justify-between px-2">
+                                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <Trophy className="h-5 w-5 text-indigo-500" />
+                                    Evaluation Criteria
+                                </h3>
+                                <span className="text-xs font-medium text-gray-400">{evaluationCriteria.length} Criteria Added</span>
+                            </div>
+
+                            {evaluationCriteria.map((c) => (
+                                <Card key={c.id} className="border-none shadow-sm bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl overflow-hidden border border-indigo-100/50 dark:border-indigo-900/50">
+                                    <CardContent className="p-5 flex flex-col md:flex-row items-center gap-4">
+                                        <div className="flex-1">
+                                            <input
+                                                type="text"
+                                                placeholder="Criterion Name (e.g., Presentation, Design, Project Utility)"
+                                                className="w-full bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-gray-400 dark:text-white outline-none"
+                                                value={c.name}
+                                                onChange={(e) => updateCriterion(c.id, { name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-gray-700">
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Max Marks</span>
+                                                <input
+                                                    type="number"
+                                                    className="w-16 bg-transparent border-none focus:ring-0 text-sm font-bold text-indigo-600 outline-none p-0"
+                                                    value={c.maxMarks}
+                                                    onChange={(e) => updateCriterion(c.id, { maxMarks: parseFloat(e.target.value) || 0 })}
+                                                />
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
+                                                onClick={() => removeCriterion(c.id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={addCriterion}
+                                className="w-full py-6 border-2 border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/20 dark:bg-indigo-900/5 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-500 transition-all font-bold text-sm"
+                            >
+                                <Plus className="h-5 w-5 mr-2" />
+                                Add Evaluation Criterion
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar Controls */}

@@ -7,6 +7,7 @@ import com.campusarena.eventhub.event.repository.EventRepository;
 import com.campusarena.eventhub.exception.ApiException;
 import com.campusarena.eventhub.user.model.User;
 import com.campusarena.eventhub.user.model.Roles;
+import com.campusarena.eventhub.registration.model.EvaluationMark;
 import com.campusarena.eventhub.registration.model.Question;
 import com.campusarena.eventhub.registration.model.QuestionType;
 import com.campusarena.eventhub.registration.model.RegistrationForm;
@@ -199,5 +200,34 @@ public class RegistrationResponseService {
                 }
             });
         }
+    }
+
+    public RegistrationResponse submitMarks(String responseId, List<EvaluationMark> marks, String feedback, User currentUser) {
+        RegistrationResponse response = responseRepository.findById(responseId)
+                .orElseThrow(() -> new ApiException("Response not found"));
+
+        RegistrationForm form = formRepository.findById(response.getFormId())
+                .orElseThrow(() -> new ApiException("Form not found"));
+
+        if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
+            if (!currentUser.getUsername().equals(form.getCreatedBy())) {
+                throw new ApiException("Access Denied: You can only give marks for responses to forms you created.");
+            }
+        }
+
+        double totalScore = marks.stream().mapToDouble(EvaluationMark::getMarksObtained).sum();
+        double maxPossibleMarks = form.getEvaluationCriteria().stream()
+                .mapToDouble(c -> c.getMaxMarks() != null ? c.getMaxMarks() : 0.0)
+                .sum();
+
+        response.setEvaluationMarks(marks);
+        response.setTotalEvaluationMarks(totalScore);
+        response.setMaxPossibleMarks(maxPossibleMarks);
+        response.setEvaluationFeedback(feedback);
+        response.setEvaluationStatus("GRADED");
+        response.setGradedBy(currentUser != null ? currentUser.getUsername() : "ADMIN");
+        response.setGradedAt(Instant.now());
+
+        return responseRepository.save(response);
     }
 }

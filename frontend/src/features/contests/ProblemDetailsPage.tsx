@@ -3,11 +3,11 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
     Play, CheckCircle2, XCircle, Clock, AlertTriangle,
     Zap, Code2, Terminal, Database, Trophy, ChevronLeft,
-    ArrowRight, Users, Lock, Key, ListFilter, ClipboardList, History
+    ClipboardList, History
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { toast } from 'sonner';
@@ -231,6 +231,60 @@ export default function ProblemDetailsPage() {
 
     const [isLoadingAccess, setIsLoadingAccess] = useState(true);
 
+    // ── Resizing Logic ──────────────────────────────────────────────────────────
+    const [leftWidth, setLeftWidth] = useState(40); // Percentage for description
+    const [editorHeight, setEditorHeight] = useState(60); // Percentage for editor
+    const [isResizingH, setIsResizingH] = useState(false);
+    const [isResizingV, setIsResizingV] = useState(false);
+
+    const startResizingH = useCallback((e: React.MouseEvent) => {
+        setIsResizingH(true);
+        e.preventDefault();
+    }, []);
+
+    const startResizingV = useCallback((e: React.MouseEvent) => {
+        setIsResizingV(true);
+        e.preventDefault();
+    }, []);
+
+    const stopResizing = useCallback(() => {
+        setIsResizingH(false);
+        setIsResizingV(false);
+    }, []);
+
+    const resize = useCallback((e: MouseEvent) => {
+        if (isResizingH) {
+            const newWidth = (e.clientX / window.innerWidth) * 100;
+            if (newWidth > 20 && newWidth < 80) {
+                setLeftWidth(newWidth);
+            }
+        }
+        if (isResizingV) {
+            const editorContainer = document.getElementById('editor-container');
+            if (editorContainer) {
+                const rect = editorContainer.getBoundingClientRect();
+                const newHeight = ((e.clientY - rect.top) / rect.height) * 100;
+                if (newHeight > 20 && newHeight < 90) {
+                    setEditorHeight(newHeight);
+                }
+            }
+        }
+    }, [isResizingH, isResizingV]);
+
+    useEffect(() => {
+        if (isResizingH || isResizingV) {
+            window.addEventListener('mousemove', resize);
+            window.addEventListener('mouseup', stopResizing);
+        } else {
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResizing);
+        }
+        return () => {
+            window.removeEventListener('mousemove', resize);
+            window.removeEventListener('mouseup', stopResizing);
+        };
+    }, [isResizingH, isResizingV, resize, stopResizing]);
+
     // ── Fetch problem & contest ───────────────────────────────────────────────
 
     useEffect(() => {
@@ -421,13 +475,16 @@ export default function ProblemDetailsPage() {
                 </Link>
             </div>
 
-            <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0">
+            <div className={`flex-1 flex flex-col md:flex-row gap-0 min-h-0 ${isResizingH ? 'cursor-col-resize' : ''} ${isResizingV ? 'cursor-row-resize' : ''}`}>
 
                 {/* ── Problem Description ── */}
-                <div className="md:w-1/2 flex flex-col overflow-hidden">
-                    <Card className="h-full flex flex-col bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div 
+                    className="flex flex-col overflow-hidden"
+                    style={{ width: window.innerWidth > 768 ? `${leftWidth}%` : '100%', minWidth: '300px' }}
+                >
+                    <Card className="h-full flex flex-col bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mr-2">
                         {/* Tab Headers */}
-                        <div className="flex border-b border-gray-100 dark:border-gray-700">
+                        <div className="flex border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
                             <button
                                 onClick={() => setActiveTab('description')}
                                 className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'description'
@@ -567,16 +624,29 @@ export default function ProblemDetailsPage() {
                     </Card>
                 </div>
 
-                {/* ── Editor + Results ── */}
-                <div className="md:w-1/2 flex flex-col gap-3 overflow-y-auto">
+                {/* ── Horizontal Resizer Handle ── */}
+                <div 
+                    className="hidden md:flex w-1.5 hover:w-2 bg-transparent hover:bg-indigo-500/20 cursor-col-resize items-center justify-center transition-all group z-10"
+                    onMouseDown={startResizingH}
+                >
+                    <div className="w-0.5 h-8 bg-gray-200 dark:bg-gray-700 rounded-full group-hover:bg-indigo-400 transition-colors" />
+                </div>
 
-                    <Card className="flex flex-col overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                        style={{ height: '65%', minHeight: '300px' }}>
+                {/* ── Editor + Results ── */}
+                <div 
+                    id="editor-container"
+                    className="flex flex-col gap-0 overflow-hidden"
+                    style={{ width: window.innerWidth > 768 ? `${100 - leftWidth}%` : '100%', minWidth: '300px' }}
+                >
+                    <Card 
+                        className="flex flex-col overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl ml-2 shadow-sm"
+                        style={{ height: `${editorHeight}%`, minHeight: '200px' }}
+                    >
                         {/* Toolbar */}
                         <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between flex-shrink-0">
                             <div className="flex items-center gap-3">
                                 <select
-                                    className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm px-2"
+                                    className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm px-2 cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500"
                                     value={language}
                                     onChange={e => handleLanguageChange(e.target.value)}
                                 >
@@ -587,7 +657,7 @@ export default function ProblemDetailsPage() {
                                 {contest?.endTime && (
                                     <CountdownTimer
                                         targetDate={contest.endTime}
-                                        className="text-xs bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-200 dark:border-gray-600"
+                                        className="text-xs bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 font-mono"
                                     />
                                 )}
                             </div>
@@ -599,7 +669,7 @@ export default function ProblemDetailsPage() {
                                     variant="outline"
                                     onClick={handleRun}
                                     disabled={isRunning || isSubmitting}
-                                    className="border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs"
+                                    className="border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs font-bold"
                                 >
                                     {isRunning ? (
                                         <span className="flex items-center gap-1">
@@ -618,7 +688,7 @@ export default function ProblemDetailsPage() {
 
                                 {/* Submit button */}
                                 {alreadySolved ? (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300">
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
                                         <CheckCircle2 className="h-3 w-3" /> Solved
                                     </span>
                                 ) : (
@@ -626,7 +696,7 @@ export default function ProblemDetailsPage() {
                                         size="sm"
                                         onClick={handleSubmit}
                                         disabled={isSubmitting || isRunning}
-                                        className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs"
+                                        className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs font-black shadow-sm"
                                     >
                                         {isSubmitting ? (
                                             <span className="flex items-center gap-1">
@@ -647,7 +717,7 @@ export default function ProblemDetailsPage() {
                         </div>
 
                         {/* Editor */}
-                        <div className="flex-1 min-h-0">
+                        <div className="flex-1 min-h-0 bg-[#1e1e1e]">
                             <Editor
                                 height="100%"
                                 language={monacoLang}
@@ -659,20 +729,48 @@ export default function ProblemDetailsPage() {
                                     fontSize: 14,
                                     scrollBeyondLastLine: false,
                                     automaticLayout: true,
+                                    fontFamily: "'Fira Code', 'Monaco', 'Cascadia Code', monospace",
+                                    fontLigatures: true,
+                                    cursorSmoothCaretAnimation: "on",
+                                    smoothScrolling: true,
+                                    roundedSelection: true,
+                                    scrollbar: {
+                                        vertical: 'visible',
+                                        horizontal: 'visible',
+                                        useShadows: false,
+                                        verticalSliderSize: 10,
+                                        horizontalSliderSize: 10
+                                    }
                                 }}
                             />
                         </div>
                     </Card>
 
-                    {/* Run result */}
-                    {runResult && (
-                        <ResultPanel result={runResult} isRun={true} />
-                    )}
+                    {/* ── Vertical Resizer Handle ── */}
+                    <div 
+                        className="h-1.5 hover:h-2 bg-transparent hover:bg-indigo-500/20 cursor-row-resize flex items-center justify-center transition-all group z-10 ml-2"
+                        onMouseDown={startResizingV}
+                    >
+                        <div className="h-0.5 w-8 bg-gray-200 dark:bg-gray-700 rounded-full group-hover:bg-indigo-400 transition-colors" />
+                    </div>
 
-                    {/* Submit result */}
-                    {submitResult && (
-                        <ResultPanel result={submitResult} isRun={false} />
-                    )}
+                    {/* Results Area */}
+                    <div className="flex-1 overflow-y-auto ml-2 pr-1 space-y-3 pb-4 scrollbar-hide">
+                        {runResult && (
+                            <ResultPanel result={runResult} isRun={true} />
+                        )}
+
+                        {submitResult && (
+                            <ResultPanel result={submitResult} isRun={false} />
+                        )}
+
+                        {!runResult && !submitResult && (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl py-10 opacity-60">
+                                <Terminal className="h-8 w-8 mb-2" />
+                                <p className="text-xs font-bold uppercase tracking-widest">Test results will appear here</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

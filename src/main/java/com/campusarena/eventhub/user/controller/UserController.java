@@ -3,6 +3,7 @@ package com.campusarena.eventhub.user.controller;
 import com.campusarena.eventhub.user.dto.UserRequest;
 import com.campusarena.eventhub.user.dto.UserResponse;
 import com.campusarena.eventhub.user.dto.UserActivityDTO;
+import com.campusarena.eventhub.user.dto.CollectiveActivityDTO;
 import com.campusarena.eventhub.user.service.AdminService;
 import com.campusarena.eventhub.user.service.UserService;
 import com.campusarena.eventhub.user.service.UserActivityService;
@@ -70,5 +71,13 @@ public class UserController {
     @GetMapping("/activity/{userId}")
     public ResponseEntity<UserActivityDTO> getUserActivity(@PathVariable String userId) {
         return ResponseEntity.ok(userActivityService.getUserActivity(userId));
+    }
+
+    @GetMapping("/collective-activity")
+    public ResponseEntity<CollectiveActivityDTO> getCollectiveActivity(
+            @RequestParam com.campusarena.eventhub.user.model.Course course,
+            @RequestParam String session,
+            @RequestParam(required = false) String section) {
+        return ResponseEntity.ok(userActivityService.getCollectiveActivity(course, session, section));
     }
 }

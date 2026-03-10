@@ -36,6 +36,7 @@ import AdminContestParticipantsPage from '@/features/admin/AdminContestParticipa
 import AdminEventAnalyticsPage from '@/features/admin/AdminEventAnalyticsPage';
 import AdminClubsPage from '@/features/admin/AdminClubsPage';
 import AdminFacultyPage from '@/features/admin/AdminFacultyPage';
+import AdminCollectiveDetails from '@/features/admin/AdminCollectiveDetails';
 
 // Submissions
 import MySubmissionsPage from '@/features/submissions/MySubmissionsPage';
@@ -114,6 +115,7 @@ function App() {
                 <Route path="/admin/registration/create" element={<AdminCreateRegistrationForm />} />
                 <Route path="/admin/registration/edit/:id" element={<AdminCreateRegistrationForm />} />
                 <Route path="/admin/registration/forms/:id/responses" element={<AdminRegistrationResponses />} />
+                <Route path="/admin/collective-details" element={<AdminCollectiveDetails />} />
               </Route>
             </Route>
 

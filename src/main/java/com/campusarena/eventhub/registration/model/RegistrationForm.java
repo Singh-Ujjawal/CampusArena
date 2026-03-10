@@ -37,4 +37,7 @@ public class RegistrationForm {
     private String eventId;    // Link to MCQ event
     private String contestId;  // Link to Coding contest
     private String createdBy;
+    
+    // Evaluation Criteria (for external events like festivals, seminars, etc.)
+    private List<EvaluationCriterion> evaluationCriteria;
 }

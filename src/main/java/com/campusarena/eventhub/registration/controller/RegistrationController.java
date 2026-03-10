@@ -1,5 +1,7 @@
 package com.campusarena.eventhub.registration.controller;
 
+import com.campusarena.eventhub.registration.model.EvaluationCriterion;
+import com.campusarena.eventhub.registration.model.EvaluationMark;
 import com.campusarena.eventhub.registration.model.RegistrationForm;
 import com.campusarena.eventhub.registration.model.RegistrationResponse;
 import com.campusarena.eventhub.registration.service.RegistrationFormService;
@@ -70,5 +72,40 @@ public class RegistrationController {
         });
 
         return ResponseEntity.ok(responseService.submitWithFiles(id, userId, textAnswers, request.getFileMap()));
+    }
+
+    @PutMapping("/forms/{id}/evaluation-criteria")
+    public ResponseEntity<RegistrationForm> updateEvaluationCriteria(
+            @PathVariable String id,
+            @RequestBody List<EvaluationCriterion> criteria,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(formService.updateEvaluationCriteria(id, criteria, securityService.getCurrentUser(auth)));
+    }
+
+    @GetMapping("/forms/{id}/responses")
+    public ResponseEntity<List<RegistrationResponse>> getFormResponses(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        return ResponseEntity.ok(responseService.getResponsesForForm(id, securityService.getCurrentUser(auth)));
+    }
+
+    @PutMapping("/responses/{id}/marks")
+    public ResponseEntity<RegistrationResponse> submitMarks(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> payload,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        
+        List<Map<String, Object>> marksList = (List<Map<String, Object>>) payload.get("marks");
+        String feedback = (String) payload.get("feedback");
+        
+        List<EvaluationMark> marks = marksList.stream()
+                .map(m -> EvaluationMark.builder()
+                        .criterionId((String) m.get("criterionId"))
+                        .criterionName((String) m.get("criterionName"))
+                        .marksObtained(Double.valueOf(m.get("marksObtained").toString()))
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(responseService.submitMarks(id, marks, feedback, securityService.getCurrentUser(auth)));
     }
 }

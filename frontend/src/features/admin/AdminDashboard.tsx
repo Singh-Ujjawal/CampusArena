@@ -111,6 +111,13 @@ export default function AdminDashboard() {
             gradientBg: 'from-blue-600 to-blue-800',
             adminOnly: false,
         },
+        {
+            name: 'Collective Details',
+            href: '/admin/collective-details',
+            icon: BarChart3,
+            gradientBg: 'from-indigo-600 to-blue-600',
+            staffOnly: true,
+        },
     ];
 
     const links = allLinks.filter(link => {

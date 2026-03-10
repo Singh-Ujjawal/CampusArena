@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    CheckCircle2, XCircle, Clock, Search, Filter,
+    CheckCircle2, XCircle, Clock, Search,
     ChevronLeft, Download, User as UserIcon, Calendar,
-    ExternalLink, Check, X, Eye, FileText, Image as ImageIcon
+    ExternalLink, Check, X, Eye, FileText, Image as ImageIcon,
+    Trophy, GraduationCap, PenTool, Save
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,12 +29,18 @@ interface RegistrationResponse {
     submittedAt: string;
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     answers: Record<string, any>;
+    evaluationMarks?: any[];
+    totalEvaluationMarks?: number;
+    maxPossibleMarks?: number;
+    evaluationStatus?: 'PENDING' | 'GRADED';
+    evaluationFeedback?: string;
 }
 
 interface RegistrationForm {
     id: string;
     title: string;
     questions: any[];
+    evaluationCriteria?: any[];
 }
 
 export default function AdminRegistrationResponses() {
@@ -46,6 +53,10 @@ export default function AdminRegistrationResponses() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
     const [viewingResponse, setViewingResponse] = useState<RegistrationResponse | null>(null);
+    const [gradingResponse, setGradingResponse] = useState<RegistrationResponse | null>(null);
+    const [marksData, setMarksData] = useState<Record<string, number>>({});
+    const [feedback, setFeedback] = useState('');
+    const [isSubmittingMarks, setIsSubmittingMarks] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -77,6 +88,43 @@ export default function AdminRegistrationResponses() {
             toast.success(`Registration ${status.toLowerCase()} successfully`);
         } catch (error) {
             toast.error('Failed to update status');
+        }
+    };
+
+    const handleGradeClick = (resp: RegistrationResponse) => {
+        const initialMarks: Record<string, number> = {};
+        if (resp.evaluationMarks) {
+            resp.evaluationMarks.forEach((m: any) => {
+                initialMarks[m.criterionId] = m.marksObtained;
+            });
+        }
+        setMarksData(initialMarks);
+        setFeedback(resp.evaluationFeedback || '');
+        setGradingResponse(resp);
+    };
+
+    const submitMarks = async () => {
+        if (!gradingResponse || !form) return;
+        setIsSubmittingMarks(true);
+        try {
+            const marks = form.evaluationCriteria?.map(c => ({
+                criterionId: c.id,
+                criterionName: c.name,
+                marksObtained: marksData[c.id] || 0
+            })) || [];
+
+            const response = await api.put(`/api/registration/responses/${gradingResponse.id}/marks`, {
+                marks,
+                feedback
+            });
+
+            setResponses(responses.map(r => r.id === gradingResponse.id ? response.data : r));
+            toast.success('Marks updated successfully');
+            setGradingResponse(null);
+        } catch (error) {
+            toast.error('Failed to update marks');
+        } finally {
+            setIsSubmittingMarks(false);
         }
     };
 
@@ -278,6 +326,27 @@ export default function AdminRegistrationResponses() {
                                                 <Eye className="h-4 w-4 mr-2" />
                                                 View Details
                                             </Button>
+
+                                            {form?.evaluationCriteria && form.evaluationCriteria.length > 0 && res.status === 'APPROVED' && (
+                                                <Button
+                                                    variant="primary"
+                                                    className="w-full rounded-xl bg-orange-500 hover:bg-orange-600 text-white h-10 font-bold border-none"
+                                                    onClick={() => handleGradeClick(res)}
+                                                >
+                                                    <PenTool className="h-4 w-4 mr-2" />
+                                                    {res.evaluationStatus === 'GRADED' ? 'Edit Marks' : 'Evaluate'}
+                                                </Button>
+                                            )}
+
+                                            {res.evaluationStatus === 'GRADED' && (
+                                                <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-100 dark:border-green-800 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <Trophy className="h-4 w-4 text-green-600" />
+                                                        <span className="text-[10px] font-black text-green-700 dark:text-green-300 uppercase tracking-tight">Grade</span>
+                                                    </div>
+                                                    <span className="text-sm font-black text-green-600">{res.totalEvaluationMarks} / {res.maxPossibleMarks}</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex-1 p-6">
@@ -408,6 +477,103 @@ export default function AdminRegistrationResponses() {
                                 >
                                     <XCircle className="mr-2 h-5 w-5" />
                                     Reject Application
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Grading Modal */}
+            <AnimatePresence>
+                {gradingResponse && form && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setGradingResponse(null)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                        >
+                            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-orange-50/50 dark:bg-orange-900/20">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                                        <GraduationCap className="h-6 w-6 text-orange-600" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Evaluate Student</h2>
+                                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{gradingResponse?.name || gradingResponse?.username}</p>
+                                    </div>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setGradingResponse(null)} className="rounded-full h-10 w-10 p-0 hover:bg-white dark:hover:bg-gray-800">
+                                    <X className="h-6 w-6" />
+                                </Button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                                <div className="space-y-4">
+                                    <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest border-l-4 border-indigo-600 pl-3">Criteria-based Marking</h3>
+                                    <div className="grid gap-4">
+                                        {form.evaluationCriteria?.map((criterion) => (
+                                            <div key={criterion.id} className="p-5 rounded-2xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 hover:border-indigo-200 dark:hover:border-indigo-900 transition-all group">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{criterion.name}</h4>
+                                                        <p className="text-[10px] text-gray-400 font-medium">MAXIMUM MARKS: {criterion.maxMarks}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex items-center gap-2 bg-white dark:bg-gray-900 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                                            <PenTool className="h-4 w-4 text-indigo-400" />
+                                                            <input
+                                                                type="number"
+                                                                max={criterion.maxMarks}
+                                                                min={0}
+                                                                placeholder="0"
+                                                                className="w-16 bg-transparent border-none focus:ring-0 text-sm font-black text-indigo-600 outline-none p-0"
+                                                                value={marksData[criterion.id] ?? ''}
+                                                                onChange={(e) => {
+                                                                    const val = parseFloat(e.target.value);
+                                                                    if (val > (criterion.maxMarks || 0)) {
+                                                                        toast.error(`Marks cannot exceed max marks (${criterion.maxMarks})`);
+                                                                        return;
+                                                                    }
+                                                                    setMarksData(prev => ({ ...prev, [criterion.id]: val }));
+                                                                }}
+                                                            />
+                                                            <span className="text-xs font-bold text-gray-300">/ {criterion.maxMarks}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4">
+                                    <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest border-l-4 border-indigo-600 pl-3">Evaluation Feedback</h3>
+                                    <textarea
+                                        placeholder="Add constructive feedback for the student..."
+                                        className="w-full min-h-[120px] p-5 bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white text-sm resize-none font-medium"
+                                        value={feedback}
+                                        onChange={(e) => setFeedback(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex bg-gray-50/50 dark:bg-gray-800/50">
+                                <Button
+                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl h-14 font-black text-base shadow-xl shadow-indigo-100 dark:shadow-none"
+                                    onClick={submitMarks}
+                                    isLoading={isSubmittingMarks}
+                                >
+                                    <Save className="mr-2 h-5 w-5" />
+                                    Submit Final Grade
                                 </Button>
                             </div>
                         </motion.div>

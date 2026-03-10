@@ -13,6 +13,7 @@ import java.util.List;
 public class UserActivityDTO {
     private List<McqActivityDTO> mcqActivities;
     private List<ContestActivityDTO> contestActivities;
+    private List<RegistrationActivityDTO> registrationActivities;
 
     @Data
     @AllArgsConstructor
@@ -39,5 +40,18 @@ public class UserActivityDTO {
         private double totalScore;
         private String lastSubmissionTime;
         private Integer rank;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class RegistrationActivityDTO {
+        private String formId;
+        private String title;
+        private String registeredAt;
+        private String status;
+        private String evaluationStatus;
+        private Double score;
+        private Double totalMarks;
     }
 }

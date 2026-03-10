@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/axios';
 import { type User } from '@/types';
-import { UserCircle, Mail, BookOpen, GraduationCap, Save, Loader2, Key, Trophy, Calendar, CheckCircle2, ChevronRight, BarChart3, ArrowLeft, LogOut, AlertCircle, Code2 } from 'lucide-react';
+import { UserCircle, Mail, BookOpen, GraduationCap, Save, Loader2, Key, Trophy, Calendar, ChevronRight, BarChart3, ArrowLeft, LogOut, AlertCircle, Code2, FileQuestion, FileDown, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { type UserActivity } from '@/types';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import LeetCodeProfile from '../leetcode/components/LeetCodeProfile';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function ProfilePage() {
     const { user: currentUser, logout } = useAuth();
@@ -19,6 +21,7 @@ export default function ProfilePage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isUserDataLoading, setIsUserDataLoading] = useState(!!userId);
     const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+    const [activeTab, setActiveTab] = useState<'profile' | 'activity' | 'leetcode'>('profile');
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -36,13 +39,131 @@ export default function ProfilePage() {
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [activity, setActivity] = useState<UserActivity | null>(null);
-    const [isActivityLoading, setIsActivityLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'profile' | 'activity' | 'leetcode'>('profile');
+    const [isActivityLoading, setIsActivityLoading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const isViewOnly = !!userId && userId !== currentUser?.id;
 
     const handleLogoutClick = () => {
         setShowLogoutDialog(true);
+    };
+
+    // ── PDF Generation Report ───────────────────────────────────────────────────
+    const handleDownloadReport = async () => {
+        if (!targetUser || !activity) return;
+        setIsDownloading(true);
+
+        try {
+            const doc = new jsPDF();
+            const timestamp = new Date().toLocaleString();
+
+            // Header
+            doc.setFillColor(37, 99, 235); // Blue-600
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.text('Student Success Report', 20, 26);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${timestamp}`, 140, 26);
+
+            // User Info Section
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            doc.text('Personal Information', 20, 55);
+            doc.setDrawColor(200, 200, 200);
+            doc.line(20, 58, 190, 58);
+
+            doc.setFontSize(11);
+            doc.text(`Name: ${targetUser.firstName} ${targetUser.lastName}`, 20, 68);
+            doc.text(`Email: ${targetUser.email}`, 20, 75);
+            doc.text(`Roll Number: ${targetUser.rollNumber || 'N/A'}`, 120, 68);
+            doc.text(`Branch/Course: ${targetUser.branch || 'N/A'} - ${targetUser.course || 'N/A'}`, 120, 75);
+            doc.text(`Session: ${targetUser.session || 'N/A'}`, 120, 82);
+
+            let currentY = 90;
+
+            // 1. Quizzes History
+            if (activity.mcqActivities.length > 0) {
+                doc.setFontSize(14);
+                doc.text('Quiz Participation & Performance', 20, currentY);
+                doc.line(20, currentY + 3, 190, currentY + 3);
+                
+                autoTable(doc, {
+                    startY: currentY + 8,
+                    head: [['Quiz Title', 'Date', 'Score', 'Total', 'Rank', 'Status']],
+                    body: activity.mcqActivities.map(q => [
+                        q.title,
+                        q.submittedAt ? new Date(q.submittedAt).toLocaleDateString() : 'N/A',
+                        q.score?.toString() || '0',
+                        q.totalMarks?.toString() || '0',
+                        q.rank ? `#${q.rank}` : 'N/A',
+                        q.status
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [37, 99, 235] }
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 15;
+            }
+
+            // 2. Contest History
+            if (activity.contestActivities.length > 0) {
+                if (currentY > 240) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(14);
+                doc.text('Coding Contests Performance', 20, currentY);
+                doc.line(20, currentY + 3, 190, currentY + 3);
+
+                autoTable(doc, {
+                    startY: currentY + 8,
+                    head: [['Contest Title', 'Solved', 'Total Problems', 'Total Score']],
+                    body: activity.contestActivities.map(c => [
+                        c.title,
+                        c.problemsSolved.toString(),
+                        c.totalProblems.toString(),
+                        c.totalScore.toString()
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [79, 70, 229] } // Indigo-600
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 15;
+            }
+
+            // 3. Registration History
+            if (activity.registrationActivities.length > 0) {
+                if (currentY > 240) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(14);
+                doc.text('Event Registrations & Evaluations', 20, currentY);
+                doc.line(20, currentY + 3, 190, currentY + 3);
+
+                autoTable(doc, {
+                    startY: currentY + 8,
+                    head: [['Form Title', 'Registration Date', 'Status', 'Evaluation', 'Marks']],
+                    body: activity.registrationActivities.map(r => [
+                        r.title,
+                        new Date(r.registeredAt).toLocaleDateString(),
+                        r.status,
+                        r.evaluationStatus,
+                        r.score !== null ? `${r.score} / ${r.totalMarks}` : 'N/A'
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [234, 88, 12] } // Orange-600
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 15;
+            }
+
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`Campus Arena - Student Portfolio System`, 20, 285);
+            doc.text(`Page: 1/1`, 180, 285);
+
+            doc.save(`Success_Report_${targetUser.rollNumber || targetUser.firstName}.pdf`);
+            toast.success('Report downloaded successfully!');
+        } catch (error) {
+            console.error(error);
+            toast.error('Failed to generate PDF');
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     const handleConfirmLogout = () => {
@@ -482,103 +603,247 @@ export default function ProfilePage() {
                 <LeetCodeProfile userId={targetUser.id} isViewOnly={isViewOnly} />
             ) : (
                 <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                    {/* Quizzes Section */}
-                    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm dark:shadow-lg border border-gray-100 dark:border-gray-700 p-8 space-y-6">
-                        <div className="flex items-center justify-between border-b border-gray-50 dark:border-gray-700 pb-4">
-                            <div className="flex items-center gap-3">
-                                <Trophy className="h-6 w-6 text-yellow-500 dark:text-yellow-400" />
-                                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">My Quizzes</h2>
+                    {/* Activity Portfolio Header */}
+                    <div className="group relative bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-800 p-10 rounded-[2.5rem] shadow-2xl shadow-indigo-500/20 text-white overflow-hidden">
+                        {/* Decorative Elements */}
+                        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-white/10 rounded-full blur-[80px] group-hover:bg-white/15 transition-all duration-700"></div>
+                        <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-blue-400/20 rounded-full blur-[60px]"></div>
+                        
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-4">
+                                    <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse"></div>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Live Performance Tracking</span>
+                                </div>
+                                <h2 className="text-4xl md:text-5xl font-black tracking-tight leading-none">
+                                    Activity <span className="text-blue-200">Portfolio</span>
+                                </h2>
+                                <p className="text-indigo-100/70 mt-3 text-lg font-medium max-w-xl">
+                                    A comprehensive record of your academic achievements, contest standings, and technical evaluations.
+                                </p>
                             </div>
-                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{activity?.mcqActivities.length || 0} Events</span>
-                        </div>
-
-                        {isActivityLoading ? (
-                            <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-600 dark:text-blue-400" /></div>
-                        ) : activity?.mcqActivities.length === 0 ? (
-                            <div className="text-center p-12 bg-gray-50 dark:bg-gray-700 rounded-2xl">
-                                <Calendar className="h-12 w-12 text-gray-300 dark:text-gray-500 mx-auto mb-3" />
-                                <p className="text-gray-500 dark:text-gray-400">No quiz participation yet.</p>
-                                <Link to="/events" className="text-blue-600 font-bold mt-2 inline-block">Explore Events</Link>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4">
-                                {activity?.mcqActivities.map(act => (
-                                    <div key={act.eventId} className="group p-4 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50/30 dark:hover:bg-blue-900/20 transition-all flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${act.status === 'COMPLETED' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}>
-                                                {act.status === 'COMPLETED' ? <CheckCircle2 className="h-6 w-6" /> : <Calendar className="h-6 w-6" />}
-                                            </div>
-                                            <div>
-                                                <h3 className="font-bold text-gray-900 dark:text-gray-100">{act.title}</h3>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
-                                                    Registered: {new Date(act.registeredAt).toLocaleDateString()}
-                                                    {act.rank && <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter text-[10px]">Rank #{act.rank}</span>}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right flex items-center gap-6">
-                                            {act.score !== undefined && (
-                                                <div>
-                                                    <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">Score</p>
-                                                    <p className="text-lg font-black text-blue-600 dark:text-blue-400">{act.score}<span className="text-xs text-gray-400 dark:text-gray-500 font-normal"> / {act.totalMarks}</span></p>
-                                                </div>
-                                            )}
-                                            <Link to={`/test/${act.eventId}/result`} className="h-10 w-10 rounded-full hover:bg-white flex items-center justify-center transition-all group-hover:shadow-sm">
-                                                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600" />
-                                            </Link>
-                                        </div>
+                            
+                            <Button
+                                onClick={handleDownloadReport}
+                                disabled={isDownloading || isActivityLoading}
+                                className="group/btn relative h-auto py-5 px-8 rounded-2xl bg-white hover:bg-white text-indigo-700 font-black shadow-2xl shadow-blue-900/40 transition-all hover:scale-[1.05] active:scale-95 disabled:opacity-70"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover/btn:opacity-100 rounded-2xl transition-opacity"></div>
+                                <div className="relative z-10 flex items-center gap-3">
+                                    {isDownloading ? (
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                    ) : (
+                                        <FileDown className="h-6 w-6 group-hover/btn:rotate-12 transition-transform" />
+                                    )}
+                                    <div className="text-left leading-tight">
+                                        <span className="block text-[10px] uppercase tracking-widest opacity-60">Generate PDF</span>
+                                        <span className="text-lg">Performance Report</span>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                </div>
+                            </Button>
+                        </div>
                     </div>
 
-                    {/* Contests Section */}
-                    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm dark:shadow-lg border border-gray-100 dark:border-gray-700 p-8 space-y-6">
-                        <div className="flex items-center justify-between border-b border-gray-50 dark:border-gray-700 pb-4">
-                            <div className="flex items-center gap-3">
-                                <BarChart3 className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-                                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">My Contests</h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Quizzes Section */}
+                        <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+                            <div className="p-8 border-b border-gray-50 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-12 w-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-600">
+                                        <Trophy className="h-6 w-6" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-gray-800 dark:text-gray-100 tracking-tight">Quiz History</h3>
+                                </div>
+                                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400">
+                                    {activity?.mcqActivities.length || 0} Events
+                                </span>
                             </div>
-                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{activity?.contestActivities.length || 0} Contests</span>
+
+                            <div className="p-6 flex-1 max-h-[500px] overflow-y-auto scrollbar-hide">
+                                {isActivityLoading ? (
+                                    <div className="flex justify-center p-12"><Loader2 className="h-10 w-10 animate-spin text-blue-600" /></div>
+                                ) : activity?.mcqActivities.length === 0 ? (
+                                    <div className="text-center py-16 opacity-50">
+                                        <Calendar className="h-12 w-12 mx-auto mb-4" />
+                                        <p className="font-bold">No quizzes participated yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {activity?.mcqActivities.map(act => (
+                                            <div key={act.eventId} className="group p-5 rounded-2xl border border-gray-50 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition-all">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex flex-col">
+                                                        <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors uppercase tracking-tight">{act.title}</h4>
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-2 mt-1">
+                                                            <Clock className="h-3 w-3" />
+                                                            {act.submittedAt ? new Date(act.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-2xl font-black text-blue-600 dark:text-blue-400 leading-none">{act.score}</span>
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">/ {act.totalMarks} Points</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    {act.rank && (
+                                                        <span className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-md text-[10px] font-black uppercase">Rank #{act.rank}</span>
+                                                    )}
+                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${act.status === 'COMPLETED' ? 'bg-green-100 text-green-700 dark:bg-green-900/30' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30'}`}>
+                                                        {act.status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {isActivityLoading ? (
-                            <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-600 dark:text-blue-400" /></div>
-                        ) : activity?.contestActivities.length === 0 ? (
-                            <div className="text-center p-12 bg-gray-50 dark:bg-gray-700 rounded-2xl">
-                                <BarChart3 className="h-12 w-12 text-gray-300 dark:text-gray-500 mx-auto mb-3" />
-                                <p className="text-gray-500 dark:text-gray-400">No contest participation yet.</p>
-                                <Link to="/contests" className="text-indigo-600 font-bold mt-2 inline-block">Join Contests</Link>
-                            </div>
-                        ) : (
-                            <div className="grid gap-4">
-                                {activity?.contestActivities.map(act => (
-                                    <div key={act.contestId} className="group p-4 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 transition-all flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-12 w-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                                                <Trophy className="h-6 w-6" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-bold text-gray-900 dark:text-gray-100">{act.title}</h3>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                    Solved {act.problemsSolved} / {act.totalProblems} Problems
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right flex items-center gap-6">
-                                            <div>
-                                                <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">Score</p>
-                                                <p className="text-lg font-black text-indigo-600 dark:text-indigo-400">{act.totalScore}</p>
-                                            </div>
-                                            <Link to={`/contests/${act.contestId}`} className="h-10 w-10 rounded-full hover:bg-white flex items-center justify-center transition-all group-hover:shadow-sm">
-                                                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
-                                            </Link>
-                                        </div>
+                        {/* Contests Section */}
+                        <div className="bg-white dark:bg-gray-800 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col">
+                            <div className="p-8 border-b border-gray-50 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+                                        <Code2 className="h-6 w-6" />
                                     </div>
-                                ))}
+                                    <h3 className="text-xl font-black text-gray-800 dark:text-gray-100 tracking-tight">Coding Contests</h3>
+                                </div>
+                                <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400">
+                                    {activity?.contestActivities.length || 0} Participation
+                                </span>
                             </div>
-                        )}
+
+                            <div className="p-6 flex-1 max-h-[500px] overflow-y-auto scrollbar-hide">
+                                {isActivityLoading ? (
+                                    <div className="flex justify-center p-12"><Loader2 className="h-10 w-10 animate-spin text-indigo-600" /></div>
+                                ) : activity?.contestActivities.length === 0 ? (
+                                    <div className="text-center py-16 opacity-50">
+                                        <BarChart3 className="h-12 w-12 mx-auto mb-4" />
+                                        <p className="font-bold">No contests participated yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {activity?.contestActivities.map(act => (
+                                            <div key={act.contestId} className="group p-5 rounded-2xl border border-gray-50 dark:border-gray-700 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-all">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-tight">{act.title}</h4>
+                                                    <div className="bg-indigo-600 text-white px-3 py-1 rounded-xl text-lg font-black shadow-lg shadow-indigo-200 dark:shadow-none">
+                                                        {act.totalScore}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Solved</span>
+                                                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{act.problemsSolved} <span className="text-gray-400 font-medium">/ {act.totalProblems}</span></span>
+                                                        </div>
+                                                        <div className="h-8 w-[1px] bg-gray-100 dark:bg-gray-700"></div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Efficiency</span>
+                                                            <span className="text-sm font-bold text-green-600">
+                                                                {act.totalProblems > 0 ? Math.round((act.problemsSolved / act.totalProblems) * 100) : 0}%
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <Link to={`/contests/${act.contestId}`} className="h-10 w-10 rounded-full border border-gray-100 dark:border-gray-700 flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all">
+                                                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Registration History Section - Full Width */}
+                    <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div className="p-10 border-b border-gray-50 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-orange-50/50 to-white dark:from-orange-950/20 dark:to-gray-900/30">
+                            <div className="flex items-center gap-5">
+                                <div className="h-16 w-16 rounded-[1.5rem] bg-orange-500/10 flex items-center justify-center text-orange-600 shadow-inner">
+                                    <FileQuestion className="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-gray-800 dark:text-gray-100 tracking-tight">Registration & Evaluations</h3>
+                                    <p className="text-gray-500 font-medium text-sm mt-0.5">Formal event participation and faculty grading history</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-right hidden md:block">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Activities</p>
+                                    <p className="text-xl font-black text-gray-900 dark:text-gray-50 leading-none">{activity?.registrationActivities.length || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-10">
+                            {isActivityLoading ? (
+                                <div className="flex justify-center p-20"><Loader2 className="h-12 w-12 animate-spin text-orange-600" /></div>
+                            ) : activity?.registrationActivities.length === 0 ? (
+                                <div className="text-center py-20 bg-gray-50/50 dark:bg-gray-900/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+                                    <GraduationCap className="h-20 w-20 text-gray-200 dark:text-gray-700 mx-auto mb-6" />
+                                    <h4 className="text-xl font-bold text-gray-400">No formal registrations on record</h4>
+                                    <p className="text-gray-400 mt-2">Participate in events to see your evaluation history here.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {activity?.registrationActivities.map(act => (
+                                        <div key={act.formId} className="group flex flex-col p-6 rounded-3xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-2xl hover:shadow-orange-500/10 hover:-translate-y-1 transition-all duration-500 relative overflow-hidden">
+                                            {/* Status Badge */}
+                                            <div className="flex items-center justify-between mb-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${act.status === 'APPROVED' ? 'bg-green-100 text-green-600' : act.status === 'REJECTED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                        <Calendar className="h-5 w-5" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-gray-400 mx-auto uppercase tracking-widest">Registered At</p>
+                                                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{new Date(act.registeredAt).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                    act.status === 'APPROVED' ? 'bg-green-500 text-white' :
+                                                    act.status === 'REJECTED' ? 'bg-red-500 text-white' :
+                                                    'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                                                }`}>
+                                                    {act.status}
+                                                </span>
+                                            </div>
+
+                                            <h4 className="text-xl font-black text-gray-900 dark:text-white mb-6 pr-10 line-clamp-1">{act.title}</h4>
+
+                                            <div className="mt-auto flex items-center justify-between pt-6 border-t border-gray-50 dark:border-gray-700">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Evaluation Status</span>
+                                                    <span className={`text-xs font-bold mt-1 ${act.evaluationStatus === 'GRADED' ? 'text-green-600' : 'text-amber-500'}`}>
+                                                        {act.evaluationStatus}
+                                                    </span>
+                                                </div>
+                                                
+                                                {act.evaluationStatus === 'GRADED' ? (
+                                                    <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900/50 px-4 py-2 rounded-2xl border border-gray-100 dark:border-gray-800">
+                                                        <div className="text-right">
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Final Score</span>
+                                                            <div className="text-xl font-black text-gray-900 dark:text-white">
+                                                                {act.score} <span className="text-xs text-gray-400 font-bold">/ {act.totalMarks}</span>
+                                                            </div>
+                                                        </div>
+                                                        <Trophy className="h-6 w-6 text-yellow-500" />
+                                                    </div>
+                                                ) : act.status === 'APPROVED' ? (
+                                                    <div className="flex items-center gap-2 text-amber-500 animate-pulse">
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                        <span className="text-xs font-black uppercase tracking-tighter">Awaiting Grade</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-xs font-black text-gray-300 uppercase italic">Not Evaluated</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -586,26 +851,28 @@ export default function ProfilePage() {
             {/* Logout Confirmation Dialog */}
             {showLogoutDialog && (
                 <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 transition-colors">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-sm mx-4 transition-colors">
-                        <div className="flex items-center gap-3 mb-4">
-                            <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-50">Confirm Logout</h2>
+                    <div className="bg-white dark:bg-gray-800 rounded-[1.5rem] shadow-2xl p-8 max-w-sm mx-4 transition-all scale-in-center">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                                <AlertCircle className="h-7 w-7" />
+                            </div>
+                            <h2 className="text-2xl font-black text-gray-900 dark:text-gray-50 tracking-tight">Logout?</h2>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6">
-                            Are you sure you want to logout? You'll need to log in again to access your account.
+                        <p className="text-gray-600 dark:text-gray-400 mb-8 font-medium leading-relaxed">
+                            Are you sure you want to end your session? You'll need your credentials to log back in.
                         </p>
-                        <div className="flex gap-3 justify-end">
+                        <div className="flex gap-4">
                             <button
                                 onClick={handleCancelLogout}
-                                className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-50 font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                className="flex-1 px-6 py-4 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-50 font-black hover:bg-gray-200 dark:hover:bg-gray-600 transition-all uppercase text-xs tracking-widest"
                             >
-                                Cancel
+                                Stay
                             </button>
                             <button
                                 onClick={handleConfirmLogout}
-                                className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white font-medium transition-colors"
+                                className="flex-1 px-6 py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black shadow-lg shadow-red-600/20 transition-all uppercase text-xs tracking-widest"
                             >
-                                Logout
+                                Exit
                             </button>
                         </div>
                     </div>

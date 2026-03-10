@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 @Document(collection = "registration_responses")
@@ -32,4 +33,13 @@ public class RegistrationResponse {
     private Instant submittedAt;
     private String paymentProofUrl; // If payment was required
     private String status; // e.g., PENDING, APPROVED, REJECTED
+    
+    // Evaluation Results
+    private List<EvaluationMark> evaluationMarks;
+    private Double totalEvaluationMarks;
+    private Double maxPossibleMarks;
+    private String evaluationStatus; // e.g., PENDING, GRADED
+    private String evaluationFeedback;
+    private String gradedBy;
+    private Instant gradedAt;
 }

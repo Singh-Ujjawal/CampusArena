@@ -117,6 +117,7 @@ export interface LeaderboardEntry {
 export interface UserActivity {
     mcqActivities: McqActivity[];
     contestActivities: ContestActivity[];
+    registrationActivities: RegistrationActivity[];
 }
 
 export interface McqActivity {
@@ -140,6 +141,16 @@ export interface ContestActivity {
     rank?: number;
 }
 
+export interface RegistrationActivity {
+    formId: string;
+    title: string;
+    registeredAt: string;
+    status: string;
+    evaluationStatus: string;
+    score?: number;
+    totalMarks?: number;
+}
+
 export interface RegistrationForm {
     id: string;
     title: string;
@@ -150,4 +161,41 @@ export interface RegistrationForm {
     eventId?: string;
     contestId?: string;
     active: boolean;
+    evaluationCriteria?: EvaluationCriterion[];
+}
+
+export interface EvaluationCriterion {
+    id: string;
+    name: string;
+    maxMarks: number;
+}
+
+export interface EvaluationMark {
+    criterionId: string;
+    criterionName: string;
+    marksObtained: number;
+}
+
+export interface RegistrationResponse {
+    id: string;
+    formId: string;
+    userId: string;
+    username: string;
+    rollNumber: string;
+    name: string;
+    email: string;
+    phoneNumber: string;
+    course: string;
+    branch: string;
+    section: string;
+    answers: Record<string, any>;
+    submittedAt: string;
+    status: string;
+    evaluationMarks?: EvaluationMark[];
+    totalEvaluationMarks?: number;
+    maxPossibleMarks?: number;
+    evaluationStatus?: 'PENDING' | 'GRADED';
+    evaluationFeedback?: string;
+    gradedBy?: string;
+    gradedAt?: string;
 }
