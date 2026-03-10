@@ -80,7 +80,15 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173",
+                "http://35.154.206.192",
+                "http://35.154.206.192:5173",
+                "http://35.154.206.192:80",
+                "http://ec2-35-154-206-192.ap-south-1.compute.amazonaws.com",
+                "http://ec2-35-154-206-192.ap-south-1.compute.amazonaws.com:5173",
+                "http://ec2-35-154-206-192.ap-south-1.compute.amazonaws.com:80"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
