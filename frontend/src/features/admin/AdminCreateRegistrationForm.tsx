@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { DeleteButton } from '@/components/DeleteButton';
 import { uploadToCloudinary } from '@/utils/cloudinary';
 
 // IST timezone identifier
@@ -434,15 +435,12 @@ export default function AdminCreateRegistrationForm() {
                                                 <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Required Response</span>
                                             </label>
 
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                            <DeleteButton
                                                 onClick={() => removeQuestion(q.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                Remove Question
-                                            </Button>
+                                                variant="full"
+                                                label="Remove Question"
+                                                className="h-10 text-xs"
+                                            />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -493,14 +491,10 @@ export default function AdminCreateRegistrationForm() {
                                                     onChange={(e) => updateCriterion(c.id, { maxMarks: parseFloat(e.target.value) || 0 })}
                                                 />
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-9 w-9 p-0 text-red-400 hover:text-red-500 hover:bg-red-50"
+                                            <DeleteButton
                                                 onClick={() => removeCriterion(c.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                                title="Remove Criterion"
+                                            />
                                         </div>
                                     </CardContent>
                                 </Card>
