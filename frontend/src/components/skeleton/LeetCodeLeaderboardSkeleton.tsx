@@ -11,46 +11,43 @@ export function LeetCodeLeaderboardSkeleton() {
     const highlightColor = isDark ? '#374151' : '#e5e7eb';
 
     return (
-        <div className="space-y-8 animate-pulse">
-            {/* Header Skeleton */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-6 animate-pulse pb-12">
+            {/* Redesigned Compact Header Skeleton */}
+            <div className="relative bg-white dark:bg-slate-900 p-5 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Skeleton width={48} height={48} borderRadius={12} baseColor={baseColor} highlightColor={highlightColor} />
-                    <div className="space-y-2">
-                        <Skeleton width={180} height={24} baseColor={baseColor} highlightColor={highlightColor} />
-                        <Skeleton width={150} height={16} baseColor={baseColor} highlightColor={highlightColor} />
+                    <Skeleton width={40} height={40} borderRadius={12} baseColor={baseColor} highlightColor={highlightColor} />
+                    <div className="flex items-center gap-3">
+                        <Skeleton width={180} height={28} baseColor={baseColor} highlightColor={highlightColor} />
+                        <Skeleton width={100} height={32} borderRadius={8} baseColor={baseColor} highlightColor={highlightColor} />
                     </div>
                 </div>
-                <Skeleton width={320} height={48} borderRadius={12} baseColor={baseColor} highlightColor={highlightColor} />
+
+                <Skeleton width={280} height={36} borderRadius={12} baseColor={baseColor} highlightColor={highlightColor} />
             </div>
 
-            {/* List Skeleton */}
-            <div className="flex flex-col gap-4">
-                {[...Array(8)].map((_, i) => (
-                    <Card key={i} className="overflow-hidden border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-                        <div className="flex flex-col md:flex-row items-center w-full">
-                            {/* Rank Skeleton */}
-                            <div className="w-full md:w-24 p-6 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800">
-                                <Skeleton width={24} height={24} baseColor={baseColor} highlightColor={highlightColor} />
-                                <Skeleton width={32} height={28} className="mt-1" baseColor={baseColor} highlightColor={highlightColor} />
-                            </div>
-
-                            {/* User Info Skeleton */}
-                            <div className="flex-1 p-6 flex items-center gap-4 w-full">
-                                <Skeleton width={56} height={56} borderRadius={16} baseColor={baseColor} highlightColor={highlightColor} />
-                                <div className="space-y-2 flex-1">
-                                    <Skeleton width="40%" height={24} baseColor={baseColor} highlightColor={highlightColor} />
-                                    <Skeleton width="25%" height={16} baseColor={baseColor} highlightColor={highlightColor} />
-                                </div>
-                            </div>
-
-                            {/* Stats Skeleton */}
-                            <div className="p-6 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-gray-100 dark:border-gray-800 min-w-[180px] w-full md:w-auto space-y-3">
-                                <Skeleton width={60} height={40} baseColor={baseColor} highlightColor={highlightColor} />
-                                <Skeleton width={120} height={6} borderRadius={3} baseColor={baseColor} highlightColor={highlightColor} />
+            {/* Table Skeleton */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden mt-4">
+                <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex justify-between">
+                    <Skeleton width={60} height={12} baseColor={baseColor} highlightColor={highlightColor} />
+                    <Skeleton width={100} height={12} baseColor={baseColor} highlightColor={highlightColor} />
+                    <Skeleton width={40} height={12} baseColor={baseColor} highlightColor={highlightColor} />
+                    <Skeleton width={80} height={12} baseColor={baseColor} highlightColor={highlightColor} />
+                    <Skeleton width={24} height={12} baseColor={baseColor} highlightColor={highlightColor} />
+                </div>
+                {[...Array(6)].map((_, i) => (
+                    <div key={i} className="p-6 flex items-center gap-4">
+                        <Skeleton width={32} height={32} borderRadius={8} baseColor={baseColor} highlightColor={highlightColor} />
+                        <div className="flex items-center gap-4 flex-1">
+                            <Skeleton width={40} height={40} borderRadius={12} baseColor={baseColor} highlightColor={highlightColor} />
+                            <div className="space-y-1">
+                                <Skeleton width={140} height={16} baseColor={baseColor} highlightColor={highlightColor} />
+                                <Skeleton width={80} height={12} baseColor={baseColor} highlightColor={highlightColor} />
                             </div>
                         </div>
-                    </Card>
+                        <Skeleton width={60} height={24} baseColor={baseColor} highlightColor={highlightColor} />
+                        <Skeleton width={120} height={6} borderRadius={3} baseColor={baseColor} highlightColor={highlightColor} />
+                        <Skeleton width={36} height={36} borderRadius={12} baseColor={baseColor} highlightColor={highlightColor} />
+                    </div>
                 ))}
             </div>
         </div>

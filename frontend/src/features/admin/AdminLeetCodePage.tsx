@@ -4,6 +4,7 @@ import { Plus, Trash2, ExternalLink, Loader2, Code2, AlertCircle, Pencil, X, Sav
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { DeleteButton } from '@/components/DeleteButton';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -305,13 +306,10 @@ export default function AdminLeetCodePage() {
                                                         >
                                                             <Pencil className="h-4 w-4" />
                                                         </button>
-                                                        <button
+                                                        <DeleteButton
                                                             onClick={() => handleDelete(q.id)}
                                                             title="Delete question"
-                                                            className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
+                                                        />
                                                     </div>
                                                 </td>
                                             )}

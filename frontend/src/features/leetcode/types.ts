@@ -13,4 +13,5 @@ export interface LcLeaderboardEntry {
     leetCodeUsername: string;
     totalSolved: number;
     userId: string;
+    rollNumber?: string;
 }

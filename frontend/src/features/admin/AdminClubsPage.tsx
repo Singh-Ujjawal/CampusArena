@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AdminClubsPageSkeleton } from '@/components/skeleton';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import { DeleteButton } from '@/components/DeleteButton';
 
 export default function AdminClubsPage() {
     const [clubs, setClubs] = useState<Club[]>([]);
@@ -22,6 +24,7 @@ export default function AdminClubsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClub, setEditingClub] = useState<Club | null>(null);
+    const [clubToDelete, setClubToDelete] = useState<string | null>(null);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -116,7 +119,6 @@ export default function AdminClubsPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this club?')) return;
         try {
             await api.delete(`/api/clubs/${id}`);
             toast.success('Club deleted successfully');
@@ -154,51 +156,41 @@ export default function AdminClubsPage() {
         <div className="w-full space-y-8">
             <div className="w-full space-y-10 px-2">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                    <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-black uppercase tracking-widest border border-indigo-100 dark:border-indigo-800">
-                            <Shield className="h-4 w-4" /> Administration
-                        </div>
-                        <h1 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tight">
-                            Club <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Management</span>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight italic">
+                            Club Management
                         </h1>
-                        <p className="text-gray-500 dark:text-gray-400 text-lg max-w-2xl font-medium leading-relaxed">
-                            Organize and oversee campus clubs, assign coordinators, and manage departmental identities.
+                        <p className="text-gray-500 dark:text-gray-400 text-sm max-w-2xl font-medium">
+                            Organize and oversee campus clubs and coordinators.
                         </p>
                     </div>
 
-                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                        <Button
-                            onClick={() => setIsModalOpen(true)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl h-16 px-8 text-lg font-black shadow-2xl shadow-indigo-500/20 transition-all"
-                        >
-                            <Plus className="mr-2 h-6 w-6" /> Add New Club
-                        </Button>
-                    </motion.div>
+                    <Button
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-11 px-6 text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all"
+                    >
+                        <Plus className="mr-2 h-4 w-4" /> Add Club
+                    </Button>
                 </div>
 
                 {/* Stats/Search Bar */}
-                <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="relative flex-1 w-full group">
-                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
                         </div>
                         <Input
                             type="text"
-                            placeholder="Search clubs by name or faculty coordinator..."
+                            placeholder="Search clubs..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-14 h-16 bg-white dark:bg-gray-800/50 border-none shadow-xl shadow-gray-200/50 dark:shadow-none rounded-3xl text-lg font-bold focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-gray-400"
+                            className="pl-11 h-11 bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 transition-all"
                         />
                     </div>
-                    <div className="px-8 py-4 bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-none flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                            <Sparkles className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Total Clubs</p>
-                            <p className="text-2xl font-black text-gray-900 dark:text-white leading-none">{clubs.length}</p>
-                        </div>
+                    <div className="px-4 py-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                        <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-sm font-bold text-gray-700 dark:text-white">{clubs.length} Clubs</span>
                     </div>
                 </div>
 
@@ -206,72 +198,58 @@ export default function AdminClubsPage() {
                 {isLoading ? (
                     <AdminClubsPageSkeleton />
                 ) : filteredClubs.length > 0 ? (
-                    <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <AnimatePresence mode='popLayout'>
                             {filteredClubs.map((club, idx) => (
                                 <motion.div
                                     key={club.id}
                                     layout
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.98 }}
-                                    transition={{ duration: 0.3, delay: idx * 0.03 }}
-                                    className="flex items-center justify-between p-6 bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all group"
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.2, delay: idx * 0.02 }}
+                                    className="flex flex-col p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all group"
                                 >
-                                    {/* Club Identity */}
-                                    <div className="flex items-center gap-6 w-1/3">
-                                        <div className="h-20 w-20 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center group-hover:rotate-3 transition-transform duration-500 overflow-hidden shadow-inner font-black text-indigo-600 dark:text-indigo-400">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="h-12 w-12 rounded-full overflow-hidden bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center border border-indigo-100 dark:border-indigo-900 flex-shrink-0 shadow-inner">
                                             {club.image ? (
                                                 <img src={club.image} alt={club.name} className="w-full h-full object-cover" />
                                             ) : (
-                                                <Building2 className="h-10 w-10" />
+                                                <Building2 className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
                                             )}
                                         </div>
-                                        <div>
-                                            <p className="text-2xl font-black text-gray-900 dark:text-white leading-tight">
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate px-1">
                                                 {club.name}
-                                            </p>
-                                            <span className="inline-block mt-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100/50 dark:border-indigo-800/50">
+                                            </h3>
+                                            <span className="inline-block mt-0.5 px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded text-[9px] font-black uppercase tracking-tight">
                                                 Active Unit
                                             </span>
                                         </div>
                                     </div>
-
-                                    {/* Coordinator Info */}
-                                    <div className="flex items-center gap-4 w-1/3">
-                                        <div className="h-12 w-12 rounded-2xl bg-gray-50 dark:bg-gray-900 flex items-center justify-center border border-gray-100 dark:border-gray-700 shadow-sm">
-                                            <UserIcon className="h-6 w-6 text-indigo-500" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
-                                                Coordinator
-                                            </p>
-                                            <p className="text-lg font-black text-gray-900 dark:text-white">
+                                    
+                                    <div className="mt-auto flex items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="h-7 w-7 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700 flex-shrink-0">
+                                                <UserIcon className="h-3.5 w-3.5 text-gray-400" />
+                                            </div>
+                                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 truncate">
                                                 {faculties.find(f => f.id === club.clubCoordinatorId)?.firstName || 'Unassigned'}
-                                            </p>
+                                            </span>
                                         </div>
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="flex justify-end gap-3 w-1/4">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleEdit(club)}
-                                            className="h-12 w-12 p-0 rounded-2xl bg-gray-50 dark:bg-gray-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 hover:text-indigo-600 shadow-sm border border-gray-100 dark:border-gray-800 transition-all hover:scale-105"
-                                            title="Edit Club"
-                                        >
-                                            <Edit className="h-5 w-5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDelete(club.id)}
-                                            className="h-12 w-12 p-0 rounded-2xl bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/50 hover:text-red-600 shadow-sm border border-gray-100 dark:border-gray-800 transition-all hover:scale-105"
-                                            title="Delete Club"
-                                        >
-                                            <Trash2 className="h-5 w-5" />
-                                        </Button>
+                                        <div className="flex items-center gap-1.5 translate-x-1">
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleEdit(club)}
+                                                className="h-8 w-8 p-0 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:text-gray-400 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/30"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <DeleteButton
+                                                onClick={() => setClubToDelete(club.id)}
+                                            />
+                                        </div>
                                     </div>
                                 </motion.div>
                             ))}
@@ -416,6 +394,14 @@ export default function AdminClubsPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            <DeleteConfirmDialog
+                isOpen={!!clubToDelete}
+                onClose={() => setClubToDelete(null)}
+                onConfirm={() => clubToDelete && handleDelete(clubToDelete)}
+                title={clubs.find(c => c.id === clubToDelete)?.name || ''}
+                itemType="Club"
+            />
         </div>
     );
 }

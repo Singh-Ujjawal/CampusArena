@@ -7,12 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminProblemsPageSkeleton } from '@/components/skeleton';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import { DeleteButton } from '@/components/DeleteButton';
 
 export default function AdminProblemsPage() {
     const [problems, setProblems] = useState<Problem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [currentProblem, setCurrentProblem] = useState<Partial<Problem>>({});
+    const [problemToDelete, setProblemToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         fetchProblems();
@@ -28,7 +31,6 @@ export default function AdminProblemsPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Delete usage logic? This is a simple delete call.')) return;
         try {
             await api.delete(`/api/problems/${id}`);
             toast.success('Problem deleted');
@@ -89,15 +91,19 @@ export default function AdminProblemsPage() {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Manage Problems</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Problem Studio</h1>
                 <Button onClick={() => { setCurrentProblem({ testCases: [] }); setIsEditing(true); }}>
                     <Plus className="mr-2 h-4 w-4" /> Add Problem
                 </Button>
             </div>
 
             {isEditing ? (
-                <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-                    <CardHeader><CardTitle className="text-gray-900 dark:text-gray-100">Problem Editor</CardTitle></CardHeader>
+                <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+                    <CardHeader className="border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-700 dark:to-gray-700 py-6">
+                        <CardTitle className="text-2xl text-gray-900 dark:text-gray-100">
+                            {currentProblem.id ? 'Edit Problem' : 'New Problem'}
+                        </CardTitle>
+                    </CardHeader>
                     <CardContent className="space-y-4">
                         <Input label="Title" value={currentProblem.title || ''} onChange={e => setCurrentProblem({ ...currentProblem, title: e.target.value })} className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700" />
                         <div className="space-y-1">
@@ -161,18 +167,38 @@ export default function AdminProblemsPage() {
                         <Card key={problem.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                             <CardContent className="flex items-center justify-between p-4">
                                 <div>
-                                    <h3 className="font-bold text-gray-900 dark:text-gray-100">{problem.title}</h3>
-                                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1 rounded">{problem.difficulty}</span>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base leading-tight">{problem.title}</h3>
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                            problem.difficulty === 'EASY' 
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800' 
+                                                : problem.difficulty === 'MEDIUM'
+                                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800'
+                                        }`}>
+                                            {problem.difficulty}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div className="flex space-x-2">
                                     <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => { setCurrentProblem(problem); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
-                                    <Button size="sm" variant="danger" onClick={() => handleDelete(problem.id)}><Trash className="h-4 w-4" /></Button>
+                                    <DeleteButton
+                                        onClick={() => setProblemToDelete(problem.id)}
+                                    />
                                 </div>
                             </CardContent>
                         </Card>
                     ))}
                 </div>
             )}
+
+            <DeleteConfirmDialog
+                isOpen={!!problemToDelete}
+                onClose={() => setProblemToDelete(null)}
+                onConfirm={() => handleDelete(problemToDelete!)}
+                title={problems.find(p => p.id === problemToDelete)?.title || ''}
+                itemType="Problem"
+            />
         </div>
     );
 }

@@ -20,7 +20,7 @@ export function AdminEventsPageSkeleton() {
             </div>
 
             {/* Event List */}
-            <div className="space-y-4">
+            <div className="grid gap-3">
                 {[...Array(5)].map((_, i) => (
                     <AdminEventRowSkeleton key={i} />
                 ))}
