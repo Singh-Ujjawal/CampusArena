@@ -11,6 +11,8 @@ import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import { DeleteButton } from '@/components/DeleteButton';
 
 interface RegistrationForm {
     id: string;
@@ -29,6 +31,11 @@ export default function AdminRegistrationHub() {
     const [forms, setForms] = useState<RegistrationForm[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; formId: string | null; formTitle: string }>({
+        open: false,
+        formId: null,
+        formTitle: ''
+    });
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -48,11 +55,11 @@ export default function AdminRegistrationHub() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this form? All responses will be lost.')) return;
         try {
             await api.delete(`/api/admin/registration/forms/${id}`);
             setForms(forms.filter(f => f.id !== id));
             toast.success('Form deleted successfully');
+            setDeleteDialog({ open: false, formId: null, formTitle: '' });
         } catch (error) {
             toast.error('Failed to delete form');
         }
@@ -117,39 +124,38 @@ export default function AdminRegistrationHub() {
 
     return (
         <div className="space-y-8 pb-12">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                        <ClipboardList className="h-8 w-8 text-indigo-600" />
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-2 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+                    <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white flex items-center gap-3 shrink-0">
+                        <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none">
+                            <ClipboardList className="h-6 w-6 text-white" />
+                        </div>
                         Registration Hub
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Manage all registration forms and participant data</p>
+                    
+                    <div className="relative w-full max-w-md">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <input
+                            type="text"
+                            placeholder="Search forms..."
+                            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white text-sm"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                 </div>
-                <Link to="/admin/registration/create">
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-12 px-6 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105 active:scale-95">
-                        <Plus className="h-5 w-5 mr-2" />
-                        Create Form
-                    </Button>
-                </Link>
+                
+                <div className="flex items-center gap-3">
+                    <Link to="/admin/registration/create">
+                        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-10 px-5 shadow-md shadow-indigo-100 dark:shadow-none transition-all hover:scale-105 active:scale-95 text-sm font-bold">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Form
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
-            {/* Filters and Search */}
-            <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                    <input
-                        type="text"
-                        placeholder="Search forms by title or description..."
-                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-                <Button variant="outline" className="rounded-xl h-12 px-6 border-gray-200 dark:border-gray-700">
-                    <Filter className="h-5 w-5 mr-2" />
-                    Filters
-                </Button>
-            </div>
+
 
             {/* Grid */}
             <div className="grid grid-cols-1 gap-6">
@@ -183,43 +189,38 @@ export default function AdminRegistrationHub() {
                                     transition={{ delay: index * 0.05 }}
                                     className="group"
                                 >
-                                    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 hover:shadow-xl hover:shadow-indigo-500/5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-                                        {isEventLinked && (
-                                            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
-                                        )}
+                                    <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-3 hover:shadow-xl hover:shadow-indigo-500/5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
 
-                                        <div className="flex-1 space-y-3">
-                                            <div className="flex flex-wrap items-center gap-3">
-                                                <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-1">
+                                                <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors truncate">
                                                     {form.title}
                                                 </h3>
-                                                <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${status.color}`}>
-                                                    <StatusIcon className="h-3.5 w-3.5" />
+                                                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider">
+                                                    <div className="flex items-center gap-1.5 text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded border border-rose-100 dark:border-rose-900/50">
+                                                        <Clock className="h-3 w-3" />
+                                                        <span>Ends {new Date(form.endTime).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-gray-500 bg-gray-50 dark:bg-gray-900 px-2 py-0.5 rounded border border-gray-100 dark:border-gray-800">
+                                                        <Calendar className="h-3 w-3" />
+                                                        <span>Created {new Date(form.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${status.color}`}>
+                                                    <StatusIcon className="h-3 w-3" />
                                                     {status.label}
                                                 </span>
                                             </div>
-
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 max-w-2xl">
-                                                {form.description || "No description provided."}
-                                            </p>
-
-                                            <div className="flex flex-wrap items-center gap-6 text-sm">
-                                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                                                    <Calendar className="h-4 w-4 text-indigo-500" />
-                                                    <span>Ends {new Date(form.endTime).toLocaleDateString()}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                                                    <Clock className="h-4 w-4 text-indigo-500" />
-                                                    <span>Created {new Date(form.createdAt).toLocaleDateString()}</span>
-                                                </div>
-                                            </div>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="rounded-xl h-10 w-10 p-0 text-gray-400 hover:text-indigo-600"
+                                                className="rounded-xl h-9 w-9 p-0 text-gray-400 hover:text-indigo-600"
                                                 onClick={() => navigate(`/admin/registration/edit/${form.id}`)}
                                                 title="Edit Form"
                                             >
@@ -228,29 +229,24 @@ export default function AdminRegistrationHub() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="rounded-xl h-10 w-10 p-0 text-gray-400 hover:text-green-600"
+                                                className="rounded-xl h-9 w-9 p-0 text-gray-400 hover:text-green-600"
                                                 onClick={() => handleExportCSV(form.id, form.title)}
                                                 title="Export Responses"
                                             >
                                                 <Download className="h-4 w-4" />
                                             </Button>
                                             <Link to={`/admin/registration/forms/${form.id}/responses`}>
-                                                <Button variant="secondary" size="sm" className="rounded-xl h-10 gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 border-none px-4">
+                                                <Button variant="secondary" size="sm" className="rounded-xl h-9 gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-300 border-none px-3 text-xs">
                                                     <BarChart3 className="h-4 w-4" />
-                                                    View Responses
+                                                    Responses
                                                 </Button>
                                             </Link>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="rounded-xl h-10 w-10 p-0 text-gray-400 hover:text-red-600"
-                                                onClick={() => handleDelete(form.id)}
+                                            <DeleteButton
+                                                onClick={() => setDeleteDialog({ open: true, formId: form.id, formTitle: form.title })}
                                                 title="Delete Form"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            />
                                             <Link to={`/registration/${form.id}`}>
-                                                <Button variant="outline" size="sm" className="rounded-xl h-10 w-10 p-0 border-gray-200 dark:border-gray-700" title="Preview">
+                                                <Button variant="outline" size="sm" className="rounded-xl h-9 w-9 p-0 border-gray-200 dark:border-gray-700" title="Preview">
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
                                             </Link>
@@ -262,6 +258,13 @@ export default function AdminRegistrationHub() {
                     </AnimatePresence>
                 )}
             </div>
+            <DeleteConfirmDialog
+                isOpen={deleteDialog.open}
+                onClose={() => setDeleteDialog({ open: false, formId: null, formTitle: '' })}
+                onConfirm={() => deleteDialog.formId && handleDelete(deleteDialog.formId)}
+                title={deleteDialog.formTitle}
+                itemType="Registration Form"
+            />
         </div>
     );
 }

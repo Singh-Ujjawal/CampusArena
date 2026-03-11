@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Plus, Trash, ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminQuestionsPageSkeleton } from '@/components/skeleton';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import { DeleteButton } from '@/components/DeleteButton';
 
 interface Question {
     id?: string;
@@ -24,6 +26,7 @@ export default function AdminQuestionsPage() {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+    const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
     // Form state
     const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({
@@ -50,13 +53,14 @@ export default function AdminQuestionsPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Delete this question?')) return;
         try {
             await api.delete(`/api/questions/${id}`);
             toast.success('Question deleted');
             fetchQuestions();
         } catch (error) {
             toast.error('Failed to delete question');
+        } finally {
+            setQuestionToDelete(null);
         }
     };
 
@@ -200,9 +204,9 @@ export default function AdminQuestionsPage() {
                                     </div>
                                     <div className="flex flex-col items-end space-y-2">
                                         <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded">Avg: {q.marks} / -{q.negativeMarks}</span>
-                                        <Button variant="danger" size="sm" onClick={() => handleDelete(q.id || q.questionId!)}>
-                                            <Trash className="h-4 w-4" />
-                                        </Button>
+                                        <DeleteButton
+                                            onClick={() => setQuestionToDelete(q.id || q.questionId!)}
+                                        />
                                     </div>
                                 </CardContent>
                             </Card>
@@ -210,6 +214,13 @@ export default function AdminQuestionsPage() {
                     )}
                 </div>
             )}
+            <DeleteConfirmDialog
+                isOpen={!!questionToDelete}
+                onClose={() => setQuestionToDelete(null)}
+                onConfirm={() => questionToDelete && handleDelete(questionToDelete)}
+                title={questions.find(q => (q.id || q.questionId) === questionToDelete)?.questionText || ''}
+                itemType="Question"
+            />
         </div>
     );
 }

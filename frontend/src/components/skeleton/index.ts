@@ -26,3 +26,5 @@ export { AdminClubsPageSkeleton } from './AdminClubsPageSkeleton';
 export { AdminClubRowSkeleton } from './AdminClubRowSkeleton';
 export { LeetCodeQuestionsSkeleton } from './LeetCodeQuestionsSkeleton';
 export { LeetCodeLeaderboardSkeleton } from './LeetCodeLeaderboardSkeleton';
+export { ContestListPageSkeleton } from './ContestListPageSkeleton';
+export { EventListPageSkeleton } from './EventListPageSkeleton';

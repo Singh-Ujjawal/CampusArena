@@ -18,6 +18,6 @@ public class LcUserProfileResponse {
     private long totalSolved;
     private Map<String, Long> difficultyStats;
     private Map<String, Long> topicStats;
-    private LocalDateTime lastSyncTime;     // when user last synced
-    private Long lastSyncedTimestamp;       // epoch millis for cooldown countdown
+    private LocalDateTime lastSyncTime; // when user last synced
+    private Long lastSyncedTimestamp; // epoch millis for cooldown countdown
 }
