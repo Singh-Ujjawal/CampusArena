@@ -40,7 +40,7 @@ public class LcUserService {
         Long lastSyncedTimestamp = user.getLastSyncedTimestamp();
         if (lastSyncedTimestamp != null && lastSyncedTimestamp != 0L
                 && (currentTime - lastSyncedTimestamp) < COOLDOWN_MILLIS) {
-            long remainingMillis  = COOLDOWN_MILLIS - (currentTime - lastSyncedTimestamp);
+            long remainingMillis = COOLDOWN_MILLIS - (currentTime - lastSyncedTimestamp);
             long remainingSeconds = remainingMillis / 1000;
             throw new RuntimeException(
                     "Please wait " + remainingSeconds + " seconds before syncing again.");
@@ -104,18 +104,16 @@ public class LcUserService {
         List<LcUserQuestion> solvedList = lcUserQuestionRepository.findByCampusUserId(user.getId());
         long totalSolved = solvedList.size();
         Map<String, Long> difficultyStats = new HashMap<>();
-        Map<String, Long> topicStats     = new HashMap<>();
+        Map<String, Long> topicStats = new HashMap<>();
 
         for (LcUserQuestion uq : solvedList) {
             lcQuestionRepository.findById(uq.getQuestionId()).ifPresent(question -> {
                 difficultyStats.put(
                         question.getDifficulty(),
-                        difficultyStats.getOrDefault(question.getDifficulty(), 0L) + 1
-                );
+                        difficultyStats.getOrDefault(question.getDifficulty(), 0L) + 1);
                 topicStats.put(
                         question.getTopic(),
-                        topicStats.getOrDefault(question.getTopic(), 0L) + 1
-                );
+                        topicStats.getOrDefault(question.getTopic(), 0L) + 1);
             });
         }
 
@@ -141,12 +139,15 @@ public class LcUserService {
                 entry.put("leetCodeUsername", user.getLeetCodeUsername());
                 entry.put("totalSolved", solvedCount);
                 entry.put("userId", user.getId());
+                entry.put("rollNumber", user.getRollNumber());
+                entry.put("branch", user.getBranch());
+                entry.put("course", user.getCourse());
+                entry.put("section", user.getSection());
+                entry.put("session", user.getSession());
                 leaderboard.add(entry);
             }
         }
-        leaderboard.sort((a, b) ->
-                Long.compare((Long) b.get("totalSolved"), (Long) a.get("totalSolved"))
-        );
+        leaderboard.sort((a, b) -> Long.compare((Long) b.get("totalSolved"), (Long) a.get("totalSolved")));
         return leaderboard;
     }
 }

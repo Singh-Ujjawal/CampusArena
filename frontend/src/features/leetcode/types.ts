@@ -14,4 +14,8 @@ export interface LcLeaderboardEntry {
     totalSolved: number;
     userId: string;
     rollNumber?: string;
+    branch?: any;
+    course?: any;
+    section?: string;
+    session?: string;
 }
