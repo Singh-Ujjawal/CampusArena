@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/axios';
 import { Trophy, Medal, Search, ArrowLeft, Code2, FileDown, Star, Users, ChevronRight, TrendingUp, Award, Target } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { type LcLeaderboardEntry } from '@/features/leetcode/types';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import autoTable from 'jspdf-autotable';
 
 export default function LeetCodeLeaderboardPage() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [entries, setEntries] = useState<LcLeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -163,7 +164,8 @@ export default function LeetCodeLeaderboardPage() {
                                 return (
                                     <tr 
                                         key={entry.userId} 
-                                        className={`group hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 ${isCurrentUser ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : ''}`}
+                                        onClick={() => navigate(`/profile/${entry.userId}`)}
+                                        className={`group hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300 cursor-pointer ${isCurrentUser ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : ''}`}
                                     >
                                         <td className="py-4 px-6">
                                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-sm font-black ${
@@ -176,24 +178,31 @@ export default function LeetCodeLeaderboardPage() {
                                             </div>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <Link to={`/profile/${entry.userId}`} className="flex items-center gap-4">
+                                            <div className="flex items-center gap-4">
                                                 <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold border border-slate-200 dark:border-slate-700">
                                                     {entry.name[0]}
                                                 </div>
                                                 <div className="flex flex-col min-w-0">
-                                                    <span className="font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                                        {entry.name}
-                                                        {isCurrentUser && <span className="ml-2 text-[8px] font-black uppercase text-indigo-500 bg-indigo-100 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded tracking-widest">You</span>}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-slate-900 dark:text-white truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                            {entry.name}
+                                                        </span>
+                                                        {isCurrentUser && <span className="text-[8px] font-black uppercase text-indigo-500 bg-indigo-100 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded tracking-widest">You</span>}
+                                                        {(entry.course || entry.branch) && (
+                                                            <span className="text-[8px] font-black uppercase text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded tracking-widest">
+                                                                {entry.course} {entry.branch}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mt-0.5">
                                                         <Code2 className="h-3 w-3" />
                                                         @{entry.leetCodeUsername}
                                                     </span>
                                                 </div>
-                                            </Link>
+                                            </div>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <span className="text-[10px] font-bold text-slate-500 font-mono">
+                                            <span className="text-sm font-black text-slate-600 dark:text-slate-300 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
                                                 {entry.rollNumber || '—'}
                                             </span>
                                         </td>
@@ -216,11 +225,9 @@ export default function LeetCodeLeaderboardPage() {
                                             </div>
                                         </td>
                                         <td className="py-4 px-6 text-right">
-                                            <Link to={`/profile/${entry.userId}`}>
-                                                <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all">
-                                                    <ChevronRight className="h-5 w-5" />
-                                                </Button>
-                                            </Link>
+                                            <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all">
+                                                <ChevronRight className="h-5 w-5" />
+                                            </Button>
                                         </td>
                                     </tr>
                                 );

@@ -27,6 +27,7 @@ public class UserActivityDTO {
         private Double score;
         private Double totalMarks;
         private Integer rank;
+        private String clubName;
     }
 
     @Data
@@ -40,6 +41,7 @@ public class UserActivityDTO {
         private double totalScore;
         private String lastSubmissionTime;
         private Integer rank;
+        private String clubName;
     }
 
     @Data
@@ -53,5 +55,6 @@ public class UserActivityDTO {
         private String evaluationStatus;
         private Double score;
         private Double totalMarks;
+        private String clubName;
     }
 }

@@ -1,5 +1,7 @@
 package com.campusarena.eventhub.user.service;
 
+import com.campusarena.eventhub.club.model.Club;
+import com.campusarena.eventhub.club.repository.ClubRepository;
 import com.campusarena.eventhub.contest.model.Contest;
 import com.campusarena.eventhub.contest.model.Submission;
 import com.campusarena.eventhub.contest.repository.ContestRepository;
@@ -36,6 +38,7 @@ public class UserActivityService {
     private final RegistrationResponseRepository registrationResponseRepository;
     private final RegistrationFormRepository registrationFormRepository;
     private final UserRepository userRepository;
+    private final ClubRepository clubRepository;
 
     public CollectiveActivityDTO getCollectiveActivity(com.campusarena.eventhub.user.model.Course course, String session, String section) {
         List<User> users;
@@ -57,6 +60,10 @@ public class UserActivityService {
     }
 
     public UserActivityDTO getUserActivity(String userId) {
+        // Fetch all clubs for mapping
+        Map<String, String> clubNameMap = clubRepository.findAll().stream()
+                .collect(Collectors.toMap(Club::getId, Club::getName));
+
         // ─── MCQ Activities ───────────────────────────────────────────────
         List<EventRegistration> registrations = registrationRepository.findByUserId(userId);
         Map<String, EventRegistration> registrationByEvent = registrations.stream()
@@ -90,6 +97,8 @@ public class UserActivityService {
                             ? sub.getSubmittedAt().toString() : "";
                     String registeredAt = reg != null && reg.getRegisteredAt() != null
                             ? reg.getRegisteredAt().toString() : "";
+                    
+                    String clubName = (event != null && event.getClubId() != null) ? clubNameMap.getOrDefault(event.getClubId(), "General") : "General";
 
                     return new UserActivityDTO.McqActivityDTO(
                             eventId,
@@ -99,7 +108,8 @@ public class UserActivityService {
                             status,
                             score,
                             event != null ? event.getTotalMarks() : null,
-                            rank
+                            rank,
+                            clubName
                     );
                 })
                 .sorted((a, b) -> {
@@ -148,6 +158,8 @@ public class UserActivityService {
                             .orElse(null);
                     int totalProblems = contest != null && contest.getProblemIds() != null
                             ? contest.getProblemIds().size() : 0;
+                    
+                    String clubName = (contest != null && contest.getClubId() != null) ? clubNameMap.getOrDefault(contest.getClubId(), "General") : "General";
 
                     return new UserActivityDTO.ContestActivityDTO(
                             contestId,
@@ -156,7 +168,8 @@ public class UserActivityService {
                             totalProblems,
                             totalScore,
                             lastTime,
-                            null
+                            null,
+                            clubName
                     );
                 })
                 .collect(Collectors.toList());
@@ -180,6 +193,8 @@ public class UserActivityService {
                     if (form != null && (form.getEventId() != null || form.getContestId() != null)) {
                         return null; 
                     }
+                    
+                    String clubName = (form != null && form.getClubId() != null) ? clubNameMap.getOrDefault(form.getClubId(), "General") : "General";
 
                     return new UserActivityDTO.RegistrationActivityDTO(
                             response.getFormId(),
@@ -188,7 +203,8 @@ public class UserActivityService {
                             response.getStatus(),
                             response.getEvaluationStatus() != null ? response.getEvaluationStatus() : "PENDING",
                             response.getTotalEvaluationMarks(),
-                            response.getMaxPossibleMarks()
+                            response.getMaxPossibleMarks(),
+                            clubName
                     );
                 })
                 .filter(Objects::nonNull)

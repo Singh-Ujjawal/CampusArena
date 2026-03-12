@@ -129,6 +129,7 @@ export interface McqActivity {
     score?: number;
     totalMarks: number;
     rank?: number;
+    clubName?: string;
 }
 
 export interface ContestActivity {
@@ -139,6 +140,7 @@ export interface ContestActivity {
     totalScore: number;
     lastSubmissionTime?: string;
     rank?: number;
+    clubName?: string;
 }
 
 export interface RegistrationActivity {
@@ -149,6 +151,7 @@ export interface RegistrationActivity {
     evaluationStatus: string;
     score?: number;
     totalMarks?: number;
+    clubName?: string;
 }
 
 export interface RegistrationForm {

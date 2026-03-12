@@ -88,6 +88,7 @@ function App() {
                 {/* User Routes */}
                 <Route path="/submissions" element={<MySubmissionsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/profile/:userId" element={<ProfilePage />} />
                 <Route path="/leetcode/questions" element={<LeetCodeQuestionsPage />} />
                 <Route path="/about" element={<AboutUsPage />} />
                 <Route path="/registration/:id" element={<RegistrationFormSubmission />} />
