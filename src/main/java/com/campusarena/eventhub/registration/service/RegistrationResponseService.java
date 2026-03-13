@@ -92,9 +92,12 @@ public class RegistrationResponseService {
             String qId = question.getId();
             if (question.getType() == QuestionType.IMAGE_UPLOAD) {
                 MultipartFile file = (files != null) ? files.get(qId) : null;
-                if (question.isRequired() && (file == null || file.isEmpty())) {
+                String textValue = textAnswers.get(qId);
+                
+                if (question.isRequired() && (file == null || file.isEmpty()) && (textValue == null || textValue.trim().isEmpty())) {
                     throw new ApiException("Required image missing: " + question.getLabel());
                 }
+                
                 if (file != null && !file.isEmpty()) {
                     if (file.getSize() > maxFileSize) {
                         throw new ApiException("File size exceeds limit (Max 2MB)");
@@ -104,6 +107,8 @@ public class RegistrationResponseService {
                     Files.createDirectories(path.getParent());
                     Files.copy(file.getInputStream(), path);
                     finalAnswers.put(qId, "/files/" + fileName);
+                } else if (textValue != null && !textValue.trim().isEmpty()) {
+                    finalAnswers.put(qId, textValue);
                 }
             } else {
                 String value = textAnswers.get(qId);
@@ -158,8 +163,8 @@ public class RegistrationResponseService {
                 userRepository.findById(response.getUserId()).ifPresent(user -> {
                     response.setUsername(user.getUsername());
                     response.setRollNumber(user.getRollNumber());
-                    response.setName((user.getFirstName() != null ? user.getFirstName() : "") + " " + 
-                                     (user.getLastName() != null ? user.getLastName() : ""));
+                    response.setName((user.getFirstName() != null ? user.getFirstName() : "") + " " +
+                            (user.getLastName() != null ? user.getLastName() : ""));
                     response.setEmail(user.getEmail());
                     response.setPhoneNumber(user.getPhoneNumber());
                     response.setCourse(user.getCourse() != null ? user.getCourse().name() : "");
@@ -189,20 +194,25 @@ public class RegistrationResponseService {
         if (form.getContestId() != null) {
             contestRepository.findById(form.getContestId()).ifPresent(contest -> {
                 if (contest.getStartTime() != null && !now.isBefore(contest.getStartTime())) {
-                    throw new ApiException("Registration closed. Contest " + contest.getTitle() + " has already started.");
+                    throw new ApiException(
+                            "Registration closed. Contest " + contest.getTitle() + " has already started.");
                 }
             });
         }
+
         if (form.getEventId() != null) {
             eventRepository.findById(form.getEventId()).ifPresent(event -> {
                 if (event.getStartTime() != null && !now.isBefore(event.getStartTime())) {
-                    throw new ApiException("Registration closed. Quiz/Event " + event.getTitle() + " has already started.");
+                    throw new ApiException(
+                            "Registration closed. Quiz/Event " + event.getTitle() + " has already started.");
                 }
             });
         }
+
     }
 
-    public RegistrationResponse submitMarks(String responseId, List<EvaluationMark> marks, String feedback, User currentUser) {
+    public RegistrationResponse submitMarks(String responseId, List<EvaluationMark> marks, String feedback,
+            User currentUser) {
         RegistrationResponse response = responseRepository.findById(responseId)
                 .orElseThrow(() -> new ApiException("Response not found"));
 

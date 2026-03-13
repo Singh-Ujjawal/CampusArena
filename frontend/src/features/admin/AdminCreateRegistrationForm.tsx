@@ -219,6 +219,15 @@ export default function AdminCreateRegistrationForm() {
 
         setIsSaving(true);
 
+        // Calculate payment fees, removing if negative or zero
+        let finalPaymentFees = null;
+        if (paymentRequired && paymentFees) {
+            const feeAmount = parseFloat(paymentFees);
+            if (feeAmount > 0) {
+                finalPaymentFees = feeAmount;
+            }
+        }
+
         const formObj: any = {
             title,
             description,
@@ -227,15 +236,16 @@ export default function AdminCreateRegistrationForm() {
             endTime: endTime ? fromISTInput(endTime) : null,
             active: isActive,
             paymentRequired,
-            paymentFees: paymentRequired && paymentFees ? parseFloat(paymentFees) : null,
+            paymentFees: finalPaymentFees,
             clubId: clubId || null,
             eventId: eventId || null,
             contestId: contestId || null,
             questions,
             imageUrl: imageUrl || null,
             imagePublicId: imagePublicId || null,
-            evaluationCriteria: (!eventId && !contestId) ? evaluationCriteria : null,
+            evaluationCriteria: evaluationCriteria,
         };
+
 
         try {
             if (isEdit) {
@@ -458,59 +468,58 @@ export default function AdminCreateRegistrationForm() {
                         </Button>
                     </div>
 
-                    {/* Evaluation Criteria Area (Only for non-MCQ/Contest) */}
-                    {!eventId && !contestId && (
-                        <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-500">
-                            <div className="flex items-center justify-between px-2">
-                                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Trophy className="h-5 w-5 text-indigo-500" />
-                                    Evaluation Criteria
-                                </h3>
-                                <span className="text-xs font-medium text-gray-400">{evaluationCriteria.length} Criteria Added</span>
-                            </div>
-
-                            {evaluationCriteria.map((c) => (
-                                <Card key={c.id} className="border-none shadow-sm bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl overflow-hidden border border-indigo-100/50 dark:border-indigo-900/50">
-                                    <CardContent className="p-5 flex flex-col md:flex-row items-center gap-4">
-                                        <div className="flex-1">
-                                            <input
-                                                type="text"
-                                                placeholder="Criterion Name (e.g., Presentation, Design, Project Utility)"
-                                                className="w-full bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-gray-400 dark:text-white outline-none"
-                                                value={c.name}
-                                                onChange={(e) => updateCriterion(c.id, { name: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-gray-700">
-                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Max Marks</span>
-                                                <input
-                                                    type="number"
-                                                    className="w-16 bg-transparent border-none focus:ring-0 text-sm font-bold text-indigo-600 outline-none p-0"
-                                                    value={c.maxMarks}
-                                                    onChange={(e) => updateCriterion(c.id, { maxMarks: parseFloat(e.target.value) || 0 })}
-                                                />
-                                            </div>
-                                            <DeleteButton
-                                                onClick={() => removeCriterion(c.id)}
-                                                title="Remove Criterion"
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={addCriterion}
-                                className="w-full py-6 border-2 border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/20 dark:bg-indigo-900/5 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-500 transition-all font-bold text-sm"
-                            >
-                                <Plus className="h-5 w-5 mr-2" />
-                                Add Evaluation Criterion
-                            </Button>
+                    {/* Evaluation Criteria Area */}
+                    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-500">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Trophy className="h-5 w-5 text-indigo-500" />
+                                Evaluation Criteria
+                            </h3>
+                            <span className="text-xs font-medium text-gray-400">{evaluationCriteria.length} Criteria Added</span>
                         </div>
-                    )}
+
+                        {evaluationCriteria.map((c) => (
+                            <Card key={c.id} className="border-none shadow-sm bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl overflow-hidden border border-indigo-100/50 dark:border-indigo-900/50">
+                                <CardContent className="p-5 flex flex-col md:flex-row items-center gap-4">
+                                    <div className="flex-1">
+                                        <input
+                                            type="text"
+                                            placeholder="Criterion Name (e.g., Presentation, Design, Project Utility)"
+                                            className="w-full bg-transparent border-none focus:ring-0 text-sm font-bold placeholder:text-gray-400 dark:text-white outline-none"
+                                            value={c.name}
+                                            onChange={(e) => updateCriterion(c.id, { name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-gray-700">
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Max Marks</span>
+                                            <input
+                                                type="number"
+                                                className="w-16 bg-transparent border-none focus:ring-0 text-sm font-bold text-indigo-600 outline-none p-0"
+                                                value={c.maxMarks}
+                                                onChange={(e) => updateCriterion(c.id, { maxMarks: parseFloat(e.target.value) || 0 })}
+                                            />
+                                        </div>
+                                        <DeleteButton
+                                            onClick={() => removeCriterion(c.id)}
+                                            title="Remove Criterion"
+                                        />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={addCriterion}
+                            className="w-full py-6 border-2 border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/20 dark:bg-indigo-900/5 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-500 transition-all font-bold text-sm"
+                        >
+                            <Plus className="h-5 w-5 mr-2" />
+                            Add Evaluation Criterion
+                        </Button>
+                    </div>
+
                 </div>
 
                 {/* Sidebar Controls */}

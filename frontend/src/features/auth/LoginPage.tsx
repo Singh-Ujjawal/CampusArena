@@ -7,7 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Zap, Award, Users, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { InteractiveLoginAside } from './InteractiveLoginAside';
 
 const loginSchema = z.object({
     userId: z.string().min(1, 'User ID is required'),
@@ -39,92 +40,49 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex">
-            {/* Left Side - Website Details & Logo */}
-            <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-between text-white" style={{ background: 'linear-gradient(to bottom right, #8ECAE6, #4B7BA7)' }}>
-                <div>
-                    <div className="mb-12 flex items-center gap-4 h-50">
-                        <img src="/main_logo.png" alt="Logo" className="h-full object-contain" />
-                        <img src="/name.png" alt="CampusArena" className="h-full object-contain" />
-                    </div>
-                    
-                    <p className="text-lg mb-8" style={{ color: '#E8F4F8' }}>
-                        Compete, Learn, and Excel in Programming Contests
-                    </p>
-                </div>
-
-                <div className="space-y-8">
-                    <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 rounded-lg p-3" style={{ backgroundColor: '#8ECAE6' }}>
-                            <Zap className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-semibold mb-1">Fast & Responsive</h3>
-                            <p style={{ color: '#E8F4F8' }}>Experience lightning-fast contests with real-time updates and instant feedback.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 rounded-lg p-3" style={{ backgroundColor: '#8ECAE6' }}>
-                            <Award className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-semibold mb-1">Competitive Edge</h3>
-                            <p style={{ color: '#E8F4F8' }}>Climb the leaderboards and prove your programming prowess.</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 rounded-lg p-3" style={{ backgroundColor: '#8ECAE6' }}>
-                            <Users className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-semibold mb-1">Community Driven</h3>
-                            <p style={{ color: '#E8F4F8' }}>Join thousands of programmers and collaborate with the best.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <p className="text-sm" style={{ color: '#D0E8F2' }}>© 2026 CampusArena. All rights reserved.</p>
+        <div className="flex min-h-screen">
+            {/* Left Side - sticky image panel */}
+            <div className="hidden lg:block lg:w-1/2 sticky top-0 h-screen flex-shrink-0">
+                <InteractiveLoginAside />
             </div>
 
-            {/* Right Side - Login Form */}
-            <div className="flex-1 flex flex-col items-center justify-center py-12 px-6 sm:px-12" style={{ backgroundColor: '#1a1a1a' }}>
+            {/* Right Side - scrollable login form (always light) */}
+            <div className="light flex-1 flex flex-col items-center justify-center py-12 px-6 sm:px-12 min-h-screen" style={{ backgroundColor: '#f8fafc' }}>
                 <div className="w-full max-w-md">
                     <div className="text-center mb-8">
-                        <h2 className="text-3xl font-bold mb-2" style={{ color: '#E8F4F8' }}>Sign in</h2>
-                        <p style={{ color: '#B0BEC5' }}>Welcome back to CampusArena</p>
+                        <h2 className="text-3xl font-bold mb-2" style={{ color: '#1e293b' }}>Sign in</h2>
+                        <p style={{ color: '#64748b' }}>Welcome back to CampusArena</p>
                     </div>
 
-                    <Card className="border-0 shadow-lg" style={{ backgroundColor: '#262626' }}>
+                    <Card className="border-0 shadow-lg" style={{ backgroundColor: '#ffffff' }}>
                         <CardContent className="pt-6">
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                                 <div>
-                                    <label htmlFor="userId" style={{ color: '#E8F4F8' }} className="text-sm font-medium block mb-2">User ID / Username</label>
+                                    <label htmlFor="userId" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">User ID / Username</label>
                                     <Input
                                         id="userId"
                                         placeholder="Enter your ID or username"
-                                        style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
+                                        style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
                                         {...register('userId')}
                                         error={errors.userId?.message}
                                     />
                                 </div>
 
                                 <div>
-                                    <label htmlFor="password" style={{ color: '#E8F4F8' }} className="text-sm font-medium block mb-2">Password</label>
+                                    <label htmlFor="password" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Password</label>
                                     <div className="relative">
                                         <Input
                                             id="password"
                                             type={showPassword ? 'text' : 'password'}
                                             placeholder="Enter your password"
-                                            style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040', paddingRight: '40px' }}
+                                            style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1', paddingRight: '40px' }}
                                             {...register('password')}
                                             error={errors.password?.message}
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                         >
                                             {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
                                         </button>
@@ -133,23 +91,23 @@ export default function LoginPage() {
 
                                 <div className="flex items-center justify-between">
                                     <label className="flex items-center">
-                                        <input type="checkbox" className="h-4 w-4" style={{ accentColor: '#8ECAE6' }} />
-                                        <span className="ml-2 text-sm" style={{ color: '#B0BEC5' }}>Remember me</span>
+                                        <input type="checkbox" className="h-4 w-4" style={{ accentColor: '#6366f1' }} />
+                                        <span className="ml-2 text-sm" style={{ color: '#64748b' }}>Remember me</span>
                                     </label>
-                                    <Link to="/forgot-password" className="text-sm hover:opacity-80" style={{ color: '#8ECAE6' }}>
+                                    <Link to="/forgot-password" className="text-sm hover:opacity-80" style={{ color: '#6366f1' }}>
                                         Forgot password?
                                     </Link>
                                 </div>
 
-                                <Button type="submit" className="w-full" style={{ backgroundColor: '#8ECAE6', color: '#000' }} isLoading={isLoading}>
+                                <Button type="submit" className="w-full" style={{ backgroundColor: '#6366f1', color: '#fff' }} isLoading={isLoading}>
                                     Sign In
                                 </Button>
                             </form>
 
-                            <div className="mt-6 pt-6" style={{ borderTop: '1px solid #404040' }}>
-                                <p className="text-center text-sm" style={{ color: '#B0BEC5' }}>
+                            <div className="mt-6 pt-6" style={{ borderTop: '1px solid #e2e8f0' }}>
+                                <p className="text-center text-sm" style={{ color: '#64748b' }}>
                                     Don't have an account?{' '}
-                                    <Link to="/register" className="font-semibold hover:opacity-80" style={{ color: '#8ECAE6' }}>
+                                    <Link to="/register" className="font-semibold hover:opacity-80" style={{ color: '#6366f1' }}>
                                         Create one now
                                     </Link>
                                 </p>
@@ -157,7 +115,7 @@ export default function LoginPage() {
                         </CardContent>
                     </Card>
 
-                    <p className="text-center text-xs mt-6" style={{ color: '#707070' }}>
+                    <p className="text-center text-xs mt-6" style={{ color: '#94a3b8' }}>
                         By signing in, you agree to our Terms of Service and Privacy Policy
                     </p>
                 </div>

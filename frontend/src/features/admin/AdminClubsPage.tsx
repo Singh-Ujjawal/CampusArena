@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AdminClubsPageSkeleton } from '@/components/skeleton';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
+import { uploadToCloudinary } from '@/utils/cloudinary';
 
 export default function AdminClubsPage() {
     const [clubs, setClubs] = useState<Club[]>([]);
@@ -30,6 +31,7 @@ export default function AdminClubsPage() {
     const [formData, setFormData] = useState({
         name: '',
         image: '',
+        imagePublicId: '',
         clubCoordinatorId: ''
     });
     const [imagePreview, setImagePreview] = useState<string>('');
@@ -63,34 +65,22 @@ export default function AdminClubsPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            toast.error('Please select an image file');
-            return;
-        }
-
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('Image size must be less than 5MB');
-            return;
-        }
-
         setIsUploadingImage(true);
         try {
-            const formDataUpload = new FormData();
-            formDataUpload.append('file', file);
-
-            const response = await api.post('/api/upload', formDataUpload, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            if (response.data.path) {
-                setFormData(prev => ({ ...prev, image: response.data.path }));
-                setImagePreview(response.data.path);
-                toast.success('Image uploaded successfully');
+            const result = await uploadToCloudinary(file);
+            
+            if (result.error) {
+                toast.error(result.error);
+                return;
             }
+
+            setFormData(prev => ({ 
+                ...prev, 
+                image: result.secure_url,
+                imagePublicId: result.public_id 
+            }));
+            setImagePreview(result.secure_url);
+            toast.success('Logo uploaded successfully');
         } catch (error) {
             toast.error('Failed to upload image');
         } finally {
@@ -100,6 +90,15 @@ export default function AdminClubsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.name) {
+            toast.error('Club name is required');
+            return;
+        }
+        if (!formData.clubCoordinatorId) {
+            toast.error('Please select a coordinator');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             if (editingClub) {
@@ -111,12 +110,13 @@ export default function AdminClubsPage() {
             }
             fetchClubs();
             handleCloseModal();
-        } catch (error) {
-            toast.error(editingClub ? 'Failed to update club' : 'Failed to create club');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || (editingClub ? 'Failed to update club' : 'Failed to create club'));
         } finally {
             setIsSubmitting(false);
         }
     };
+
 
     const handleDelete = async (id: string) => {
         try {
@@ -133,6 +133,7 @@ export default function AdminClubsPage() {
         setFormData({
             name: club.name,
             image: club.image,
+            imagePublicId: club.imagePublicId || '',
             clubCoordinatorId: club.clubCoordinatorId
         });
         setImagePreview(club.image);
@@ -142,7 +143,7 @@ export default function AdminClubsPage() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingClub(null);
-        setFormData({ name: '', image: '', clubCoordinatorId: '' });
+        setFormData({ name: '', image: '', imagePublicId: '', clubCoordinatorId: '' });
         setImagePreview('');
     };
 

@@ -23,13 +23,20 @@ public class RegistrationFormService {
 
     /**
      * Create a new registration form with Cloudinary image URL
+     * Removes payment fees if they are negative or zero
      */
     public RegistrationForm createForm(RegistrationForm form, User creator) {
         form.setCreatedAt(Instant.now());
         form.setActive(true);
+        
+        // Remove payment fees if payment not required or amount is invalid
         if (form.getPaymentRequired() == null || !form.getPaymentRequired()) {
             form.setPaymentFees(null);
+        } else if (form.getPaymentFees() != null && form.getPaymentFees().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            // Remove negative or zero payment amounts
+            form.setPaymentFees(null);
         }
+        
         if (creator != null) {
             form.setCreatedBy(creator.getUsername());
         }
@@ -87,7 +94,11 @@ public class RegistrationFormService {
         existing.setImagePublicId(updatedForm.getImagePublicId());
         existing.setEvaluationCriteria(updatedForm.getEvaluationCriteria());
         
+        // Remove payment fees if payment not required or amount is invalid
         if (existing.getPaymentRequired() == null || !existing.getPaymentRequired()) {
+            existing.setPaymentFees(null);
+        } else if (existing.getPaymentFees() != null && existing.getPaymentFees().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            // Remove negative or zero payment amounts
             existing.setPaymentFees(null);
         }
         

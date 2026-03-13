@@ -28,7 +28,8 @@ public class CloudinaryService {
 
     /**
      * Delete an image from Cloudinary using its public_id
-     * Uses Cloudinary's REST API with basic auth
+     * 
+     * Uses Cloudi   ary's REST API with basic auth
      * @param publicId The Cloudinary public_id of the image to delete
      */
     public void deleteImage(String publicId) {
@@ -45,7 +46,6 @@ public class CloudinaryService {
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             body.add("public_id", publicId);
             body.add("api_key", apiKey);
-            body.add("api_secret", apiSecret);
 
             // Create headers for form-urlencoded
             HttpHeaders headers = new HttpHeaders();
@@ -63,3 +63,5 @@ public class CloudinaryService {
         }
     }
 }
+
+            
