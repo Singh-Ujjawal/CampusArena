@@ -124,7 +124,7 @@ function ResultPanel({ result, isRun }: { result: ExecutionResult; isRun: boolea
     const showTestStats = result.totalTestCases != null && result.passedTestCases != null;
 
     return (
-        <Card className={`border-l-4 ${cfg.borderClass} border border-gray-200 dark:border-gray-700 ${cfg.bgClass}`}>
+        <Card className={`border-l-4 ${cfg.borderClass} border border-gray-200 dark:border-gray-800 ${cfg.bgClass}`}>
             <div className="p-4 space-y-3">
 
                 {/* Header */}
@@ -230,6 +230,13 @@ export default function ProblemDetailsPage() {
     const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
 
     const [isLoadingAccess, setIsLoadingAccess] = useState(true);
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // ── Resizing Logic ──────────────────────────────────────────────────────────
     const [leftWidth, setLeftWidth] = useState(40); // Percentage for description
@@ -457,39 +464,93 @@ export default function ProblemDetailsPage() {
     const monacoLang = LANGUAGES.find(l => l.value === language)?.monaco ?? 'cpp';
 
     return (
-        <div className="h-[calc(100vh-6rem)] flex flex-col p-4 space-y-4">
+        <div className="h-[calc(100vh-3rem)] flex flex-col p-0 space-y-0 dark:bg-[#0a0a0a]">
             {/* ── Navigation Header ── */}
-            <div className="flex items-center justify-between flex-shrink-0 bg-white dark:bg-gray-800 p-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <div className="flex items-center justify-between flex-shrink-0 bg-white dark:bg-[#0a0a0a] px-4 py-2 border-b border-gray-100 dark:border-gray-800 shadow-sm flex-wrap md:flex-nowrap gap-2">
                 <Link to={`/contests/${contestId}`}>
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600">
+                    <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-indigo-600 cursor-pointer">
                         <ChevronLeft className="h-4 w-4" />
-                        Back to Contest
+                        <span className="text-sm font-medium">Back</span>
                     </Button>
                 </Link>
+
+                {/* ── Center: Run + Submit ── */}
+                <div className="flex items-center gap-2">
+                    {/* Run button */}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRun}
+                        disabled={isRunning || isSubmitting}
+                        className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-bold"
+                    >
+                        {isRunning ? (
+                            <span className="flex items-center gap-1">
+                                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                </svg>
+                                Running...
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-1">
+                                <Play className="h-3 w-3" /> Run
+                            </span>
+                        )}
+                    </Button>
+
+                    {/* Submit button */}
+                    {alreadySolved ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700">
+                            <CheckCircle2 className="h-3 w-3" /> Solved
+                        </span>
+                    ) : (
+                        <Button
+                            size="sm"
+                            onClick={handleSubmit}
+                            disabled={isSubmitting || isRunning}
+                            className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs font-black shadow-sm"
+                        >
+                            {isSubmitting ? (
+                                <span className="flex items-center gap-1">
+                                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                    </svg>
+                                    Judging...
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1">
+                                    <Play className="h-3 w-3" /> Submit
+                                </span>
+                            )}
+                        </Button>
+                    )}
+                </div>
 
                 <Link to={`/leaderboard/${contestId}`}>
                     <Button variant="outline" size="sm" className="flex items-center gap-2 text-indigo-600 border-indigo-100 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg font-bold">
                         <Trophy className="h-4 w-4" />
-                        Live Leaderboard
+                        Leaderboard
                     </Button>
                 </Link>
             </div>
 
-            <div className={`flex-1 flex flex-col md:flex-row gap-0 min-h-0 ${isResizingH ? 'cursor-col-resize' : ''} ${isResizingV ? 'cursor-row-resize' : ''}`}>
+            <div className={`flex-1 flex flex-col md:flex-row gap-0 md:min-h-0 overflow-y-auto md:overflow-hidden ${isResizingH ? 'cursor-col-resize' : ''} ${isResizingV ? 'cursor-row-resize' : ''}`}>
 
                 {/* ── Problem Description ── */}
                 <div 
-                    className="flex flex-col overflow-hidden"
-                    style={{ width: window.innerWidth > 768 ? `${leftWidth}%` : '100%', minWidth: '300px' }}
+                    className="flex flex-col md:overflow-hidden shrink-0 md:shrink"
+                    style={!isMobile ? { width: `${leftWidth}%`, minWidth: '300px' } : { width: '100%', minHeight: '50vh' }}
                 >
-                    <Card className="h-full flex flex-col bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mr-2">
+                    <Card className="h-full flex flex-col bg-white dark:bg-[#0a0a0a] border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-800 rounded-none overflow-hidden">
                         {/* Tab Headers */}
-                        <div className="flex border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+                        <div className="flex border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
                             <button
                                 onClick={() => setActiveTab('description')}
                                 className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'description'
-                                        ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30'
-                                        : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                        ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30 dark:bg-indigo-500/10 dark:text-indigo-400'
+                                        : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'
                                     }`}
                             >
                                 <Code2 className="h-4 w-4" /> Description
@@ -497,8 +558,8 @@ export default function ProblemDetailsPage() {
                             <button
                                 onClick={() => setActiveTab('submissions')}
                                 className={`flex-1 py-4 text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'submissions'
-                                        ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30'
-                                        : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                        ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30 dark:bg-indigo-500/10 dark:text-indigo-400'
+                                        : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'
                                     }`}
                             >
                                 <History className="h-4 w-4" /> My Submissions
@@ -530,7 +591,7 @@ export default function ProblemDetailsPage() {
                                                 <Terminal className="h-4 w-4 text-gray-400" /> Example Test Cases
                                             </h4>
                                             {problem.testCases?.filter(tc => !tc.hidden).map((tc, idx) => (
-                                                <div key={idx} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl text-sm font-mono border border-gray-100 dark:border-gray-700">
+                                                <div key={idx} className="bg-gray-50 dark:bg-[#111111] p-4 rounded-xl text-sm font-mono border border-gray-100 dark:border-gray-800">
                                                     <div className="mb-3">
                                                         <span className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-bold tracking-widest block mb-1">Input</span>
                                                         <pre className="whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200">{tc.input}</pre>
@@ -555,7 +616,7 @@ export default function ProblemDetailsPage() {
                                             <p className="text-sm">Loading history...</p>
                                         </div>
                                     ) : mySubmissions.length === 0 ? (
-                                        <div className="text-center py-20 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                                        <div className="text-center py-20 bg-gray-50 dark:bg-[#111111] rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
                                             <ClipboardList className="h-12 w-12 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
                                             <p className="text-gray-500 dark:text-gray-400 font-medium italic">No submissions yet. Start coding!</p>
                                         </div>
@@ -565,10 +626,10 @@ export default function ProblemDetailsPage() {
                                                 const subCfg = getVerdictCfg(sub.verdict);
                                                 const isExpanded = expandedSubmissionId === sub.id;
                                                 return (
-                                                    <div key={sub.id} className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                                    <div key={sub.id} className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
                                                         <button
                                                             onClick={() => setExpandedSubmissionId(isExpanded ? null : sub.id)}
-                                                            className="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                                            className="w-full flex items-center justify-between p-4 bg-white dark:bg-[#0a0a0a] hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                                                         >
                                                             <div className="flex items-center gap-4">
                                                                 <div className={`p-2 rounded-lg ${subCfg.bgClass} ${subCfg.textClass}`}>
@@ -591,7 +652,7 @@ export default function ProblemDetailsPage() {
                                                             </div>
                                                         </button>
                                                         {isExpanded && (
-                                                            <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                            <div className="p-4 bg-gray-50 dark:bg-[#111111] border-t border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-200">
                                                                 <div className="flex justify-between items-center mb-2">
                                                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Source Code</span>
                                                                     <Button 
@@ -626,94 +687,45 @@ export default function ProblemDetailsPage() {
 
                 {/* ── Horizontal Resizer Handle ── */}
                 <div 
-                    className="hidden md:flex w-1.5 hover:w-2 bg-transparent hover:bg-indigo-500/20 cursor-col-resize items-center justify-center transition-all group z-10"
+                    className="hidden md:flex w-3 hover:w-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-indigo-500 dark:hover:bg-indigo-500 cursor-col-resize items-center justify-center transition-all duration-150 z-20 active:bg-indigo-600 group relative"
                     onMouseDown={startResizingH}
+                    title="Drag to resize panels"
                 >
-                    <div className="w-0.5 h-8 bg-gray-200 dark:bg-gray-700 rounded-full group-hover:bg-indigo-400 transition-colors" />
+                    {/* Grip dots */}
+                    <div className="flex flex-col gap-[3px] opacity-40 group-hover:opacity-100 transition-opacity">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="w-1 h-1 rounded-full bg-gray-500 group-hover:bg-white dark:group-hover:bg-white transition-colors" />
+                        ))}
+                    </div>
                 </div>
 
                 {/* ── Editor + Results ── */}
                 <div 
                     id="editor-container"
-                    className="flex flex-col gap-0 overflow-hidden"
-                    style={{ width: window.innerWidth > 768 ? `${100 - leftWidth}%` : '100%', minWidth: '300px' }}
+                    className="flex flex-col gap-0 overflow-visible md:overflow-hidden shrink-0 md:shrink"
+                    style={!isMobile ? { width: `${100 - leftWidth}%`, minWidth: '300px' } : { width: '100%', minHeight: '600px', flex: 1 }}
                 >
                     <Card 
-                        className="flex flex-col overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl ml-2 shadow-sm"
-                        style={{ height: `${editorHeight}%`, minHeight: '200px' }}
+                        className="flex flex-col overflow-hidden bg-white dark:bg-[#0a0a0a] border-y md:border-y-0 border-gray-200 dark:border-gray-800 border-none rounded-none shadow-none"
+                        style={!isMobile ? { height: `${editorHeight}%`, minHeight: '200px' } : { flex: '1 1 auto', minHeight: '400px' }}
                     >
-                        {/* Toolbar */}
-                        <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between flex-shrink-0">
-                            <div className="flex items-center gap-3">
-                                <select
-                                    className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm px-2 cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500"
-                                    value={language}
-                                    onChange={e => handleLanguageChange(e.target.value)}
-                                >
-                                    {LANGUAGES.map(l => (
-                                        <option key={l.value} value={l.value}>{l.label}</option>
-                                    ))}
-                                </select>
-                                {contest?.endTime && (
-                                    <CountdownTimer
-                                        targetDate={contest.endTime}
-                                        className="text-xs bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 font-mono"
-                                    />
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                {/* Run button */}
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={handleRun}
-                                    disabled={isRunning || isSubmitting}
-                                    className="border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs font-bold"
-                                >
-                                    {isRunning ? (
-                                        <span className="flex items-center gap-1">
-                                            <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                            </svg>
-                                            Running...
-                                        </span>
-                                    ) : (
-                                        <span className="flex items-center gap-1">
-                                            <Play className="h-3 w-3" /> Run
-                                        </span>
-                                    )}
-                                </Button>
-
-                                {/* Submit button */}
-                                {alreadySolved ? (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                                        <CheckCircle2 className="h-3 w-3" /> Solved
-                                    </span>
-                                ) : (
-                                    <Button
-                                        size="sm"
-                                        onClick={handleSubmit}
-                                        disabled={isSubmitting || isRunning}
-                                        className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs font-black shadow-sm"
-                                    >
-                                        {isSubmitting ? (
-                                            <span className="flex items-center gap-1">
-                                                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                                </svg>
-                                                Judging...
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1">
-                                                <Play className="h-3 w-3" /> Submit
-                                            </span>
-                                        )}
-                                    </Button>
-                                )}
-                            </div>
+                        {/* Toolbar: language + timer only */}
+                        <div className="p-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#111111] flex items-center gap-3 flex-shrink-0">
+                            <select
+                                className="h-8 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm px-2 cursor-pointer outline-none focus:ring-1 focus:ring-indigo-500"
+                                value={language}
+                                onChange={e => handleLanguageChange(e.target.value)}
+                            >
+                                {LANGUAGES.map(l => (
+                                    <option key={l.value} value={l.value}>{l.label}</option>
+                                ))}
+                            </select>
+                            {contest?.endTime && (
+                                <CountdownTimer
+                                    targetDate={contest.endTime}
+                                    className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 font-mono"
+                                />
+                            )}
                         </div>
 
                         {/* Editor */}
@@ -748,14 +760,20 @@ export default function ProblemDetailsPage() {
 
                     {/* ── Vertical Resizer Handle ── */}
                     <div 
-                        className="h-1.5 hover:h-2 bg-transparent hover:bg-indigo-500/20 cursor-row-resize flex items-center justify-center transition-all group z-10 ml-2"
+                        className="hidden md:flex h-3 hover:h-1.5 bg-gray-200 dark:bg-gray-800 hover:bg-indigo-500 dark:hover:bg-indigo-500 cursor-row-resize items-center justify-center transition-all duration-150 z-20 active:bg-indigo-600 group relative"
                         onMouseDown={startResizingV}
+                        title="Drag to resize editor / results"
                     >
-                        <div className="h-0.5 w-8 bg-gray-200 dark:bg-gray-700 rounded-full group-hover:bg-indigo-400 transition-colors" />
+                        {/* Grip dots */}
+                        <div className="flex flex-row gap-[3px] opacity-40 group-hover:opacity-100 transition-opacity">
+                            {[...Array(6)].map((_, i) => (
+                                <div key={i} className="w-1 h-1 rounded-full bg-gray-500 group-hover:bg-white dark:group-hover:bg-white transition-colors" />
+                            ))}
+                        </div>
                     </div>
 
                     {/* Results Area */}
-                    <div className="flex-1 overflow-y-auto ml-2 pr-1 space-y-3 pb-4 scrollbar-hide">
+                    <div className="flex-1 md:overflow-y-auto px-4 py-3 space-y-3 scrollbar-hide dark:bg-[#0a0a0a]">
                         {runResult && (
                             <ResultPanel result={runResult} isRun={true} />
                         )}

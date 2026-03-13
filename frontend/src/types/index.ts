@@ -20,8 +20,10 @@ export interface Club {
     id: string;
     name: string;
     image: string;
+    imagePublicId?: string;
     clubCoordinatorId: string;
 }
+
 
 export interface Faculty extends User {
 }
@@ -58,7 +60,9 @@ export interface Contest {
     facultyCoordinators?: string[];
     studentCoordinators?: string[];
     registrationRequired?: boolean;
+    registeredUserCount?: number;
 }
+
 
 // Problem
 export interface Problem {

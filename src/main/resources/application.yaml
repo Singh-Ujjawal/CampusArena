@@ -16,7 +16,7 @@ server:
 
 app:
   jwtSecret: CampusArenaSecretKeyCampusArenaSecretKeyCampusArenaSecretKeyCampusArenaSecretKey
-  jwtExpirationMs: 86400000
+  jwtExpirationMs: 604800000
 
 file:
   upload-dir: uploads

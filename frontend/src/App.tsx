@@ -50,6 +50,9 @@ import LeetCodeLeaderboardPage from '@/features/leetcode/components/LeetCodeLead
 import LeetCodeQuestionsPage from '@/features/leetcode/components/LeetCodeQuestionsPage';
 import AdminLeetCodePage from '@/features/admin/AdminLeetCodePage';
 
+// Developers
+import DevelopersPage from '@/features/developers/DevelopersPage';
+
 // Registration
 import AdminRegistrationHub from '@/features/admin/AdminRegistrationHub';
 import AdminCreateRegistrationForm from '@/features/admin/AdminCreateRegistrationForm';
@@ -91,6 +94,7 @@ function App() {
                 <Route path="/profile/:userId" element={<ProfilePage />} />
                 <Route path="/leetcode/questions" element={<LeetCodeQuestionsPage />} />
                 <Route path="/about" element={<AboutUsPage />} />
+                <Route path="/developers" element={<DevelopersPage />} />
                 <Route path="/registration/:id" element={<RegistrationFormSubmission />} />
                 <Route path="/registration/forms/:id" element={<RegistrationFormSubmission />} />
               </Route>
@@ -133,7 +137,7 @@ function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
-          <Toaster position="top-right" richColors />
+          <Toaster position="top-right" richColors duration={3000} visibleToasts={1} />
         </Router>
       </ThemeProvider>
     </AuthProvider>

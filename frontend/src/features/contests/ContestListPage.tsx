@@ -15,7 +15,7 @@ export default function ContestListPage() {
             itemTypeLabel={(_, activeFilter) => activeFilter === 'COMPLETED' ? 'Ranked' : 'Preparation'}
             itemStats={(contest) => ({
                 stat1: { label: 'Problems', value: contest.problemIds?.length || 0, icon: Trophy },
-                stat2: { label: 'Users', value: Math.floor(Math.random() * 50) + 12, icon: Users }
+                stat2: { label: 'Users', value: contest.registeredUserCount || 0, icon: Users }
             })}
             Skeleton={ContestListPageSkeleton}
         />

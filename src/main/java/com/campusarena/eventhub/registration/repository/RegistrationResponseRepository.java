@@ -10,7 +10,12 @@ import java.util.Optional;
 @Repository
 public interface RegistrationResponseRepository extends MongoRepository<RegistrationResponse, String> {
     List<RegistrationResponse> findByFormId(String formId);
+
     List<RegistrationResponse> findByUserId(String userId);
+
     Optional<RegistrationResponse> findByFormIdAndUserId(String formId, String userId);
+
     boolean existsByFormIdAndUserId(String formId, String userId);
+
+    long countByFormId(String formId);
 }

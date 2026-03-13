@@ -1,13 +1,14 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from 'react';
 import { api } from '@/lib/axios';
 import { type User } from '@/types';
 import { toast } from 'sonner';
+import { isTokenValid, msUntilExpiry } from '@/lib/token';
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
     login: (credentials: { userId: string; password: string }) => Promise<void>;
-    logout: () => void;
+    logout: (reason?: string) => void;
     isAuthenticated: boolean;
     isAdmin: boolean;
     isFaculty: boolean;
@@ -20,26 +21,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load user from local storage on mount
-    useEffect(() => {
-        const initializeAuth = async () => {
-            const storedUser = localStorage.getItem('auth_user');
-            const storedToken = localStorage.getItem('auth_token');
+    const logout = useCallback((reason?: string) => {
+        setUser(null);
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_token');
+        
+        if (reason === 'session_expired') {
+            toast.error('Session expired. Please log in again.');
+            // Only redirect if we are not already on the login page
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        } else if (reason !== 'silent') {
+            toast.info('Logged out');
+        }
+    }, []);
 
-            if (storedUser && storedToken) {
+    // 1. Initial Load: Sync state with localStorage
+    useEffect(() => {
+        const storedUser = localStorage.getItem('auth_user');
+        const storedToken = localStorage.getItem('auth_token');
+
+        if (storedUser && storedToken) {
+            if (isTokenValid(storedToken)) {
                 try {
                     setUser(JSON.parse(storedUser));
                 } catch (e) {
                     console.error("Failed to parse stored user", e);
-                    localStorage.removeItem('auth_user');
-                    localStorage.removeItem('auth_token');
+                    logout('silent');
                 }
+            } else {
+                logout('session_expired');
             }
-            setIsLoading(false);
+        }
+        setIsLoading(false);
+    }, [logout]);
+
+    // 2. Session Timer: Automatically logout when token expires
+    useEffect(() => {
+        if (!user) return;
+
+        const token = localStorage.getItem('auth_token');
+        const timeout = msUntilExpiry(token);
+
+        if (timeout > 0) {
+            const timer = setTimeout(() => {
+                logout('session_expired');
+            }, timeout);
+            return () => clearTimeout(timer);
+        } else if (token) {
+            // Token already expired
+            logout('session_expired');
+        }
+    }, [user, logout]);
+
+    // 3. Global Event Listener: Handle logout requests from other layers (like Axios)
+    useEffect(() => {
+        const handleLogoutEvent = (event: any) => {
+            const reason = event.detail?.reason;
+            logout(reason);
         };
 
-        initializeAuth();
-    }, []);
+        window.addEventListener('auth:logout', handleLogoutEvent);
+        return () => window.removeEventListener('auth:logout', handleLogoutEvent);
+    }, [logout]);
 
     const login = async ({ userId, password }: { userId: string; password: string }) => {
         setIsLoading(true);
@@ -54,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const meRes = await api.get('/user/me');
             const userData = meRes.data;
             
+            // Setting user triggers the Session Timer useEffect
             setUser(userData);
             localStorage.setItem('auth_user', JSON.stringify(userData));
 
@@ -68,19 +114,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_token');
-        toast.info('Logged out');
-    };
-
     const value = {
         user,
         isLoading,
         login,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && isTokenValid(localStorage.getItem('auth_token')),
         isAdmin: user?.role === 'ADMIN',
         isFaculty: user?.role === 'FACULTY',
         isStaff: user?.role === 'ADMIN' || user?.role === 'FACULTY',
@@ -96,3 +135,4 @@ export const useAuth = () => {
     }
     return context;
 };
+

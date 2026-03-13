@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { uploadToCloudinary } from '@/utils/cloudinary';
 
 interface RegistrationForm {
     id: string;
@@ -94,21 +95,29 @@ export default function RegistrationFormSubmission() {
         }
 
         setIsSubmitting(true);
+        
+        // Upload files to Cloudinary first
+        const finalAnswers = { ...answers };
+        for (const [qId, file] of Object.entries(files)) {
+            const result = await uploadToCloudinary(file);
+            if (result.error) {
+                toast.error(`Failed to upload ${file.name}: ${result.error}`);
+                setIsSubmitting(false);
+                return;
+            }
+            finalAnswers[qId] = result.secure_url;
+        }
+
         const formData = new FormData();
         formData.append('userId', user.id || '');
 
-        // Add text answers
-        Object.entries(answers).forEach(([qId, value]) => {
+        // Add text and file URL answers
+        Object.entries(finalAnswers).forEach(([qId, value]) => {
             if (Array.isArray(value)) {
                 formData.append(qId, value.join(', '));
-            } else {
-                formData.append(qId, value);
+            } else if (value !== undefined && value !== null) {
+                formData.append(qId, value.toString());
             }
-        });
-
-        // Add files
-        Object.entries(files).forEach(([qId, file]) => {
-            formData.append(qId, file);
         });
 
         try {

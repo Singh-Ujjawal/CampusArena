@@ -51,14 +51,14 @@ public class ContestService {
 
     public List<ContestResponse> getAllContests(User currentUser) {
         List<Contest> allContests = contestRepository.findAll();
-        
+
         if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
             return allContests.stream()
                     .filter(c -> currentUser.getUsername().equals(c.getCreatedBy()))
                     .map(this::mapToResponse)
                     .collect(Collectors.toList());
         }
-        
+
         return allContests.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -82,13 +82,13 @@ public class ContestService {
     public void deleteContest(String id, User currentUser) {
         Contest contest = contestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Contest not found with id: " + id));
-        
+
         if (currentUser != null && currentUser.getRole() == Roles.FACULTY) {
             if (!currentUser.getUsername().equals(contest.getCreatedBy())) {
                 throw new ApiException("Access Denied: You can only delete contests you created.");
             }
         }
-        
+
         contestRepository.deleteById(id);
     }
 
@@ -159,6 +159,12 @@ public class ContestService {
     }
 
     private ContestResponse mapToResponse(Contest contest) {
+        long userCount = 0;
+        java.util.Optional<RegistrationForm> form = registrationFormRepository.findByContestId(contest.getId());
+        if (form.isPresent()) {
+            userCount = registrationResponseRepository.countByFormId(form.get().getId());
+        }
+
         return ContestResponse.builder()
                 .id(contest.getId())
                 .title(contest.getTitle())
@@ -171,6 +177,7 @@ public class ContestService {
                 .studentCoordinators(contest.getStudentCoordinators())
                 .status(getContestStatus(contest.getStartTime(), contest.getEndTime()))
                 .registrationRequired(contest.getRegistrationRequired())
+                .registeredUserCount(userCount)
                 .build();
     }
 }

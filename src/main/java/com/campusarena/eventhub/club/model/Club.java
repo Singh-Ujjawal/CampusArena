@@ -20,9 +20,10 @@ public class Club {
     @Indexed(unique = true)
     private String name;
     
-    @NotBlank(message = "Club image URL is required")
-    private String image;
+    private String image; // URL
+    private String imagePublicId;
     
     @NotBlank(message = "Club coordinator ID is required")
     private String clubCoordinatorId;
 }
+

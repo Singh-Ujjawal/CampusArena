@@ -68,7 +68,7 @@ export default function AdminUsersPage() {
     };
 
     // Derived data for filters
-    const standardCourses = ['B.Tech', 'BCA', 'BBA', 'B.Com', 'MBA'];
+    const standardCourses = [ 'BCA', 'BBA', 'MBA','B.COM'];
     const uniqueUserCourses = Array.from(new Set(users.map(u => u.course))).filter(Boolean);
     const courses = Array.from(new Set([...standardCourses, ...uniqueUserCourses])).sort();
     

@@ -146,7 +146,7 @@ export default function TestInterface() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <div className="h-[calc(100vh-5rem)] bg-gray-50 dark:bg-gray-900 flex flex-col overflow-hidden">
             {/* Header */}
             <header className="bg-white dark:bg-gray-800 shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 z-10 border-b dark:border-gray-700">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">MCQ Test</h2>

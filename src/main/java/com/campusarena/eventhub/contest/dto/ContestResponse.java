@@ -24,4 +24,5 @@ public class ContestResponse {
     private List<String> studentCoordinators;
     private String status;
     private Boolean registrationRequired;
+    private long registeredUserCount;
 }
