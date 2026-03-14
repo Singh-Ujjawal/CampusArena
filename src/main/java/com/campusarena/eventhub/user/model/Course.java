@@ -1,5 +1,5 @@
 package com.campusarena.eventhub.user.model;
 
 public enum Course {
-    BTECH , BCA , BBA , BCOM , MBA , DIPLOMA
+    BTECH, BIOTECH, BCA, BBA, BCOM, MBA, DIPLOMA
 }

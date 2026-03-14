@@ -6,7 +6,7 @@ import { type Contest, type Problem, type Club } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash, Check, Users, X, ClipboardCheck, AlertTriangle, Clock, History as HistoryIcon } from 'lucide-react';
+import { Plus, Edit, Trash, Check, Users, X, ClipboardCheck, AlertTriangle, Clock, History as HistoryIcon, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
 import { AdminContestsPageSkeleton } from '@/components/skeleton';
@@ -417,7 +417,14 @@ export default function AdminContestsPage() {
                                                     Participants
                                                 </Button>
                                             </Link>
+                                            <Link to={`/leaderboard/${contest.id}`}>
+                                                <Button size="sm" variant="outline" className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/10 hover:bg-indigo-100 dark:hover:bg-indigo-900/20">
+                                                    <Trophy className="h-4 w-4" />
+                                                    Leaderboard
+                                                </Button>
+                                            </Link>
                                             <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600" onClick={() => { setCurrentContest(contest); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
+
                                             
                                             {registrationForms.find(f => f.contestId === contest.id) ? (
                                                 <Button size="sm" variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-900/10 hover:bg-emerald-100 dark:hover:bg-emerald-900/20" onClick={() => navigate(`/admin/registration/edit/${registrationForms.find(f => f.contestId === contest.id).id}?contestId=${contest.id}&clubId=${contest.clubId}`)}>

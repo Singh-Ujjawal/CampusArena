@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { api } from '@/lib/axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    GraduationCap, ChevronRight, FileDown, 
+import {
+    GraduationCap, ChevronRight, FileDown,
     Users, Search, Loader2, ArrowLeft,
     LayoutGrid, List, Calendar
 } from 'lucide-react';
@@ -55,10 +55,14 @@ export default function AdminCollectiveDetails() {
 
     const getSessionForYear = (yearIndex: number) => {
         const startYearOfCurrentFirstYear = getCurrentSession();
+        const courseObj = COURSES.find(c => c.value === selectedCourse);
+        const duration = courseObj?.duration || 4;
+
         // If yearIndex = 1 (1st year), session start is current session start.
         // If yearIndex = 2 (2nd year), session start was 1 year before current first year.
         const targetStartYear = startYearOfCurrentFirstYear - (yearIndex - 1);
-        const targetEndYearShort = (targetStartYear + 1) % 100;
+        const targetEndYear = targetStartYear + duration;
+        const targetEndYearShort = targetEndYear % 100;
         return `${targetStartYear}-${targetEndYearShort.toString().padStart(2, '0')}`;
     };
 
@@ -72,6 +76,13 @@ export default function AdminCollectiveDetails() {
         setStep('section');
     };
 
+    const handleAllBatchesSelect = () => {
+        setSelectedYearIndex(null);
+        setSelectedSection(null);
+        fetchCollectiveData(selectedCourse!, null, null);
+        setStep('data');
+    };
+
     const handleSectionSelect = (section: string | null) => {
         setSelectedSection(section);
         const session = getSessionForYear(selectedYearIndex!);
@@ -79,15 +90,15 @@ export default function AdminCollectiveDetails() {
         setStep('data');
     };
 
-    const fetchCollectiveData = async (course: string, session: string, section: string | null) => {
+    const fetchCollectiveData = async (course: string, session: string | null, section: string | null) => {
         setIsLoading(true);
         try {
             const params = new URLSearchParams({
                 course: course,
-                session: session
             });
+            if (session) params.append('session', session);
             if (section) params.append('section', section);
-            
+
             const response = await api.get<CollectiveActivityResponse>(`/user/collective-activity?${params.toString()}`);
             setCollectiveData(response.data.users);
         } catch (error) {
@@ -101,39 +112,39 @@ export default function AdminCollectiveDetails() {
     const handleDownloadCollectiveReport = async () => {
         if (collectiveData.length === 0) return;
         setIsDownloading(true);
-        
+
         try {
-            const doc = new jsPDF('l', 'mm', 'a4'); 
+            const doc = new jsPDF('l', 'mm', 'a4');
             const timestamp = new Date().toLocaleString();
-            const session = getSessionForYear(selectedYearIndex!);
-            
+            const session = selectedYearIndex ? getSessionForYear(selectedYearIndex!) : 'All Batches';
+
             doc.setFillColor(37, 99, 235);
             doc.rect(0, 0, 297, 40, 'F');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(24);
             doc.setFont("helvetica", "bold");
             doc.text("COLLECTIVE PERFORMANCE REPORT", 20, 25);
-            
+
             doc.setFontSize(10);
             doc.setFont("helvetica", "normal");
             doc.text(`Generated on: ${timestamp}`, 20, 32);
-            
+
             doc.setTextColor(0, 0, 0);
             doc.setFontSize(14);
             doc.text(`Course: ${selectedCourse}`, 20, 50);
             doc.text(`Academic Batch (Session): ${session}`, 100, 50);
-            doc.text(`Section: ${selectedSection || 'All Sections'}`, 180, 50);
+            doc.text(`Section: ${selectedSection || 'All'}`, 180, 50);
             doc.text(`Total Students: ${collectiveData.length}`, 20, 60);
 
             const tableRows = collectiveData.map((data, index) => {
                 const quizCount = data.activity.mcqActivities.length;
                 const contestCount = data.activity.contestActivities.length;
                 const regCount = data.activity.registrationActivities.length;
-                
-                const avgQuizScore = quizCount > 0 
+
+                const avgQuizScore = quizCount > 0
                     ? (data.activity.mcqActivities.reduce((acc, curr) => acc + (curr.score || 0), 0) / quizCount).toFixed(1)
                     : "0";
-                
+
                 const totalContestScore = data.activity.contestActivities.reduce((acc, curr) => acc + curr.totalScore, 0);
 
                 return [
@@ -150,7 +161,7 @@ export default function AdminCollectiveDetails() {
 
             autoTable(doc, {
                 startY: 70,
-                head: [['#', 'Roll Number', 'Student Name', 'Quizzes', 'Avg Quiz', 'Contests', 'Total Contest', 'Registrations']],
+                head: [['#', 'Roll Number', 'Student Name', 'Quizzes', 'Avg Quiz', 'Contests', 'Avg Contest', 'Registrations']],
                 body: tableRows,
                 theme: 'striped',
                 headStyles: { fillColor: [37, 99, 235], fontStyle: 'bold' },
@@ -171,7 +182,7 @@ export default function AdminCollectiveDetails() {
         }
     };
 
-    const filteredData = collectiveData.filter(data => 
+    const filteredData = collectiveData.filter(data =>
         data.user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         data.user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (data.user.rollNumber && data.user.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -188,8 +199,8 @@ export default function AdminCollectiveDetails() {
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         {step !== 'course' && (
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => {
                                     if (step === 'year') setStep('course');
@@ -218,7 +229,7 @@ export default function AdminCollectiveDetails() {
                 <AnimatePresence mode="wait">
                     {/* Course Selection */}
                     {step === 'course' && (
-                        <motion.div 
+                        <motion.div
                             key="step-course"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -248,7 +259,7 @@ export default function AdminCollectiveDetails() {
 
                     {/* Year Selection */}
                     {step === 'year' && (
-                        <motion.div 
+                        <motion.div
                             key="step-year"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -268,12 +279,19 @@ export default function AdminCollectiveDetails() {
                                     <p className="text-xs font-black uppercase tracking-widest text-indigo-500">Year</p>
                                 </button>
                             ))}
+                            <button
+                                onClick={handleAllBatchesSelect}
+                                className="col-span-full mt-6 p-8 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-[2rem] shadow-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-4 group"
+                            >
+                                <Users className="h-6 w-6 text-gray-400 group-hover:text-white transition-colors" />
+                                <span className="text-lg font-black uppercase tracking-widest">View All Students (Global)</span>
+                            </button>
                         </motion.div>
                     )}
 
                     {/* Section Selection */}
                     {step === 'section' && (
-                        <motion.div 
+                        <motion.div
                             key="step-section"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -306,7 +324,7 @@ export default function AdminCollectiveDetails() {
 
                     {/* Data Visualization */}
                     {step === 'data' && (
-                        <motion.div 
+                        <motion.div
                             key="step-data"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -320,10 +338,10 @@ export default function AdminCollectiveDetails() {
                                     </div>
                                     <div>
                                         <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none mb-1">
-                                            {selectedCourse} - {getYearLabel(selectedYearIndex!)}
+                                            {selectedCourse} {selectedYearIndex ? `- ${getYearLabel(selectedYearIndex!)}` : '(All Batches)'}
                                         </h2>
                                         <p className="text-gray-500 font-medium">
-                                            Session: {getSessionForYear(selectedYearIndex!)} • {collectiveData.length} Students
+                                            {selectedYearIndex ? `Session: ${getSessionForYear(selectedYearIndex!)}` : 'Comprehensive View'} • {collectiveData.length} Students
                                         </p>
                                     </div>
                                 </div>
@@ -339,13 +357,13 @@ export default function AdminCollectiveDetails() {
                                         />
                                     </div>
                                     <div className="flex bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl">
-                                        <button 
+                                        <button
                                             onClick={() => setViewMode('grid')}
                                             className={`p-2.5 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-800 shadow-sm text-blue-600' : 'text-gray-400'}`}
                                         >
                                             <LayoutGrid className="h-5 w-5" />
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => setViewMode('table')}
                                             className={`p-2.5 rounded-xl transition-all ${viewMode === 'table' ? 'bg-white dark:bg-gray-800 shadow-sm text-blue-600' : 'text-gray-400'}`}
                                         >
@@ -373,7 +391,7 @@ export default function AdminCollectiveDetails() {
                                 <div className="text-center py-40 opacity-30">
                                     <Users className="h-20 w-20 mx-auto mb-6" />
                                     <h3 className="text-2xl font-black">No Students Found</h3>
-                                    <p>No students found for session {getSessionForYear(selectedYearIndex!)}</p>
+                                    <p>No students found for this selection.</p>
                                 </div>
                             ) : viewMode === 'grid' ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -416,8 +434,8 @@ export default function AdminCollectiveDetails() {
                                                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Performance Index</span>
                                                     <div className="flex items-center gap-1.5 mt-1">
                                                         <div className="h-1.5 w-24 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                            <div 
-                                                                className="h-full bg-blue-600 transition-all duration-1000" 
+                                                            <div
+                                                                className="h-full bg-blue-600 transition-all duration-1000"
                                                                 style={{ width: `${Math.min(100, (activity.mcqActivities.reduce((acc, curr) => acc + (curr.score || 0), 0) / (activity.mcqActivities.length || 1) * 2))}%` }}
                                                             ></div>
                                                         </div>

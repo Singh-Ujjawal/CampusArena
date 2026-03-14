@@ -21,6 +21,8 @@ public interface UserRepository extends MongoRepository<User, String> {
     boolean existsByPhoneNumberAndIdNot(String phoneNumber, String id);
     boolean existsByLeetCodeUsernameAndIdNot(String leetCodeUsername, String id);
 
+    java.util.List<User> findByCourse(com.campusarena.eventhub.user.model.Course course);
+    java.util.List<User> findByCourseAndSection(com.campusarena.eventhub.user.model.Course course, String section);
     java.util.List<User> findByCourseAndSession(com.campusarena.eventhub.user.model.Course course, String session);
     java.util.List<User> findByCourseAndSessionAndSection(com.campusarena.eventhub.user.model.Course course, String session, String section);
 }

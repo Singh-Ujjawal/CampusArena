@@ -37,6 +37,7 @@ import AdminEventAnalyticsPage from '@/features/admin/AdminEventAnalyticsPage';
 import AdminClubsPage from '@/features/admin/AdminClubsPage';
 import AdminFacultyPage from '@/features/admin/AdminFacultyPage';
 import AdminCollectiveDetails from '@/features/admin/AdminCollectiveDetails';
+import AdminEventLeaderboardPage from '@/features/admin/AdminEventLeaderboardPage';
 
 // Submissions
 import MySubmissionsPage from '@/features/submissions/MySubmissionsPage';
@@ -113,6 +114,7 @@ function App() {
                 <Route path="/admin/events/:eventId/analytics" element={<AdminEventAnalyticsPage />} />
                 <Route path="/admin/contests" element={<AdminContestsPage />} />
                 <Route path="/admin/contests/:contestId/participants" element={<AdminContestParticipantsPage />} />
+                <Route path="/admin/events/:eventId/leaderboard" element={<AdminEventLeaderboardPage />} />
                 <Route path="/admin/problems" element={<AdminProblemsPage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                 <Route path="/admin/submissions" element={<AdminSubmissionsPage />} />

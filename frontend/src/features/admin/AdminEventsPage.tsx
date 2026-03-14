@@ -5,7 +5,7 @@ import { type Event, type Club } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash, X, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Trash, X, ClipboardCheck, AlertTriangle, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
 import { AdminEventsPageSkeleton } from '@/components/skeleton';
@@ -569,6 +569,17 @@ export default function AdminEventsPage() {
                                                     }
                                                 >
                                                     Analytics
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="dark:border-gray-700 dark:text-gray-200 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-800 dark:text-indigo-400 dark:bg-indigo-900/10 dark:hover:bg-indigo-900/20"
+                                                    onClick={() =>
+                                                        (window.location.href = `/admin/events/${event.id}/leaderboard`)
+                                                    }
+                                                >
+                                                    <Trophy className="h-4 w-4 mr-1" />
+                                                    Leaderboard
                                                 </Button>
 
                                                 {/* Reg. Form button: green if exists, red if not */}

@@ -33,8 +33,14 @@ public class LeaderboardService {
         Contest contest = contestRepository.findById(contestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Contest not found"));
 
+        User accessingUser = null;
+        if (userId != null && !userId.isEmpty() && !"undefined".equals(userId)) {
+            accessingUser = userRepository.findById(userId).orElse(null);
+        }
+        boolean isAdmin = accessingUser != null && com.campusarena.eventhub.user.model.Roles.ADMIN.equals(accessingUser.getRole());
+
         // Check registration for leaderboard access
-        if (contest.getRegistrationRequired() != null && contest.getRegistrationRequired()) {
+        if (!isAdmin && contest.getRegistrationRequired() != null && contest.getRegistrationRequired()) {
             Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(contestId);
             if (regForm.isPresent()) {
                 Optional<RegistrationResponse> regResponse = registrationResponseRepository

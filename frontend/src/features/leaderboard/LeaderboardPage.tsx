@@ -3,9 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { type LeaderboardEntry } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Medal, RefreshCw, Trophy, Clock, ChevronLeft } from 'lucide-react';
+import { Loader2, Medal, RefreshCw, Trophy, Clock, ChevronLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from 'sonner';
 
 const POLL_INTERVAL_MS = 30000; // refresh every 30 seconds
 
@@ -93,6 +96,62 @@ export default function LeaderboardPage() {
         return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Kolkata' });
     };
 
+    const handleDownloadCSV = () => {
+        if (!leaderboard || leaderboard.length === 0) return;
+        
+        let csv = 'Rank,Participant,Roll Number,Problems Solved,Last Submission Time,Score\n';
+        leaderboard.forEach((entry, index) => {
+            const rank = index + 1;
+            const pt = entry.username || entry.userId;
+            const rn = entry.rollNumber || '—';
+            const solved = entry.problemsSolved;
+            const lastSub = entry.lastSubmissionTime ? formatTime(entry.lastSubmissionTime as unknown as string) : '—';
+            const score = entry.totalScore;
+            
+            const safePt = pt.includes(',') ? `"${pt}"` : pt;
+            const safeRn = rn.includes(',') ? `"${rn}"` : rn;
+            
+            csv += `${rank},${safePt},${safeRn},${solved},${lastSub},${score}\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `leaderboard-${contestId}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDownloadPDF = () => {
+        if (!leaderboard || leaderboard.length === 0) {
+            toast.error('No data to download');
+            return;
+        }
+
+        const doc = new jsPDF();
+        doc.text(`Contest Leaderboard - ${contestId}`, 14, 15);
+        
+        const tableData = leaderboard.map((entry, index) => [
+            index + 1,
+            entry.username || entry.userId,
+            entry.rollNumber || '—',
+            entry.problemsSolved,
+            entry.lastSubmissionTime ? formatTime(entry.lastSubmissionTime as unknown as string) : '—',
+            entry.totalScore
+        ]);
+
+        autoTable(doc, {
+            head: [['Rank', 'Participant', 'Roll No', 'Solved', 'Last Submission', 'Score']],
+            body: tableData,
+            startY: 20
+        });
+
+        doc.save(`leaderboard-${contestId}.pdf`);
+    };
+
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -137,6 +196,26 @@ export default function LeaderboardPage() {
                                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                                 Refresh
                             </button>
+                            {user?.role === 'ADMIN' && (
+                                <>
+                                    <button
+                                        onClick={handleDownloadCSV}
+                                        className="flex items-center gap-2 bg-emerald-500/80 hover:bg-emerald-500 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                        title="Download CSV"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        CSV
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadPDF}
+                                        className="flex items-center gap-2 bg-emerald-500/80 hover:bg-emerald-500 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                        title="Download PDF"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        PDF
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </CardHeader>

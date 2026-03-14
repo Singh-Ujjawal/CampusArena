@@ -76,7 +76,7 @@ public class UserController {
     @GetMapping("/collective-activity")
     public ResponseEntity<CollectiveActivityDTO> getCollectiveActivity(
             @RequestParam com.campusarena.eventhub.user.model.Course course,
-            @RequestParam String session,
+            @RequestParam(required = false) String session,
             @RequestParam(required = false) String section) {
         return ResponseEntity.ok(userActivityService.getCollectiveActivity(course, session, section));
     }

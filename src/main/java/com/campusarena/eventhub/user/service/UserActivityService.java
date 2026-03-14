@@ -42,17 +42,40 @@ public class UserActivityService {
 
     public CollectiveActivityDTO getCollectiveActivity(com.campusarena.eventhub.user.model.Course course, String session, String section) {
         List<User> users;
-        if (section == null || section.isEmpty()) {
-            users = userRepository.findByCourseAndSession(course, session);
-        } else {
+        boolean hasSession = session != null && !session.isEmpty();
+        boolean hasSection = section != null && !section.isEmpty();
+
+        if (hasSession && hasSection) {
             users = userRepository.findByCourseAndSessionAndSection(course, session, section);
+        } else if (hasSession) {
+            users = userRepository.findByCourseAndSession(course, session);
+        } else if (hasSection) {
+            users = userRepository.findByCourseAndSection(course, section);
+        } else {
+            users = userRepository.findByCourse(course);
         }
+
+        if (users.isEmpty()) {
+            return new CollectiveActivityDTO(new ArrayList<>());
+        }
+
+        List<String> userIds = users.stream().map(User::getId).collect(Collectors.toList());
+
+        // Pre-fetch all clubs to avoid repeating this in getUserActivity if we still use it, 
+        // but for collective we'll do even better by pre-fetching mostly everything.
+        
+        // However, to keep it clean and use existing logic for complex ranking/stats, 
+        // we can still call getUserActivity but let's optimize it by caching common data like clubs.
+        // Actually, for a report of ~60-100 students, calling optimized getUserActivity is fine.
+        // Let's optimize the club mapping inside getUserActivity first.
+
+        Map<String, String> clubNameMap = clubRepository.findAll().stream()
+                .collect(Collectors.toMap(Club::getId, Club::getName, (a, b) -> a));
 
         List<CollectiveActivityDTO.UserWithActivityDTO> userActivities = users.stream()
                 .map(user -> {
-                    // Hide password for security
                     user.setPassword(null);
-                    return new CollectiveActivityDTO.UserWithActivityDTO(user, getUserActivity(user.getId()));
+                    return new CollectiveActivityDTO.UserWithActivityDTO(user, getUserActivity(user.getId(), clubNameMap));
                 })
                 .collect(Collectors.toList());
 
@@ -60,9 +83,12 @@ public class UserActivityService {
     }
 
     public UserActivityDTO getUserActivity(String userId) {
-        // Fetch all clubs for mapping
         Map<String, String> clubNameMap = clubRepository.findAll().stream()
-                .collect(Collectors.toMap(Club::getId, Club::getName));
+                .collect(Collectors.toMap(Club::getId, Club::getName, (a, b) -> a));
+        return getUserActivity(userId, clubNameMap);
+    }
+
+    public UserActivityDTO getUserActivity(String userId, Map<String, String> clubNameMap) {
 
         // ─── MCQ Activities ───────────────────────────────────────────────
         List<EventRegistration> registrations = registrationRepository.findByUserId(userId);
