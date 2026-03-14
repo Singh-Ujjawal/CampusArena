@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Zap, Award, Users, Eye, EyeOff } from 'lucide-react';
+import { InteractiveLoginAside } from './InteractiveLoginAside';
 
 const registerSchema = z.object({
     username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -19,8 +20,8 @@ const registerSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     fatherName: z.string().min(1, 'Father name is required'),
-    course: z.enum(['BTECH', 'BCA', 'BBA', 'BCOM', 'MBA', 'DIPLOMA']),
-    branch: z.enum(['CSE', 'IT', 'AIML', 'DS', 'CIVIL', 'MECHANICAL', 'BIOTECH']).optional(),
+    course: z.enum(['BTECH', 'BCA', 'BBA', 'BCOM', 'MBA', 'DIPLOMA'], { message: 'Please select a course' }),
+    branch: z.enum(['CSE', 'IT', 'AIML', 'DS', 'CIVIL', 'MECHANICAL', 'BIOTECH'], { message: 'Please select a branch' }),
     rollNumber: z.string().length(13, 'Roll number must be exactly 13 characters'),
     phoneNumber: z.string().length(10, 'Phone number must be exactly 10 characters'),
     section: z.string().length(1, 'Section must be a single character'),
@@ -74,19 +75,9 @@ export default function RegisterPage() {
 
     return (
         <div className="flex min-h-screen">
-            {/* Left Side - sticky image panel */}
-            <div
-                className="hidden lg:flex lg:w-1/2 sticky top-0 h-screen flex-shrink-0 flex-col justify-end p-8"
-                style={{ 
-                    backgroundImage: 'url(/login.png)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                }}
-            >
-                <p className="text-xs font-light tracking-widest text-center" style={{ color: '#4B7BA7' }}>
-                    © {new Date().getFullYear()} CAMPUSARENA
-                </p>
+            {/* Left Side - sticky image panel with cursor effect */}
+            <div className="hidden lg:block lg:w-1/2 sticky top-0 h-screen flex-shrink-0" style={{ borderRight: '3px solid #cbd5e1' }}>
+                <InteractiveLoginAside />
             </div>
 
             {/* Right Side - Register Form (always light) */}
@@ -102,7 +93,7 @@ export default function RegisterPage() {
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
-                                        <label htmlFor="firstName" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">First Name</label>
+                                        <label htmlFor="firstName" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">First Name</label>
                                         <Input
                                             id="firstName"
                                             placeholder="John"
@@ -112,7 +103,7 @@ export default function RegisterPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label htmlFor="lastName" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Last Name</label>
+                                        <label htmlFor="lastName" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Last Name</label>
                                         <Input
                                             id="lastName"
                                             placeholder="Doe"
@@ -124,7 +115,7 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="fatherName" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Father's Name</label>
+                                    <label htmlFor="fatherName" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Father's Name</label>
                                     <Input
                                         id="fatherName"
                                         placeholder="Father's Name"
@@ -141,6 +132,7 @@ export default function RegisterPage() {
                                         className=""
                                         style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
                                         options={[
+                                            { value: '', label: 'Select Course' },
                                             { value: 'BTECH', label: 'B.Tech' },
                                             { value: 'BCA', label: 'BCA' },
                                             { value: 'BBA', label: 'BBA' },
@@ -153,30 +145,29 @@ export default function RegisterPage() {
                                         })}
                                         error={errors.course?.message}
                                     />
-                                    {(course === 'BTECH' || course === 'DIPLOMA') && (
-                                        <Select
-                                            label="Branch"
-                                            id="branch"
-                                            className=""
-                                            style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
-                                            options={[
-                                                { value: 'CSE', label: 'CSE' },
-                                                { value: 'IT', label: 'IT' },
-                                                { value: 'AIML', label: 'AIML' },
-                                                { value: 'DS', label: 'DS' },
-                                                { value: 'CIVIL', label: 'Civil' },
-                                                { value: 'MECHANICAL', label: 'Mechanical' },
-                                                { value: 'BIOTECH', label: 'Biotech' },
-                                            ]}
-                                            {...register('branch')}
-                                            error={errors.branch?.message}
-                                        />
-                                    )}
+                                    <Select
+                                        label="Branch"
+                                        id="branch"
+                                        className=""
+                                        style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
+                                        options={[
+                                            { value: '', label: 'Select Branch' },
+                                            { value: 'CSE', label: 'CSE' },
+                                            { value: 'IT', label: 'IT' },
+                                            { value: 'AIML', label: 'AIML' },
+                                            { value: 'DS', label: 'DS' },
+                                            { value: 'CIVIL', label: 'Civil' },
+                                            { value: 'MECHANICAL', label: 'Mechanical' },
+                                            { value: 'BIOTECH', label: 'Biotech' },
+                                        ]}
+                                        {...register('branch')}
+                                        error={errors.branch?.message}
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
-                                        <label htmlFor="rollNumber" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Roll Number (13 digits)</label>
+                                        <label htmlFor="rollNumber" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Roll Number (13 digits)</label>
                                         <Input
                                             id="rollNumber"
                                             placeholder="2101640100000"
@@ -187,7 +178,7 @@ export default function RegisterPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label htmlFor="phoneNumber" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Phone Number (10 digits)</label>
+                                        <label htmlFor="phoneNumber" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Phone Number (10 digits)</label>
                                         <Input
                                             id="phoneNumber"
                                             placeholder="9876543210"
@@ -201,7 +192,7 @@ export default function RegisterPage() {
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
-                                        <label htmlFor="section" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Section</label>
+                                        <label htmlFor="section" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Section</label>
                                         <Input
                                             id="section"
                                             placeholder="A, B, etc."
@@ -212,10 +203,10 @@ export default function RegisterPage() {
                                         />
                                     </div>
                                     <div>
-                                        <label htmlFor="session" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Session (YYYY-YY)</label>
+                                        <label htmlFor="session" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Session (YYYY-YY)</label>
                                         <Input
                                             id="session"
-                                            placeholder="2025-26"
+                                            placeholder="2023-27"
                                             style={{ backgroundColor: '#f1f5f9', color: '#1e293b', borderColor: '#cbd5e1' }}
                                             {...register('session')}
                                             error={errors.session?.message}
@@ -224,7 +215,7 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="leetCodeUsername" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">LeetCode Username</label>
+                                    <label htmlFor="leetCodeUsername" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">LeetCode Username</label>
                                     <Input
                                         id="leetCodeUsername"
                                         placeholder="johndoe_lc"
@@ -235,7 +226,7 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="email" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Email</label>
+                                    <label htmlFor="email" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Email</label>
                                     <Input
                                         id="email"
                                         type="email"
@@ -247,7 +238,7 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="username" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Username</label>
+                                    <label htmlFor="username" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Username</label>
                                     <Input
                                         id="username"
                                         placeholder="johndoe"
@@ -258,7 +249,7 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="password" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Password</label>
+                                    <label htmlFor="password" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Password</label>
                                     <div className="relative">
                                         <Input
                                             id="password"
@@ -279,7 +270,7 @@ export default function RegisterPage() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="passwordConfirm" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Confirm Password</label>
+                                    <label htmlFor="passwordConfirm" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Confirm Password</label>
                                     <div className="relative">
                                         <Input
                                             id="passwordConfirm"

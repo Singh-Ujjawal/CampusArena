@@ -42,7 +42,7 @@ export default function LoginPage() {
     return (
         <div className="flex min-h-screen">
             {/* Left Side - sticky image panel */}
-            <div className="hidden lg:block lg:w-1/2 sticky top-0 h-screen flex-shrink-0">
+            <div className="hidden lg:block lg:w-1/2 sticky top-0 h-screen flex-shrink-0" style={{ borderRight: '3px solid #cbd5e1' }}>
                 <InteractiveLoginAside />
             </div>
 
@@ -58,7 +58,7 @@ export default function LoginPage() {
                         <CardContent className="pt-6">
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                                 <div>
-                                    <label htmlFor="userId" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">User ID / Username</label>
+                                    <label htmlFor="userId" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">User ID / Username</label>
                                     <Input
                                         id="userId"
                                         placeholder="Enter your ID or username"
@@ -69,7 +69,7 @@ export default function LoginPage() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="password" style={{ color: '#334155' }} className="text-sm font-medium block mb-2">Password</label>
+                                    <label htmlFor="password" style={{ color: '#000000' }} className="text-sm font-medium block mb-2">Password</label>
                                     <div className="relative">
                                         <Input
                                             id="password"

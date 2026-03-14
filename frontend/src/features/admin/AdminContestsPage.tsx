@@ -377,8 +377,8 @@ export default function AdminContestsPage() {
                                                             );
                                                         } else if (now < start) {
                                                             return (
-                                                                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700 flex items-center gap-1">
-                                                                    <Clock className="h-3 w-3" />
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700 whitespace-nowrap">
+                                                                    <Clock className="h-3 w-3 flex-shrink-0" />
                                                                     UPCOMING
                                                                 </span>
                                                             );
