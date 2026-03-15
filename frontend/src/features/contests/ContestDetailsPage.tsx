@@ -9,6 +9,9 @@ import { ArrowRight, CheckCircle2, Clock, Users, Lock, Key, LayoutGrid, Clipboar
 import { toast } from 'sonner';
 import { CountdownTimer } from '@/components/CountdownTimer';
 import { ContestDetailsSkeleton } from '@/components/skeleton';
+import FeedbackForm from '@/features/registration/FeedbackForm';
+import { MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const IST_TZ = 'Asia/Kolkata';
 
@@ -31,6 +34,9 @@ export default function ContestDetailsPage() {
     const [mySubmissions, setMySubmissions] = useState<Submission[]>([]);
     const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
     const [expandedSubmissionId, setExpandedSubmissionId] = useState<string | null>(null);
+    const [associatedFormId, setAssociatedFormId] = useState<string | null>(null);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
     useEffect(() => {
         if (contestId && sessionStorage.getItem(`contest_access_${contestId}`)) {
@@ -75,20 +81,33 @@ export default function ContestDetailsPage() {
                 setContest(contestData);
                 setStatus(contestStatus);
 
-                if (user && contestData.registrationRequired) {
-                    try {
-                        const regRes = await api.get(`/api/registration/responses/check`, {
-                            params: { contestId, userId: user.id }
-                        });
-                        setIsRegistered(regRes.data); // Status string from backend
-
-                        if (!regRes.data) {
-                            const formRes = await api.get(`/api/registration/forms/contest/${contestId}`);
-                            setRegFormId(formRes.data.id);
+                // Fetch form info regardless of registrationRequired to check for feedback
+                try {
+                    const formRes = await api.get(`/api/registration/forms/contest/${contestId}`);
+                    if (formRes.data && formRes.data.feedbackEnabled) {
+                        setAssociatedFormId(formRes.data.id);
+                        
+                        // Check if user already submitted feedback
+                        if (user) {
+                            const statusRes = await api.get(`/api/feedback/${formRes.data.id}/status`);
+                            setFeedbackSubmitted(statusRes.data);
                         }
-                    } catch (e) {
-                        // Form might not exist yet
                     }
+                } catch (e) {
+                    // Form might not exist, that's fine
+                }
+
+                if (user) {
+                    // Always check registration status if user is logged in
+                    api.get(`/api/registration/responses/check`, {
+                        params: { contestId, userId: user.id }
+                    })
+                    .then(res => {
+                        const statusStr = res.data?.toString().trim();
+                        console.log("Contest Registration Status:", statusStr);
+                        setIsRegistered(statusStr);
+                    })
+                    .catch(() => setIsRegistered(null));
                 }
 
                 if (contestStatus !== 'UPCOMING' && contestData.problemIds && contestData.problemIds.length > 0) {
@@ -168,11 +187,33 @@ export default function ContestDetailsPage() {
                             {solvedCount} / {problems.length} Solved
                         </span>
                     )}
-                    <Link to={`/leaderboard/${contest.id}`}>
-                        <Button variant="outline" className="rounded-2xl font-bold shadow-sm text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">View Leaderboard</Button>
-                    </Link>
                 </div>
             </div>
+
+            {/* Feedback Banner at Top if Past and Approved */}
+            {associatedFormId && (status === 'PAST' || status === 'ENDED') && isRegistered === 'APPROVED' && !feedbackSubmitted && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800 shadow-sm"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400">
+                            <MessageSquare className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Contest Feedback</h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Tell us what you thought about this competition.</p>
+                        </div>
+                    </div>
+                    <Button 
+                        onClick={() => setShowFeedback(true)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold px-6 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-[1.05]"
+                    >
+                        Give Feedback
+                    </Button>
+                </motion.div>
+            )}
 
             {/* Coordinators */}
             {(contest.facultyCoordinators?.length || contest.studentCoordinators?.length) && (
@@ -489,6 +530,33 @@ export default function ContestDetailsPage() {
                     </div>
                 )}
             </div>
+
+            <AnimatePresence>
+                {showFeedback && associatedFormId && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="w-full max-w-2xl"
+                        >
+                            <FeedbackForm 
+                                formId={associatedFormId} 
+                                onClose={() => setShowFeedback(false)}
+                                onSuccess={() => {
+                                    setFeedbackSubmitted(true);
+                                    setTimeout(() => setShowFeedback(false), 2000);
+                                }}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

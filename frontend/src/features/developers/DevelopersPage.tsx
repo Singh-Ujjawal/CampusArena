@@ -91,52 +91,83 @@ export default function DevelopersPage() {
             </div>
 
             {/* Hero Section */}
-            <section className="relative pt-12 md:pt-20 pb-12 md:pb-32 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-6xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: -30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                        className="text-center mb-8 md:mb-12"
-                    >
-                        <div className="inline-block mb-4 md:mb-6">
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                                className="p-3 md:p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl"
-                            >
-                                <Terminal className="w-8 h-8 md:w-10 md:h-10 text-white" />
-                            </motion.div>
-                        </div>
+            <section className="relative pt-2 md:pt-4 pb-4 md:pb-8 px-4 sm:px-6 lg:px-8 min-h-[60vh] flex items-center">
+                <div className="max-w-6xl mx-auto w-full">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                        {/* Left Column: Info */}
+                        <motion.div
+                            initial={{ opacity: 0, x: -30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className="text-left"
+                        >
+                            <div className="inline-block mb-4">
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                                    className="p-2 md:p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl"
+                                >
+                                    <Terminal className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                                </motion.div>
+                            </div>
 
-                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-gray-900 dark:text-white mb-4 md:mb-6 leading-tight">
-                            Crafted by <br />
-                            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                Quantum Coders
-                            </span>
-                        </h1>
+                            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 dark:text-white mb-4 leading-tight">
+                                Crafted by <br />
+                                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                    Quantum Coders
+                                </span>
+                            </h1>
 
-                        <p className="text-base md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed">
-                            A talented team of full-stack engineers building the next generation of competitive programming platform with cutting-edge technology.
-                        </p>
+                            <p className="text-sm md:text-lg text-gray-600 dark:text-gray-400 mb-6 leading-relaxed max-w-xl">
+                                A talented team of full-stack engineers building the next generation of competitive programming platform with cutting-edge technology.
+                            </p>
 
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl md:rounded-2xl hover:shadow-lg hover:shadow-blue-500/40 transition-all"
-                            >
-                                View on GitHub
-                            </motion.button>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="px-6 md:px-8 py-3 md:py-4 border-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-bold rounded-xl md:rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-                            >
-                                Join Our Team
-                            </motion.button>
-                        </div>
-                    </motion.div>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="px-5 md:px-7 py-2.5 md:py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg md:rounded-xl hover:shadow-lg hover:shadow-blue-500/40 transition-all text-sm md:text-base"
+                                >
+                                    View on GitHub
+                                </motion.button>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="px-5 md:px-7 py-2.5 md:py-3.5 border-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-bold rounded-lg md:rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all text-sm md:text-base"
+                                >
+                                    Join Our Team
+                                </motion.button>
+                            </div>
+                        </motion.div>
+
+                        {/* Right Column: Tech Stack */}
+                        <motion.div
+                            initial={{ opacity: 0, x: 30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.6, delay: 0.2 }}
+                            className="relative"
+                        >
+                            <div className="grid grid-cols-2 gap-4">
+                                {techStack.map((tech, idx) => {
+                                    const Icon = tech.icon;
+                                    return (
+                                        <motion.div
+                                            key={idx}
+                                            whileHover={{ y: -5, scale: 1.02 }}
+                                            className={`p-4 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br ${tech.color} text-white font-bold text-center shadow-lg group overflow-hidden relative`}
+                                        >
+                                            <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                                            <Icon className="w-6 h-6 md:w-8 md:h-8 mx-auto mb-2 relative z-10" />
+                                            <span className="text-xs md:text-sm relative z-10 block">{tech.name}</span>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                            
+                            {/* Decorative background for the tech grid */}
+                            <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/10 to-purple-600/10 dark:from-blue-500/20 dark:to-purple-600/20 blur-2xl -z-10 rounded-full"></div>
+                        </motion.div>
+                    </div>
                 </div>
             </section>
 
@@ -165,44 +196,6 @@ export default function DevelopersPage() {
                 </div>
             </section> */}
 
-            {/* Tech Stack Section */}
-            <section className="relative py-12 md:py-20 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-6xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        whileInView={{ opacity: 1 }}
-                        viewport={{ once: true }}
-                        className="text-center mb-12 md:mb-16"
-                    >
-                        <h2 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white mb-4">Tech Stack</h2>
-                        <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg">Modern technologies powering our platform</p>
-                    </motion.div>
-
-                    <motion.div
-                        variants={containerVariants}
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true }}
-                        className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6"
-                    >
-                        {techStack.map((tech, idx) => {
-                            const Icon = tech.icon;
-                            return (
-                                <motion.div
-                                    key={idx}
-                                    variants={itemVariants}
-                                    whileHover={{ y: -8, scale: 1.02 }}
-                                    className={`relative p-6 md:p-8 rounded-2xl md:rounded-3xl bg-gradient-to-br ${tech.color} text-white font-bold text-center shadow-lg hover:shadow-2xl transition-all cursor-pointer group overflow-hidden`}
-                                >
-                                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                                    <Icon className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-3 md:mb-4 relative z-10" />
-                                    <span className="text-sm md:text-base relative z-10 block">{tech.name}</span>
-                                </motion.div>
-                            );
-                        })}
-                    </motion.div>
-                </div>
-            </section>
 
             {/* Team Section */}
             <section className="relative py-12 md:py-20 px-4 sm:px-6 lg:px-8">

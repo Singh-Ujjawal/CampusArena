@@ -5,7 +5,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
     Plus, Trash2, Image as ImageIcon, X, ChevronLeft,
     Save, Layout, Settings, FileQuestion, BadgeDollarSign,
-    Calendar, Clock, Loader2, Trophy
+    Calendar, Clock, Loader2, Trophy, MessageSquare
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
@@ -85,6 +85,8 @@ export default function AdminCreateRegistrationForm() {
 
     const [questions, setQuestions] = useState<Question[]>([]);
     const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriterion[]>([]);
+    const [feedbackEnabled, setFeedbackEnabled] = useState(false);
+    const [feedbackQuestions, setFeedbackQuestions] = useState<Question[]>([]);
     const [clubs, setClubs] = useState<any[]>([]);
     const [events, setEvents] = useState<any[]>([]);
     const [contests, setContests] = useState<any[]>([]);
@@ -129,6 +131,8 @@ export default function AdminCreateRegistrationForm() {
             setContestId(data.contestId || '');
             setQuestions(data.questions || []);
             setEvaluationCriteria(data.evaluationCriteria || []);
+            setFeedbackEnabled(data.feedbackEnabled || false);
+            setFeedbackQuestions(data.feedbackQuestions || []);
             // Load Cloudinary image if it exists
             if (data.imageUrl) {
                 setImageUrl(data.imageUrl);
@@ -157,6 +161,25 @@ export default function AdminCreateRegistrationForm() {
 
     const updateQuestion = (qId: string, updates: Partial<Question>) => {
         setQuestions(questions.map((q) => (q.id === qId ? { ...q, ...updates } : q)));
+    };
+
+    const addFeedbackQuestion = () => {
+        const newQuestion: Question = {
+            id: Math.random().toString(36).substr(2, 9),
+            label: '',
+            type: 'TEXT',
+            required: true,
+            options: ['Option 1'],
+        };
+        setFeedbackQuestions([...feedbackQuestions, newQuestion]);
+    };
+
+    const removeFeedbackQuestion = (qId: string) => {
+        setFeedbackQuestions(feedbackQuestions.filter((q) => q.id !== qId));
+    };
+
+    const updateFeedbackQuestion = (qId: string, updates: Partial<Question>) => {
+        setFeedbackQuestions(feedbackQuestions.map((q) => (q.id === qId ? { ...q, ...updates } : q)));
     };
 
     const addCriterion = () => {
@@ -244,6 +267,8 @@ export default function AdminCreateRegistrationForm() {
             imageUrl: imageUrl || null,
             imagePublicId: imagePublicId || null,
             evaluationCriteria: evaluationCriteria,
+            feedbackEnabled,
+            feedbackQuestions,
         };
 
 
@@ -520,6 +545,132 @@ export default function AdminCreateRegistrationForm() {
                         </Button>
                     </div>
 
+                    {/* Feedback Configuration section */}
+                    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-500">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <MessageSquare className="h-5 w-5 text-indigo-500" />
+                                Feedback Form Questions
+                            </h3>
+                            <span className="text-xs font-medium text-gray-400">{feedbackQuestions.length} Feedback Questions</span>
+                        </div>
+
+                        {!feedbackEnabled && (
+                            <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900 flex items-center gap-3">
+                                <span className="text-sm text-amber-700 dark:text-amber-300">Feedback is currently <b>disabled</b>. Enable it in the sidebar to show these questions after the event.</span>
+                            </div>
+                        )}
+
+                        {feedbackQuestions.map((q) => (
+                            <motion.div
+                                key={q.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="relative group"
+                            >
+                                <Card className="border-2 border-indigo-50/50 dark:border-indigo-900/20 hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all rounded-2xl overflow-hidden shadow-none">
+                                    <CardContent className="p-6 space-y-6">
+                                        <div className="flex flex-col md:flex-row gap-4">
+                                            <div className="flex-1">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Feedback Question (e.g., How would you rate the event?)"
+                                                    className="w-full text-lg font-bold bg-gray-50 dark:bg-gray-900 px-4 py-3 rounded-xl border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-gray-800 outline-none transition-all dark:text-white"
+                                                    value={q.label}
+                                                    onChange={(e) => updateFeedbackQuestion(q.id, { label: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="md:w-56">
+                                                <select
+                                                    className="w-full h-full bg-gray-50 dark:bg-gray-900 px-4 py-3 rounded-xl border border-transparent focus:border-indigo-500 outline-none transition-all dark:text-white font-medium cursor-pointer"
+                                                    value={q.type}
+                                                    onChange={(e) => updateFeedbackQuestion(q.id, { type: e.target.value as any })}
+                                                >
+                                                    {QUESTION_TYPES.map(t => (
+                                                        <option key={t.value} value={t.value}>{t.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {['RADIO', 'CHECKBOX', 'DROPDOWN'].includes(q.type) && (
+                                            <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900 space-y-3">
+                                                <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest pl-2">Options</p>
+                                                {q.options.map((opt, optIdx) => (
+                                                    <div key={optIdx} className="flex items-center gap-2 group/opt">
+                                                        <div className="h-2 w-2 rounded-full bg-indigo-200 group-hover/opt:bg-indigo-500"></div>
+                                                        <input
+                                                            type="text"
+                                                            className="flex-1 bg-transparent border-b border-gray-200 dark:border-gray-700 py-1 focus:border-indigo-500 outline-none text-sm dark:text-white"
+                                                            value={opt}
+                                                            onChange={(e) => {
+                                                                const newOpts = [...q.options];
+                                                                newOpts[optIdx] = e.target.value;
+                                                                updateFeedbackQuestion(q.id, { options: newOpts });
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
+                                                            onClick={() => {
+                                                                const newOpts = q.options.filter((_, i) => i !== optIdx);
+                                                                updateFeedbackQuestion(q.id, { options: newOpts });
+                                                            }}
+                                                            disabled={q.options.length <= 1}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg text-xs font-bold ml-4"
+                                                    onClick={() => updateFeedbackQuestion(q.id, { options: [...q.options, `Option ${q.options.length + 1}`] })}
+                                                >
+                                                    <Plus className="h-3 w-3 mr-1" /> Add Option
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-700/50 pt-4">
+                                            <label className="flex items-center gap-3 cursor-pointer group/toggle">
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={q.required}
+                                                    onChange={(e) => updateFeedbackQuestion(q.id, { required: e.target.checked })}
+                                                />
+                                                <div className={`w-10 h-5 rounded-full transition-all relative ${q.required ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${q.required ? 'left-6' : 'left-1'}`}></div>
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-500 dark:text-gray-400">Required Response</span>
+                                            </label>
+
+                                            <DeleteButton
+                                                onClick={() => removeFeedbackQuestion(q.id)}
+                                                variant="full"
+                                                label="Remove Feedback Question"
+                                                className="h-10 text-xs"
+                                            />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        ))}
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={addFeedbackQuestion}
+                            className="w-full py-8 border-2 border-dashed border-indigo-100 dark:border-indigo-900/30 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-400 hover:text-indigo-600 transition-all font-bold"
+                        >
+                            <Plus className="h-6 w-6 mr-2" />
+                            Add Question to Feedback Form
+                        </Button>
+                    </div>
+
                 </div>
 
                 {/* Sidebar Controls */}
@@ -622,6 +773,22 @@ export default function AdminCreateRegistrationForm() {
                                     />
                                     <div className={`w-12 h-6 rounded-full relative transition-all ${isActive ? 'bg-green-500' : 'bg-gray-300'}`}>
                                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isActive ? 'left-7' : 'left-1'}`}></div>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-center justify-between p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl cursor-pointer">
+                                    <div className="flex items-center gap-2">
+                                        <MessageSquare className="h-4 w-4 text-indigo-600" />
+                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Enable Feedback</span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={feedbackEnabled}
+                                        onChange={e => setFeedbackEnabled(e.target.checked)}
+                                    />
+                                    <div className={`w-12 h-6 rounded-full relative transition-all ${feedbackEnabled ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${feedbackEnabled ? 'left-7' : 'left-1'}`}></div>
                                     </div>
                                 </label>
                             </div>

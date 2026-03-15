@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Calendar, Clock, AlertCircle, Users, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { EventDetailsSkeleton } from '@/components/skeleton';
+import FeedbackForm from '@/features/registration/FeedbackForm';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageSquare } from 'lucide-react';
 
 export default function EventDetailsPage() {
     const { eventId } = useParams();
@@ -22,6 +25,9 @@ export default function EventDetailsPage() {
     const [regFormId, setRegFormId] = useState<string | null>(null);
     const [isCheckingReg, setIsCheckingReg] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
+    const [associatedFormId, setAssociatedFormId] = useState<string | null>(null);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
     useEffect(() => {
         if (eventId && sessionStorage.getItem(`event_access_${eventId}`)) {
             setHasAccess(true);
@@ -35,20 +41,43 @@ export default function EventDetailsPage() {
                 const eventData = response.data;
                 setEvent(eventData);
 
-                if (user && eventData.registrationRequired) {
-                    try {
-                        const regRes = await api.get(`/api/registration/responses/check`, {
-                            params: { eventId, userId: user.id }
-                        });
-                        setIsRegistered(regRes.data); // data is now the status string from backend
+                if (user) {
+                    // Start registration check
+                    api.get(`/api/registration/responses/check`, {
+                        params: { eventId, userId: user.id }
+                    })
+                    .then(res => {
+                        const status = res.data?.toString().trim();
+                        console.log("Event Registration Status:", status);
+                        setIsRegistered(status);
+                    })
+                    .catch(() => setIsRegistered(null));
 
-                        if (!regRes.data) {
+                    // Start form and feedback check
+                        try {
                             const formRes = await api.get(`/api/registration/forms/event/${eventId}`);
+                            console.log("Event Form Data:", formRes.data);
+                            if (formRes.data) {
+                                setRegFormId(formRes.data.id);
+                                if (formRes.data.feedbackEnabled) {
+                                    console.log("Feedback is enabled for this form");
+                                    setAssociatedFormId(formRes.data.id);
+                                    const fbStatusRes = await api.get(`/api/feedback/${formRes.data.id}/status`);
+                                    console.log("User Feedback Status:", fbStatusRes.data);
+                                    setFeedbackSubmitted(fbStatusRes.data);
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Form or feedback check failed", e);
+                        }
+                } else {
+                    // Not logged in, but still check for form if needed
+                    try {
+                        const formRes = await api.get(`/api/registration/forms/event/${eventId}`);
+                        if (formRes.data) {
                             setRegFormId(formRes.data.id);
                         }
-                    } catch (e) {
-                        // Form might not exist yet if flag was false before
-                    }
+                    } catch (e) {}
                 }
             } catch (error) {
                 navigate('/events');
@@ -129,6 +158,28 @@ export default function EventDetailsPage() {
                         </span>
                     </div>
                 </CardHeader>
+
+                {/* Feedback Banner at Top if Completed and Approved */}
+                {associatedFormId && (status === 'COMPLETED' || isCompleted) && isRegistered?.toUpperCase() === 'APPROVED' && !feedbackSubmitted && (
+                    <div className="px-6 py-4 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400">
+                                <MessageSquare className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Event Feedback</h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Share your experience with us.</p>
+                            </div>
+                        </div>
+                        <Button 
+                            onClick={() => setShowFeedback(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold px-6 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-[1.05]"
+                        >
+                            Give Feedback
+                        </Button>
+                    </div>
+                )}
+
                 <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex items-center text-gray-700 dark:text-gray-300">
@@ -244,10 +295,37 @@ export default function EventDetailsPage() {
                         </>
                     )}
                     {isCompleted && (
-                        <Button variant="outline" disabled>Event Completed</Button>
+                        <Button variant="outline" className="rounded-xl" disabled>Event Completed</Button>
                     )}
                 </CardFooter>
             </Card>
+
+            <AnimatePresence>
+                {showFeedback && associatedFormId && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="w-full max-w-2xl"
+                        >
+                            <FeedbackForm 
+                                formId={associatedFormId} 
+                                onClose={() => setShowFeedback(false)}
+                                onSuccess={() => {
+                                    setFeedbackSubmitted(true);
+                                    setTimeout(() => setShowFeedback(false), 2000);
+                                }}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Password Modal */}
             {showPasswordModal && (

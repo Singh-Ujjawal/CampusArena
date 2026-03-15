@@ -6,12 +6,14 @@ import { type Contest, type Problem, type Club } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash, Check, Users, X, ClipboardCheck, AlertTriangle, Clock, History as HistoryIcon, Trophy } from 'lucide-react';
+import { Plus, Edit, Trash, Check, Users, X, ClipboardCheck, AlertTriangle, Clock, History as HistoryIcon, Trophy, Eye, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
 import { AdminContestsPageSkeleton } from '@/components/skeleton';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
+import { CreateReportDialog } from './components/CreateReportDialog';
+
 
 /**
  * A simple tag-input component for entering a list of names.
@@ -88,13 +90,32 @@ export default function AdminContestsPage() {
     const [currentContest, setCurrentContest] = useState<Partial<Contest>>({});
     const [registrationForms, setRegistrationForms] = useState<any[]>([]);
     const [contestToDelete, setContestToDelete] = useState<string | null>(null);
+    const [reports, setReports] = useState<any[]>([]);
+
+    // Report dialog state
+    const [reportDialog, setReportDialog] = useState<{
+        open: boolean;
+        contestId: string;
+        contestTitle: string;
+    }>({ open: false, contestId: '', contestTitle: '' });
+
 
     useEffect(() => {
         fetchContests();
         fetchProblems(); // Fetch problems on load
         fetchClubs();
         fetchRegistrationForms();
+        fetchReports();
     }, []);
+
+    const fetchReports = async () => {
+        try {
+            const response = await api.get('/api/reports');
+            setReports(response.data);
+        } catch {
+            console.error('Failed to load reports');
+        }
+    };
 
     const fetchRegistrationForms = async () => {
         try {
@@ -391,6 +412,7 @@ export default function AdminContestsPage() {
                                                             );
                                                         }
                                                     })()}
+
                                                     {contest.accessPassword && (
                                                         <span className="inline-block px-2 py-0.5 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 tracking-wider">
                                                             PWD: {contest.accessPassword}
@@ -411,6 +433,36 @@ export default function AdminContestsPage() {
                                             ) : null}
                                         </div>
                                         <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
+                                            {(() => {
+                                                const now = new Date();
+                                                const end = new Date(contest.endTime);
+                                                if (now > end) {
+                                                    const existingReport = reports.find(r => r.eventId === contest.id && r.eventType === 'CONTEST');
+                                                    return existingReport ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            className="h-9 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-emerald-100 dark:shadow-none transition-all hover:scale-105"
+                                                            onClick={() => navigate(`/admin/reports/${existingReport.id}`)}
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                            View Report
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            className="h-9 px-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none transition-all hover:scale-105"
+                                                            onClick={() => setReportDialog({ open: true, contestId: contest.id, contestTitle: contest.title })}
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                            Generate Report
+                                                        </Button>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
+
                                             <Link to={`/admin/contests/${contest.id}/participants`}>
                                                 <Button size="sm" variant="outline" className="flex items-center gap-1 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
                                                     <Users className="h-4 w-4" />
@@ -455,6 +507,15 @@ export default function AdminContestsPage() {
                 title={contests.find(c => c.id === contestToDelete)?.title || ''}
                 itemType="Contest"
             />
+
+            <CreateReportDialog
+                isOpen={reportDialog.open}
+                onClose={() => setReportDialog({ ...reportDialog, open: false })}
+                eventId={reportDialog.contestId}
+                eventTitle={reportDialog.contestTitle}
+                eventType="CONTEST"
+            />
+
         </>
     );
 }

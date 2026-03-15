@@ -48,11 +48,14 @@ public class RegistrationController {
     public ResponseEntity<String> checkRegistrationStatus(
             @RequestParam(required = false) String eventId,
             @RequestParam(required = false) String contestId,
+            @RequestParam(required = false) String formId,
             @RequestParam String userId) {
         if (eventId != null) {
             return ResponseEntity.ok(responseService.getRegistrationStatusForEvent(eventId, userId));
         } else if (contestId != null) {
             return ResponseEntity.ok(responseService.getRegistrationStatusForContest(contestId, userId));
+        } else if (formId != null) {
+            return ResponseEntity.ok(responseService.getRegistrationStatusForForm(formId, userId));
         }
         return ResponseEntity.badRequest().build();
     }

@@ -118,7 +118,15 @@ export default function AdminDashboard() {
             gradientBg: 'from-indigo-600 to-blue-600',
             staffOnly: true,
         },
+        {
+            name: 'Event Reports',
+            href: '/admin/reports',
+            icon: FileText,
+            gradientBg: 'from-blue-600 to-indigo-700',
+            staffOnly: true,
+        },
     ];
+
 
     const links = allLinks.filter(link => {
         if (link.adminOnly) return isAdmin;

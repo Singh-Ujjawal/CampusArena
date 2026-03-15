@@ -12,8 +12,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { uploadToCloudinary } from '@/utils/cloudinary';
+import FeedbackForm from '@/features/registration/FeedbackForm';
+import { MessageSquare } from 'lucide-react';
 
 interface RegistrationForm {
     id: string;
@@ -29,6 +31,7 @@ interface RegistrationForm {
     imagePublicId?: string;
     eventId?: string;
     contestId?: string;
+    feedbackEnabled?: boolean;
 }
 
 export default function RegistrationFormSubmission() {
@@ -43,6 +46,9 @@ export default function RegistrationFormSubmission() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [focusedQuestionId, setFocusedQuestionId] = useState<string | null>(null);
+    const [isRegisteredStatus, setIsRegisteredStatus] = useState<string | null>(null);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
     useEffect(() => {
         fetchForm();
@@ -60,6 +66,23 @@ export default function RegistrationFormSubmission() {
                 else initialAnswers[q.id] = '';
             });
             setAnswers(initialAnswers);
+
+            // Check if user is registered and their status
+            if (user) {
+                try {
+                    const statusRes = await api.get(`/api/registration/responses/check`, {
+                        params: { formId: id, userId: user.id }
+                    });
+                    setIsRegisteredStatus(statusRes.data);
+                    
+                    if (response.data.feedbackEnabled) {
+                        const feedbackStatusRes = await api.get(`/api/feedback/${id}/status`);
+                        setFeedbackSubmitted(feedbackStatusRes.data);
+                    }
+                } catch (e) {
+                    // Ignore
+                }
+            }
         } catch (error) {
             toast.error('Form not found or inaccessible');
             navigate('/dashboard');
@@ -244,6 +267,33 @@ export default function RegistrationFormSubmission() {
                     </div>
                 </div>
             </header>
+ 
+            {/* Feedback Section at Top if Closed and Approved */}
+            {isClosed && isRegisteredStatus === 'APPROVED' && form.feedbackEnabled && !feedbackSubmitted && (
+                <div className="w-full px-2 sm:px-4 py-3 bg-white dark:bg-slate-950 border-b border-slate-200/50 dark:border-slate-800/50">
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="max-w-7xl mx-auto flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-xl">
+                                <MessageSquare className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Give Your Feedback</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Share your thoughts on this event.</p>
+                            </div>
+                        </div>
+                        <Button 
+                            onClick={() => setShowFeedback(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold px-5 shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-[1.05]"
+                        >
+                            Give Feedback
+                        </Button>
+                    </motion.div>
+                </div>
+            )}
 
             {/* Main Content */}
             <main className="w-full mx-auto px-2 sm:px-4 py-4">
@@ -591,6 +641,33 @@ export default function RegistrationFormSubmission() {
                     </aside>
                 </div>
             </main>
+
+            <AnimatePresence>
+                {showFeedback && form && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="w-full max-w-2xl"
+                        >
+                            <FeedbackForm 
+                                formId={form.id} 
+                                onClose={() => setShowFeedback(false)}
+                                onSuccess={() => {
+                                    setFeedbackSubmitted(true);
+                                    setTimeout(() => setShowFeedback(false), 2000);
+                                }}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
