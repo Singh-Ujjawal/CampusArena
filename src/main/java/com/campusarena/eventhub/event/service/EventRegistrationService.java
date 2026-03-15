@@ -27,9 +27,6 @@ public class EventRegistrationService {
         }
 
         Instant now = Instant.now();
-        if (!now.isBefore(event.getStartTime())) {
-            throw new ApiException("Registration closed. Event already started.");
-        }
 
         if (registrationRepository.existsByEventIdAndUserId(eventId, userId)) {
             throw new ApiException("Already registered for this event");

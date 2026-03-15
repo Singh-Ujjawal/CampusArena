@@ -51,9 +51,6 @@ public class RegistrationResponseService {
                 .orElseThrow(() -> new ApiException("Form not found"));
         Instant now = Instant.now();
 
-        // Check if event or contest has started
-        checkIfStarted(form, now);
-
         if (!form.isActive() || now.isBefore(form.getStartTime())
                 || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
             throw new ApiException("Registration form is closed");
@@ -74,9 +71,6 @@ public class RegistrationResponseService {
         RegistrationForm form = formRepository.findById(formId)
                 .orElseThrow(() -> new ApiException("Form not found"));
         Instant now = Instant.now();
-
-        // Check if event or contest has started
-        checkIfStarted(form, now);
 
         if (!form.isActive() || now.isBefore(form.getStartTime())
                 || (form.getEndTime() != null && now.isAfter(form.getEndTime()))) {
@@ -190,26 +184,6 @@ public class RegistrationResponseService {
                 .orElse(null);
     }
 
-    private void checkIfStarted(RegistrationForm form, Instant now) {
-        if (form.getContestId() != null) {
-            contestRepository.findById(form.getContestId()).ifPresent(contest -> {
-                if (contest.getStartTime() != null && !now.isBefore(contest.getStartTime())) {
-                    throw new ApiException(
-                            "Registration closed. Contest " + contest.getTitle() + " has already started.");
-                }
-            });
-        }
-
-        if (form.getEventId() != null) {
-            eventRepository.findById(form.getEventId()).ifPresent(event -> {
-                if (event.getStartTime() != null && !now.isBefore(event.getStartTime())) {
-                    throw new ApiException(
-                            "Registration closed. Quiz/Event " + event.getTitle() + " has already started.");
-                }
-            });
-        }
-
-    }
 
     public RegistrationResponse submitMarks(String responseId, List<EvaluationMark> marks, String feedback,
             User currentUser) {

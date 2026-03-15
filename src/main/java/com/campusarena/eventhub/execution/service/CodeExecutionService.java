@@ -26,6 +26,7 @@ public class CodeExecutionService {
     public ExecutionResponse executeCode(ExecutionRequest request) {
         long startTime = System.currentTimeMillis();
         Path tempDir = null;
+        String containerName = "sandbox-" + UUID.randomUUID();
 
         try {
             if (request.getSourceCode() == null || request.getSourceCode().isBlank()) {
@@ -48,118 +49,128 @@ public class CodeExecutionService {
 
             String volumeMount = tempDir.toAbsolutePath().toString() + ":/app";
 
-            String compileCmd = strategy.getCompileCommand(fileName);
-            if (compileCmd != null) {
-                ProcessResult cr = runProcess(List.of(
-                        "docker", "run", "--rm",
-                        "-v", volumeMount,
-                        "-w", "/app",
-                        strategy.getDockerImage(),
-                        "sh", "-c", compileCmd + " 2>&1"
-                ), 30);
+            // Start a persistent container to run all tests
+            ProcessResult startRes = runProcess(List.of(
+                    "docker", "run", "-d", "--rm",
+                    "--name", containerName,
+                    "--memory=256m", "--cpus=1.0",
+                    "--network=none",
+                    "-v", volumeMount,
+                    "-w", "/app",
+                    strategy.getDockerImage(),
+                    "sleep", "infinity"
+            ), 20);
 
-                if (cr.exitCode != 0) {
-                    cleanup(tempDir);
-                    return ExecutionResponse.builder()
-                            .compileError(cr.output)
-                            .status(ExecutionStatus.COMPILE_ERROR)
-                            .executionTime(0L)
-                            .passedTestCases(0)
-                            .totalTestCases(testCases.size())
-                            .build();
-                }
+            if (startRes.exitCode != 0) {
+                return ExecutionResponse.error("Failed to start execution container: " + startRes.output);
             }
 
-            int passedCount = 0;
-            int totalCases  = testCases.size();
+            try {
+                // Compilation (if needed)
+                String compileCmd = strategy.getCompileCommand(fileName);
+                if (compileCmd != null) {
+                    ProcessResult cr = runProcess(List.of(
+                            "docker", "exec", containerName,
+                            "sh", "-c", compileCmd + " 2>&1"
+                    ), 30);
 
-            for (int i = 0; i < totalCases; i++) {
-                ExecutionTestCase tc = testCases.get(i);
-                String inputContent = tc.getInput() != null ? tc.getInput() : "";
-                Files.writeString(tempDir.resolve("input.txt"), inputContent);
-
-                String runScript = "timeout " + timeLimit + "s "
-                        + strategy.getRunCommand(fileName)
-                        + " < input.txt 2>&1";
-
-                ProcessResult rr = runProcess(List.of(
-                        "docker", "run", "--rm",
-                        "--memory=256m", "--cpus=1.0",
-                        "--network=none",
-                        "-v", volumeMount,
-                        "-w", "/app",
-                        strategy.getDockerImage(),
-                        "sh", "-c", runScript
-                ), timeLimit + 15);
-
-                long elapsed = System.currentTimeMillis() - startTime;
-
-                if (rr.timedOut || rr.exitCode == 124) {
-                    cleanup(tempDir);
-                    return ExecutionResponse.builder()
-                            .stderr("Time Limit Exceeded")
-                            .status(ExecutionStatus.TIME_LIMIT_EXCEEDED)
-                            .executionTime((long) (timeLimit * 1000))
-                            .failedTestCase(i + 1)
-                            .passedTestCases(passedCount)
-                            .totalTestCases(totalCases)
-                            .build();
+                    if (cr.exitCode != 0) {
+                        return ExecutionResponse.builder()
+                                .compileError(cr.output)
+                                .status(ExecutionStatus.COMPILE_ERROR)
+                                .executionTime(0L)
+                                .passedTestCases(0)
+                                .totalTestCases(testCases.size())
+                                .build();
+                    }
                 }
 
-                if (rr.exitCode == 137 || rr.output.contains("Killed")) {
-                    cleanup(tempDir);
-                    return ExecutionResponse.builder()
-                            .stderr("Memory Limit Exceeded")
-                            .status(ExecutionStatus.MEMORY_LIMIT_EXCEEDED)
-                            .executionTime(elapsed)
-                            .failedTestCase(i + 1)
-                            .passedTestCases(passedCount)
-                            .totalTestCases(totalCases)
-                            .build();
+                int passedCount = 0;
+                int totalCases = testCases.size();
+
+                for (int i = 0; i < totalCases; i++) {
+                    ExecutionTestCase tc = testCases.get(i);
+                    String inputContent = tc.getInput() != null ? tc.getInput() : "";
+                    Files.writeString(tempDir.resolve("input.txt"), inputContent);
+
+                    String runScript = "timeout " + timeLimit + "s "
+                            + strategy.getRunCommand(fileName)
+                            + " < input.txt 2>&1";
+
+                    ProcessResult rr = runProcess(List.of(
+                            "docker", "exec", containerName,
+                            "sh", "-c", runScript
+                    ), timeLimit + 10);
+
+                    long elapsed = System.currentTimeMillis() - startTime;
+
+                    if (rr.timedOut || rr.exitCode == 124) {
+                        return ExecutionResponse.builder()
+                                .stderr("Time Limit Exceeded")
+                                .status(ExecutionStatus.TIME_LIMIT_EXCEEDED)
+                                .executionTime((long) (timeLimit * 1000))
+                                .failedTestCase(i + 1)
+                                .passedTestCases(passedCount)
+                                .totalTestCases(totalCases)
+                                .build();
+                    }
+
+                    if (rr.exitCode == 137 || rr.output.contains("Killed")) {
+                        return ExecutionResponse.builder()
+                                .stderr("Memory Limit Exceeded")
+                                .status(ExecutionStatus.MEMORY_LIMIT_EXCEEDED)
+                                .executionTime(elapsed)
+                                .failedTestCase(i + 1)
+                                .passedTestCases(passedCount)
+                                .totalTestCases(totalCases)
+                                .build();
+                    }
+
+                    if (rr.exitCode != 0) {
+                        return ExecutionResponse.builder()
+                                .stderr(rr.output)
+                                .status(ExecutionStatus.RUNTIME_ERROR)
+                                .executionTime(elapsed)
+                                .failedTestCase(i + 1)
+                                .passedTestCases(passedCount)
+                                .totalTestCases(totalCases)
+                                .build();
+                    }
+
+                    String actual = rr.output.trim();
+                    String expected = (tc.getExpectedOutput() != null ? tc.getExpectedOutput() : "").trim();
+
+                    if (!actual.equals(expected)) {
+                        return ExecutionResponse.builder()
+                                .stdout(actual)
+                                .status(ExecutionStatus.WRONG_ANSWER)
+                                .executionTime(elapsed)
+                                .failedTestCase(i + 1)
+                                .passedTestCases(passedCount)
+                                .totalTestCases(totalCases)
+                                .build();
+                    }
+
+                    passedCount++;
                 }
 
-                if (rr.exitCode != 0) {
-                    cleanup(tempDir);
-                    return ExecutionResponse.builder()
-                            .stderr(rr.output)
-                            .status(ExecutionStatus.RUNTIME_ERROR)
-                            .executionTime(elapsed)
-                            .failedTestCase(i + 1)
-                            .passedTestCases(passedCount)
-                            .totalTestCases(totalCases)
-                            .build();
-                }
+                return ExecutionResponse.builder()
+                        .status(ExecutionStatus.ACCEPTED)
+                        .executionTime(System.currentTimeMillis() - startTime)
+                        .passedTestCases(passedCount)
+                        .totalTestCases(totalCases)
+                        .build();
 
-                String actual   = rr.output.trim();
-                String expected = (tc.getExpectedOutput() != null ? tc.getExpectedOutput() : "").trim();
-
-                if (!actual.equals(expected)) {
-                    cleanup(tempDir);
-                    return ExecutionResponse.builder()
-                            .stdout(actual)
-                            .status(ExecutionStatus.WRONG_ANSWER)
-                            .executionTime(elapsed)
-                            .failedTestCase(i + 1)
-                            .passedTestCases(passedCount)
-                            .totalTestCases(totalCases)
-                            .build();
-                }
-
-                passedCount++;
+            } finally {
+                // Ensure container is stopped and cleanup triggered by --rm
+                runProcess(List.of("docker", "stop", "-t", "0", containerName), 10);
             }
-
-            cleanup(tempDir);
-            return ExecutionResponse.builder()
-                    .status(ExecutionStatus.ACCEPTED)
-                    .executionTime(System.currentTimeMillis() - startTime)
-                    .passedTestCases(passedCount)
-                    .totalTestCases(totalCases)
-                    .build();
 
         } catch (Exception e) {
             log.error("Code execution failed: {}", e.getMessage(), e);
-            if (tempDir != null) cleanup(tempDir);
             return ExecutionResponse.error(e.getMessage());
+        } finally {
+            if (tempDir != null) cleanup(tempDir);
         }
     }
 
