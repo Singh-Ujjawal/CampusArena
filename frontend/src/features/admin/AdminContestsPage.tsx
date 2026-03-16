@@ -13,6 +13,8 @@ import { AdminContestsPageSkeleton } from '@/components/skeleton';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
 import { CreateReportDialog } from './components/CreateReportDialog';
+import { FeedbackResultsModal } from './components/FeedbackResultsModal';
+import { MessageSquare } from 'lucide-react';
 
 
 /**
@@ -92,12 +94,18 @@ export default function AdminContestsPage() {
     const [contestToDelete, setContestToDelete] = useState<string | null>(null);
     const [reports, setReports] = useState<any[]>([]);
 
-    // Report dialog state
     const [reportDialog, setReportDialog] = useState<{
         open: boolean;
         contestId: string;
         contestTitle: string;
     }>({ open: false, contestId: '', contestTitle: '' });
+
+    const [feedbackModal, setFeedbackModal] = useState<{
+        open: boolean;
+        formId: string;
+        formTitle: string;
+        questions: any[];
+    }>({ open: false, formId: '', formTitle: '', questions: [] });
 
 
     useEffect(() => {
@@ -475,6 +483,28 @@ export default function AdminContestsPage() {
                                                     Leaderboard
                                                 </Button>
                                             </Link>
+                                             {(() => {
+                                                 const regForm = registrationForms.find(f => f.contestId === contest.id);
+                                                 if (regForm && regForm.feedbackEnabled) {
+                                                     return (
+                                                         <Button
+                                                             size="sm"
+                                                             variant="secondary"
+                                                             className="h-9 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-emerald-100 dark:shadow-none transition-all hover:scale-105"
+                                                             onClick={() => setFeedbackModal({
+                                                                 open: true,
+                                                                 formId: regForm.id,
+                                                                 formTitle: contest.title,
+                                                                 questions: regForm.feedbackQuestions || []
+                                                             })}
+                                                         >
+                                                             <MessageSquare className="h-4 w-4" />
+                                                             Feedback
+                                                         </Button>
+                                                     );
+                                                 }
+                                                 return null;
+                                             })()}
                                             <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600" onClick={() => { setCurrentContest(contest); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
 
                                             
@@ -514,6 +544,14 @@ export default function AdminContestsPage() {
                 eventId={reportDialog.contestId}
                 eventTitle={reportDialog.contestTitle}
                 eventType="CONTEST"
+            />
+
+            <FeedbackResultsModal 
+                isOpen={feedbackModal.open}
+                onClose={() => setFeedbackModal({ ...feedbackModal, open: false })}
+                formId={feedbackModal.formId}
+                formTitle={feedbackModal.formTitle}
+                feedbackQuestions={feedbackModal.questions}
             />
 
         </>

@@ -169,6 +169,8 @@ export interface RegistrationForm {
     contestId?: string;
     active: boolean;
     evaluationCriteria?: EvaluationCriterion[];
+    feedbackEnabled?: boolean;
+    feedbackQuestions?: any[];
 }
 
 export interface EvaluationCriterion {
