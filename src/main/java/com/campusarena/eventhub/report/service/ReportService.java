@@ -17,6 +17,7 @@ import com.campusarena.eventhub.event.service.EventLeaderboardService;
 import com.campusarena.eventhub.event.dto.EventLeaderboardEntry;
 import com.campusarena.eventhub.contest.service.LeaderboardService;
 import com.campusarena.eventhub.contest.dto.LeaderboardEntry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +35,9 @@ import java.util.Optional;
 public class ReportService {
 
     private final ReportRepository reportRepository;
+    private final com.campusarena.eventhub.user.repository.UserRepository userRepository;
+
+
     private final EventRepository eventRepository;
     private final ContestRepository contestRepository;
     private final RegistrationFormRepository registrationFormRepository;
@@ -48,7 +52,10 @@ public class ReportService {
             .withZone(ZoneId.of("Asia/Kolkata"));
 
     public Report generateReport(ReportRequest request, String createdBy) {
+        Optional<Report> existingReport = reportRepository.findByEventIdAndEventType(request.getEventId(), request.getEventType());
+        
         Report.ReportBuilder reportBuilder = Report.builder()
+                .id(existingReport.map(Report::getId).orElse(null))
                 .eventId(request.getEventId())
                 .eventType(request.getEventType())
                 .venue(request.getVenue())
@@ -73,8 +80,14 @@ public class ReportService {
 
             // Participants and Winners for Quiz
             List<EventLeaderboardEntry> leaderboard = eventLeaderboardService.getLeaderboard(event.getId());
-            reportBuilder.participants(leaderboard.stream().map(EventLeaderboardEntry::getUsername).collect(Collectors.toList()));
-            reportBuilder.winners(leaderboard.stream().limit(3).map(EventLeaderboardEntry::getUsername).collect(Collectors.toList()));
+            String totalMarks = event.getTotalMarks() != null ? String.valueOf(event.getTotalMarks()) : "N/A";
+            
+            reportBuilder.participants(leaderboard.stream()
+                    .map(entry -> mapToParticipantInfo(entry.getUsername(), entry.getScore() + " / " + totalMarks))
+                    .collect(Collectors.toList()));
+            reportBuilder.winners(leaderboard.stream().limit(3)
+                    .map(entry -> mapToParticipantInfo(entry.getUsername(), entry.getScore() + " / " + totalMarks))
+                    .collect(Collectors.toList()));
 
         } else if ("CONTEST".equalsIgnoreCase(request.getEventType())) {
             Contest contest = contestRepository.findById(request.getEventId())
@@ -92,8 +105,12 @@ public class ReportService {
 
             // Participants and Winners for Contest
             List<LeaderboardEntry> leaderboard = contestLeaderboardService.getLeaderboard(contest.getId());
-            reportBuilder.participants(leaderboard.stream().map(LeaderboardEntry::getUsername).collect(Collectors.toList()));
-            reportBuilder.winners(leaderboard.stream().limit(3).map(LeaderboardEntry::getUsername).collect(Collectors.toList()));
+            reportBuilder.participants(leaderboard.stream()
+                    .map(entry -> mapToParticipantInfo(entry.getUsername(), String.valueOf(entry.getTotalScore())))
+                    .collect(Collectors.toList()));
+            reportBuilder.winners(leaderboard.stream().limit(3)
+                    .map(entry -> mapToParticipantInfo(entry.getUsername(), String.valueOf(entry.getTotalScore())))
+                    .collect(Collectors.toList()));
 
         } else if ("REGISTRATION".equalsIgnoreCase(request.getEventType())) {
             RegistrationForm form = registrationFormRepository.findById(request.getEventId())
@@ -124,7 +141,9 @@ public class ReportService {
 
             // Participants: Those who registered
             List<RegistrationResponse> responses = registrationResponseRepository.findByFormId(form.getId());
-            reportBuilder.participants(responses.stream().map(RegistrationResponse::getName).collect(Collectors.toList()));
+            reportBuilder.participants(responses.stream()
+                    .map(this::mapResponseToParticipantInfo)
+                    .collect(Collectors.toList()));
             
             // Winners: Those with highest evaluation marks (if any)
             List<RegistrationResponse> winners = responses.stream()
@@ -132,15 +151,71 @@ public class ReportService {
                     .sorted((a, b) -> Double.compare(b.getTotalEvaluationMarks(), a.getTotalEvaluationMarks()))
                     .limit(3)
                     .collect(Collectors.toList());
-            reportBuilder.winners(winners.stream().map(RegistrationResponse::getName).collect(Collectors.toList()));
+            reportBuilder.winners(winners.stream()
+                    .map(this::mapResponseToParticipantInfo)
+                    .collect(Collectors.toList()));
         }
 
         Report report = reportBuilder.build();
         return reportRepository.save(report);
     }
 
+    private Report.ParticipantInfo mapResponseToParticipantInfo(RegistrationResponse res) {
+        String scoreStr = (res.getTotalEvaluationMarks() != null && res.getMaxPossibleMarks() != null)
+                ? res.getTotalEvaluationMarks() + " / " + res.getMaxPossibleMarks()
+                : (res.getTotalEvaluationMarks() != null ? String.valueOf(res.getTotalEvaluationMarks()) : "N/A");
+
+        if (res.getUserId() != null) {
+            return userRepository.findById(res.getUserId())
+                    .map(user -> Report.ParticipantInfo.builder()
+                            .name((user.getFirstName() != null ? user.getFirstName() : "") + " " +
+                                    (user.getLastName() != null ? user.getLastName() : ""))
+                            .rollNumber(user.getRollNumber())
+                            .course(user.getCourse() != null ? user.getCourse().name() : "N/A")
+                            .branch(user.getBranch() != null ? user.getBranch().name() : "N/A")
+                            .section(user.getSection())
+                            .score(scoreStr)
+                            .build())
+                    .orElseGet(() -> Report.ParticipantInfo.builder()
+                            .name(res.getName() != null ? res.getName() : (res.getUsername() != null ? res.getUsername() : "Unknown"))
+                            .rollNumber(res.getRollNumber())
+                            .course(res.getCourse())
+                            .branch(res.getBranch())
+                            .section(res.getSection())
+                            .score(scoreStr)
+                            .build());
+        }
+
+        return Report.ParticipantInfo.builder()
+                .name(res.getName() != null ? res.getName() : (res.getUsername() != null ? res.getUsername() : "Unknown"))
+                .rollNumber(res.getRollNumber())
+                .course(res.getCourse())
+                .branch(res.getBranch())
+                .section(res.getSection())
+                .score(scoreStr)
+                .build();
+    }
+
+    private Report.ParticipantInfo mapToParticipantInfo(String username, String score) {
+        return userRepository.findByUsername(username)
+                .map(user -> Report.ParticipantInfo.builder()
+                        .name((user.getFirstName() != null ? user.getFirstName() : "") + " " +
+                                (user.getLastName() != null ? user.getLastName() : ""))
+                        .rollNumber(user.getRollNumber())
+                        .course(user.getCourse() != null ? user.getCourse().name() : "N/A")
+                        .branch(user.getBranch() != null ? user.getBranch().name() : "N/A")
+                        .section(user.getSection())
+                        .score(score)
+                        .build())
+                .orElse(Report.ParticipantInfo.builder().name(username).score(score).build());
+    }
+
     public List<Report> getAllReports() {
         return reportRepository.findAll();
+    }
+
+    public void deleteAllReports() {
+        reportRepository.deleteAll();
     }
 
     public Report getReportById(String id) {

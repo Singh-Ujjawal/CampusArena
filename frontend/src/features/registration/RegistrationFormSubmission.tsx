@@ -5,7 +5,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ClipboardCheck, Calendar, Clock, AlertCircle,
     Upload, CheckCircle2, BadgeDollarSign,
-    ChevronLeft, Send, Loader2
+    ChevronLeft, Send, Loader2, Plus, 
+    Linkedin, Github, Instagram, Twitter, Globe, MessageCircle
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
@@ -32,6 +33,7 @@ interface RegistrationForm {
     eventId?: string;
     contestId?: string;
     feedbackEnabled?: boolean;
+    socialMediaLinks?: { platform: string; url: string; }[];
 }
 
 export default function RegistrationFormSubmission() {
@@ -689,6 +691,54 @@ export default function RegistrationFormSubmission() {
                                                 </div>
                                             </motion.div>
                                         )}
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {/* Social Media Links Card */}
+                        {form.socialMediaLinks && form.socialMediaLinks.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.15 }}
+                            >
+                                <Card className="border border-indigo-100 dark:border-indigo-900/40 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                                    <CardHeader className="p-5 border-b border-indigo-50 dark:border-indigo-900/30 bg-indigo-50/30 dark:bg-indigo-900/10">
+                                    <CardTitle className="flex items-center gap-2.5 text-base font-bold text-indigo-800 dark:text-indigo-400">
+                                        <Globe className="h-4 w-4" />
+                                        Social Media & Helpful Links
+                                    </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5 space-y-3">
+                                        {form.socialMediaLinks.map((link, idx) => (
+                                            <a
+                                                key={idx}
+                                                href={link.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                                {/* Platform mapping with icons */}
+                                                {link.platform === 'LinkedIn' && <Linkedin className="h-4 w-4" />}
+                                                {link.platform === 'GitHub' && <Github className="h-4 w-4" />}
+                                                {link.platform === 'WhatsApp' && <MessageCircle className="h-4 w-4" />}
+                                                {link.platform === 'Discord' && <MessageCircle className="h-4 w-4" />}
+                                                {link.platform === 'Instagram' && <Instagram className="h-4 w-4" />}
+                                                {link.platform === 'Twitter' && <Twitter className="h-4 w-4" />}
+                                                {link.platform === 'Website' && <Globe className="h-4 w-4" />}
+                                                {link.platform === 'Other' && <Plus className="h-4 w-4" />}
+                                                {!['LinkedIn', 'GitHub', 'WhatsApp', 'Discord', 'Instagram', 'Twitter', 'Website', 'Other'].includes(link.platform) && <Plus className="h-4 w-4" />}
+                                            </div>
+                                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{link.platform}</span>
+                                                </div>
+                                                <div className="text-indigo-500 group-hover:translate-x-1 transition-transform">
+                                                    <Send className="h-3.5 w-3.5 rotate-45" />
+                                                </div>
+                                            </a>
+                                        ))}
                                     </CardContent>
                                 </Card>
                             </motion.div>

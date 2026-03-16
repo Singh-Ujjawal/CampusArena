@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import ScrollToTop from '@/components/ScrollToTop';
 
 // Layouts & Pages
 import DashboardLayout from '@/layouts/DashboardLayout';
@@ -68,6 +69,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <Router>
+          <ScrollToTop />
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />

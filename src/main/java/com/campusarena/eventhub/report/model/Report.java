@@ -29,9 +29,22 @@ public class Report {
     private String clubName;
     private String objective;
     private String description;
-    private List<String> participants; // List of names or roll numbers
-    private List<String> winners; // List of names or roll numbers
+    private List<ParticipantInfo> participants;
+    private List<ParticipantInfo> winners;
     private List<String> socialMediaLinks;
     private Instant createdAt;
     private String createdBy;
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ParticipantInfo {
+        private String name;
+        private String rollNumber;
+        private String course;
+        private String branch;
+        private String section;
+        private String score; // Formatted as "85/100" or similar
+    }
 }

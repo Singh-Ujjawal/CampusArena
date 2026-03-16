@@ -6,5 +6,8 @@ public enum QuestionType {
     CHECKBOX,
     DROPDOWN,
     NUMBER,
-    IMAGE_UPLOAD
+    IMAGE_UPLOAD,
+    RATING_STAR,
+    RATING_NUMBER,
+    TEXT_AREA
 }

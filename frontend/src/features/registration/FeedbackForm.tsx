@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, Loader2, CheckCircle2, X } from 'lucide-react';
+import { MessageSquare, Send, Loader2, CheckCircle2, X, Star } from 'lucide-react';
 
 interface FeedbackFormProps {
     formId: string;
@@ -130,21 +130,70 @@ export default function FeedbackForm({ formId, onClose, onSuccess }: FeedbackFor
                             </label>
 
                             <div className="pl-2">
-                                {q.type === 'TEXT' && (
+                                {q.type === 'TEXT_AREA' && (
                                     <textarea
                                         required={q.required}
-                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white text-sm min-h-[100px]"
-                                        placeholder="Enter your comments..."
+                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white text-sm min-h-[120px]"
+                                        placeholder="Tell us more about your experience..."
                                         value={answers[q.id]}
                                         onChange={e => handleInputChange(q.id, e.target.value)}
                                     />
                                 )}
 
-                                {q.type === 'NUMBER' && (
+                                {q.type === 'RATING_STAR' && (
+                                    <div className="flex items-center gap-2">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                            <button
+                                                key={star}
+                                                type="button"
+                                                className="transition-transform hover:scale-110 active:scale-95"
+                                                onClick={() => handleInputChange(q.id, star)}
+                                            >
+                                                <Star
+                                                    className={`h-8 w-8 ${
+                                                        star <= (answers[q.id] || 0)
+                                                            ? 'fill-amber-400 text-amber-400'
+                                                            : 'text-slate-300 dark:text-slate-600'
+                                                    }`}
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {q.type === 'RATING_NUMBER' && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-4">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={q.options?.[0] || '10'}
+                                                required={q.required}
+                                                className="w-40 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white text-sm"
+                                                value={answers[q.id]}
+                                                placeholder={`1 to ${q.options?.[0] || '10'}`}
+                                                onChange={e => {
+                                                    const val = parseInt(e.target.value);
+                                                    const max = parseInt(q.options?.[0] || '10');
+                                                    if (isNaN(val)) handleInputChange(q.id, '');
+                                                    else if (val > 0 && val <= max) handleInputChange(q.id, val);
+                                                    else if (val > max) handleInputChange(q.id, max);
+                                                    else if (val <= 0) handleInputChange(q.id, 1);
+                                                }}
+                                            />
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                                / {q.options?.[0] || '10'} Limit
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {q.type === 'TEXT' && (
                                     <input
-                                        type="number"
+                                        type="text"
                                         required={q.required}
-                                        className="w-40 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white text-sm"
+                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white text-sm"
+                                        placeholder="Your answer..."
                                         value={answers[q.id]}
                                         onChange={e => handleInputChange(q.id, e.target.value)}
                                     />

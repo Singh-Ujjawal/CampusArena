@@ -171,6 +171,7 @@ export interface RegistrationForm {
     evaluationCriteria?: EvaluationCriterion[];
     feedbackEnabled?: boolean;
     feedbackQuestions?: any[];
+    socialMediaLinks?: { platform: string; url: string; }[];
 }
 
 export interface EvaluationCriterion {
@@ -222,11 +223,20 @@ export interface Report {
     clubName?: string;
     objective: string;
     description: string;
-    participants: string[];
-    winners: string[];
+    participants: ParticipantInfo[];
+    winners: ParticipantInfo[];
     socialMediaLinks: string[];
     createdAt: string;
     createdBy: string;
+}
+
+export interface ParticipantInfo {
+    name: string;
+    rollNumber: string;
+    course: string;
+    branch: string;
+    section: string;
+    score: string;
 }
 
 export interface ReportRequest {
