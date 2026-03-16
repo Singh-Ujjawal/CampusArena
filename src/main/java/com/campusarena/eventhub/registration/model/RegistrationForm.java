@@ -40,4 +40,8 @@ public class RegistrationForm {
     
     // Evaluation Criteria (for external events like festivals, seminars, etc.)
     private List<EvaluationCriterion> evaluationCriteria;
+
+    // Feedback Configuration
+    private Boolean feedbackEnabled;
+    private List<Question> feedbackQuestions;
 }

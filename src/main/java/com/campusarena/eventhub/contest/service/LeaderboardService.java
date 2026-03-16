@@ -54,6 +54,10 @@ public class LeaderboardService {
             }
         }
 
+        return getLeaderboard(contestId);
+    }
+
+    public List<LeaderboardEntry> getLeaderboard(String contestId) {
         List<Submission> submissions = submissionRepository.findByContestId(contestId);
         Map<String, Map<String, Submission>> bestSubmissions = new HashMap<>();
 

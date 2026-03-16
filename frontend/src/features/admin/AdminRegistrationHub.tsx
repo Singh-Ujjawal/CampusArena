@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
     Plus, Edit2, BarChart3, Download, Eye, Trash2,
     ClipboardList, Calendar, CheckCircle2, XCircle, Clock,
-    Search, Filter
+    Search, Filter, FileText
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
+import { CreateReportDialog } from './components/CreateReportDialog';
+
 
 interface RegistrationForm {
     id: string;
@@ -31,16 +33,36 @@ export default function AdminRegistrationHub() {
     const [forms, setForms] = useState<RegistrationForm[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [reports, setReports] = useState<any[]>([]);
     const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; formId: string | null; formTitle: string }>({
         open: false,
         formId: null,
         formTitle: ''
     });
+
+    // Report dialog state
+    const [reportDialog, setReportDialog] = useState<{
+        open: boolean;
+        formId: string;
+        formTitle: string;
+    }>({ open: false, formId: '', formTitle: '' });
+
     const navigate = useNavigate();
+
 
     useEffect(() => {
         fetchForms();
+        fetchReports();
     }, []);
+
+    const fetchReports = async () => {
+        try {
+            const response = await api.get('/api/reports');
+            setReports(response.data);
+        } catch {
+            console.error('Failed to load reports');
+        }
+    };
 
     const fetchForms = async () => {
         try {
@@ -207,16 +229,42 @@ export default function AdminRegistrationHub() {
                                                     </div>
                                                 </div>
                                             </div>
-
                                             <div className="flex items-center gap-2">
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${status.color}`}>
                                                     <StatusIcon className="h-3 w-3" />
                                                     {status.label}
                                                 </span>
                                             </div>
+
+
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-2">
+                                            {status.label === 'Closed' && (() => {
+                                                const existingReport = reports.find(r => r.eventId === form.id && r.eventType === 'REGISTRATION');
+                                                return existingReport ? (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        className="h-9 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-emerald-100 dark:shadow-none transition-all hover:scale-105"
+                                                        onClick={() => navigate(`/admin/reports/${existingReport.id}`)}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                        View Report
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        className="h-9 px-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none transition-all hover:scale-105"
+                                                        onClick={() => setReportDialog({ open: true, formId: form.id, formTitle: form.title })}
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                        Generate Report
+                                                    </Button>
+                                                );
+                                            })()}
+
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -265,6 +313,15 @@ export default function AdminRegistrationHub() {
                 title={deleteDialog.formTitle}
                 itemType="Registration Form"
             />
+
+            <CreateReportDialog
+                isOpen={reportDialog.open}
+                onClose={() => setReportDialog({ ...reportDialog, open: false })}
+                eventId={reportDialog.formId}
+                eventTitle={reportDialog.formTitle}
+                eventType="REGISTRATION"
+            />
         </div>
+
     );
 }

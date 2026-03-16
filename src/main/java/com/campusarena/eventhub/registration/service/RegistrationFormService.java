@@ -93,6 +93,8 @@ public class RegistrationFormService {
         existing.setImageUrl(updatedForm.getImageUrl());
         existing.setImagePublicId(updatedForm.getImagePublicId());
         existing.setEvaluationCriteria(updatedForm.getEvaluationCriteria());
+        existing.setFeedbackEnabled(updatedForm.getFeedbackEnabled());
+        existing.setFeedbackQuestions(updatedForm.getFeedbackQuestions());
         
         // Remove payment fees if payment not required or amount is invalid
         if (existing.getPaymentRequired() == null || !existing.getPaymentRequired()) {
@@ -129,12 +131,14 @@ public class RegistrationFormService {
 
     public RegistrationForm getFormByEventId(String eventId) {
         return formRepository.findByEventId(eventId)
-                .orElseThrow(() -> new RuntimeException("Form not found for event"));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Registration form not found for event " + eventId));
     }
 
     public RegistrationForm getFormByContestId(String contestId) {
         return formRepository.findByContestId(contestId)
-                .orElseThrow(() -> new RuntimeException("Form not found for contest"));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Registration form not found for contest " + contestId));
     }
 
     public RegistrationForm updateEvaluationCriteria(String formId, List<EvaluationCriterion> criteria, User currentUser) {

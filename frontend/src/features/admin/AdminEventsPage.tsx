@@ -5,12 +5,15 @@ import { type Event, type Club } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash, X, ClipboardCheck, AlertTriangle, Trophy } from 'lucide-react';
+import { Plus, Edit, Trash, X, ClipboardCheck, AlertTriangle, Trophy, FileText, Eye } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { Select } from '@/components/ui/select';
 import { AdminEventsPageSkeleton } from '@/components/skeleton';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
+import { CreateReportDialog } from './components/CreateReportDialog';
+
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const TITLE_MAX = 30;
@@ -124,6 +127,7 @@ export default function AdminEventsPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [currentEvent, setCurrentEvent] = useState<Partial<Event>>({});
     const [registrationForms, setRegistrationForms] = useState<any[]>([]);
+    const [reports, setReports] = useState<any[]>([]);
 
     // Delete dialog state
     const [deleteDialog, setDeleteDialog] = useState<{
@@ -132,11 +136,30 @@ export default function AdminEventsPage() {
         eventTitle: string;
     }>({ open: false, eventId: null, eventTitle: '' });
 
+
+    // Report dialog state
+    const [reportDialog, setReportDialog] = useState<{
+        open: boolean;
+        eventId: string;
+        eventTitle: string;
+    }>({ open: false, eventId: '', eventTitle: '' });
+
+
     useEffect(() => {
         fetchEvents();
         fetchClubs();
         fetchRegistrationForms();
+        fetchReports();
     }, []);
+
+    const fetchReports = async () => {
+        try {
+            const response = await api.get('/api/reports');
+            setReports(response.data);
+        } catch {
+            console.error('Failed to load reports');
+        }
+    };
 
     const fetchRegistrationForms = async () => {
         try {
@@ -280,6 +303,15 @@ export default function AdminEventsPage() {
                 onClose={cancelDelete}
                 itemType="Quiz"
             />
+
+            <CreateReportDialog
+                isOpen={reportDialog.open}
+                onClose={() => setReportDialog({ ...reportDialog, open: false })}
+                eventId={reportDialog.eventId}
+                eventTitle={reportDialog.eventTitle}
+                eventType="QUIZ"
+            />
+
 
             <div className="space-y-6">
                 {/* Header */}
@@ -530,6 +562,7 @@ export default function AdminEventsPage() {
                                                     )}
                                                 </div>
 
+
                                                 {/* ── Phone only: coordinators below badges ── */}
                                                 {hasCoords && (
                                                     <p className="sm:hidden text-xs font-semibold text-gray-600 dark:text-gray-300 mt-1 leading-snug break-words">
@@ -550,6 +583,32 @@ export default function AdminEventsPage() {
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
+
+                                                {event.status === 'COMPLETED' && (() => {
+                                                    const existingReport = reports.find(r => r.eventId === event.id && r.eventType === 'QUIZ');
+                                                    return existingReport ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            className="h-9 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-emerald-100 dark:shadow-none transition-all hover:scale-105"
+                                                            onClick={() => navigate(`/admin/reports/${existingReport.id}`)}
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                            View Report
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            className="h-9 px-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none transition-all hover:scale-105"
+                                                            onClick={() => setReportDialog({ open: true, eventId: event.id, eventTitle: event.title })}
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                            Generate Report
+                                                        </Button>
+                                                    );
+                                                })()}
+
                                                 <Button
                                                     size="sm"
                                                     variant="outline"

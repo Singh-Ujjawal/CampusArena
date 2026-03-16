@@ -38,6 +38,9 @@ import AdminClubsPage from '@/features/admin/AdminClubsPage';
 import AdminFacultyPage from '@/features/admin/AdminFacultyPage';
 import AdminCollectiveDetails from '@/features/admin/AdminCollectiveDetails';
 import AdminEventLeaderboardPage from '@/features/admin/AdminEventLeaderboardPage';
+import AdminReportsPage from '@/features/admin/AdminReportsPage';
+import ReportViewPage from '@/features/admin/ReportViewPage';
+
 
 // Submissions
 import MySubmissionsPage from '@/features/submissions/MySubmissionsPage';
@@ -123,6 +126,9 @@ function App() {
                 <Route path="/admin/registration/edit/:id" element={<AdminCreateRegistrationForm />} />
                 <Route path="/admin/registration/forms/:id/responses" element={<AdminRegistrationResponses />} />
                 <Route path="/admin/collective-details" element={<AdminCollectiveDetails />} />
+                <Route path="/admin/reports" element={<AdminReportsPage />} />
+                <Route path="/admin/reports/:id" element={<ReportViewPage />} />
+
               </Route>
             </Route>
 

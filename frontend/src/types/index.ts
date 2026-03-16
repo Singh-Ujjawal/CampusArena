@@ -206,3 +206,32 @@ export interface RegistrationResponse {
     gradedBy?: string;
     gradedAt?: string;
 }
+
+export interface Report {
+    id: string;
+    eventId: string;
+    eventType: 'QUIZ' | 'CONTEST' | 'REGISTRATION';
+    eventName: string;
+    date: string;
+    time: string;
+    venue?: string;
+    facultyCoordinators: string[];
+    studentCoordinators: string[];
+    clubName?: string;
+    objective: string;
+    description: string;
+    participants: string[];
+    winners: string[];
+    socialMediaLinks: string[];
+    createdAt: string;
+    createdBy: string;
+}
+
+export interface ReportRequest {
+    eventId: string;
+    eventType: 'QUIZ' | 'CONTEST' | 'REGISTRATION';
+    venue?: string;
+    objective: string;
+    socialMediaLinks?: string[];
+}
+

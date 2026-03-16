@@ -1,10 +1,12 @@
 import { useLocation, Link, Navigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, Trophy, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Trophy, Loader2, MessageSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
+import FeedbackForm from '@/features/registration/FeedbackForm';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function TestResultPage() {
     const { eventId } = useParams();
@@ -12,6 +14,8 @@ export default function TestResultPage() {
     const location = useLocation();
     const [result, setResult] = useState(location.state?.result);
     const [isLoading, setIsLoading] = useState(!result);
+    const [associatedFormId, setAssociatedFormId] = useState<string | null>(null);
+    const [showFeedback, setShowFeedback] = useState(false);
 
     useEffect(() => {
         if (!result && eventId && user) {
@@ -29,6 +33,22 @@ export default function TestResultPage() {
                 }
             };
             fetchResult();
+        }
+
+        if (eventId) {
+            const fetchFormInfo = async () => {
+                try {
+                    const response = await api.get(`/api/registration/forms/event/${eventId}`);
+                    if (response.data && response.data.feedbackEnabled) {
+                        setAssociatedFormId(response.data.id);
+                        // Show feedback form automatically or via button? 
+                        // Let's show it after a small delay or if they click.
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch associated form");
+                }
+            };
+            fetchFormInfo();
         }
     }, [eventId, user, result]);
 
@@ -70,12 +90,49 @@ export default function TestResultPage() {
                         {result.rank && <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-1">Rank: #{result.rank}</p>}
                     </div>
                 </CardContent>
-                <CardFooter className="justify-center">
-                    <Link to="/dashboard">
-                        <Button size="lg">Return to Dashboard</Button>
+                <CardFooter className="flex flex-col gap-3">
+                    {associatedFormId && !showFeedback && (
+                        <Button 
+                            variant="outline" 
+                            className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                            onClick={() => setShowFeedback(true)}
+                        >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Give Event Feedback
+                        </Button>
+                    )}
+                    
+                    <Link to="/dashboard" className="w-full">
+                        <Button className="w-full" size="lg">Return to Dashboard</Button>
                     </Link>
                 </CardFooter>
             </Card>
+
+            <AnimatePresence>
+                {showFeedback && associatedFormId && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="w-full max-w-2xl"
+                        >
+                            <FeedbackForm 
+                                formId={associatedFormId} 
+                                onClose={() => setShowFeedback(false)}
+                                onSuccess={() => {
+                                    setTimeout(() => setShowFeedback(false), 2000);
+                                }}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

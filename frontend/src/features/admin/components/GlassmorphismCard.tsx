@@ -17,21 +17,33 @@ export const GlassmorphismCard = ({ name, href, icon: Icon, gradientBg, delay }:
     const [isHovered, setIsHovered] = useState(false);
 
     const bgGradients: Record<string, string> = {
-        'Quiz Studio': 'from-blue-100 to-cyan-100 dark:from-blue-950 dark:to-cyan-950 hover:from-blue-200 hover:to-cyan-200 dark:hover:from-blue-900 dark:hover:to-cyan-900',
-        'Contest Studio': 'from-indigo-100 to-purple-100 dark:from-indigo-950 dark:to-purple-950 hover:from-indigo-200 hover:to-purple-200 dark:hover:from-indigo-900 dark:hover:to-purple-900',
-        'Manage Problems': 'from-rose-100 to-pink-100 dark:from-rose-950 dark:to-pink-950 hover:from-rose-200 hover:to-pink-200 dark:hover:from-rose-900 dark:hover:to-pink-900',
-        'Manage Users': 'from-emerald-100 to-teal-100 dark:from-emerald-950 dark:to-teal-950 hover:from-emerald-200 hover:to-teal-200 dark:hover:from-emerald-900 dark:hover:to-teal-900',
-        'Event Analytics': 'from-violet-100 to-fuchsia-100 dark:from-violet-950 dark:to-fuchsia-950 hover:from-violet-200 hover:to-fuchsia-200 dark:hover:from-violet-900 dark:hover:to-fuchsia-900',
-        'All Submissions': 'from-lime-100 to-green-100 dark:from-lime-950 dark:to-green-950 hover:from-lime-200 hover:to-green-200 dark:hover:from-lime-900 dark:hover:to-green-900',
+        'Quiz Studio': 'from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 hover:from-blue-200 hover:to-cyan-200 dark:hover:from-blue-800/60 dark:hover:to-cyan-800/60',
+        'Contest Studio': 'from-indigo-100 to-violet-100 dark:from-indigo-900/40 dark:to-violet-900/40 hover:from-indigo-200 hover:to-violet-200 dark:hover:from-indigo-800/60 dark:hover:to-violet-800/60',
+        'Manage Problems': 'from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40 hover:from-violet-200 hover:to-purple-200 dark:hover:from-violet-800/60 dark:hover:to-purple-800/60',
+        'Manage Users': 'from-emerald-100 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/40 hover:from-emerald-200 hover:to-teal-200 dark:hover:from-emerald-800/60 dark:hover:to-teal-800/60',
+        'Manage Clubs': 'from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/40 hover:from-amber-200 hover:to-orange-200 dark:hover:from-amber-800/60 dark:hover:to-orange-800/60',
+        'Manage Faculty': 'from-sky-100 to-indigo-100 dark:from-sky-900/40 dark:to-indigo-900/40 hover:from-sky-200 hover:to-indigo-200 dark:hover:from-sky-800/60 dark:hover:to-indigo-800/60',
+        'Event Analytics': 'from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40 hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-800/60 dark:hover:to-indigo-800/60',
+        'All Submissions': 'from-teal-100 to-emerald-100 dark:from-teal-900/40 dark:to-emerald-900/40 hover:from-teal-200 hover:to-emerald-200 dark:hover:from-teal-800/60 dark:hover:to-emerald-800/60',
+        'Registration Hub': 'from-cyan-100 to-teal-100 dark:from-cyan-900/40 dark:to-teal-900/40 hover:from-cyan-200 hover:to-teal-200 dark:hover:from-cyan-800/60 dark:hover:to-teal-800/60',
+        'LeetCode Questions': 'from-orange-100 to-yellow-100 dark:from-orange-900/40 dark:to-yellow-900/40 hover:from-orange-200 hover:to-yellow-200 dark:hover:from-orange-800/60 dark:hover:to-yellow-800/60',
+        'Collective Details': 'from-indigo-100 to-blue-100 dark:from-indigo-900/40 dark:to-blue-900/40 hover:from-indigo-200 hover:to-blue-200 dark:hover:from-indigo-800/60 dark:hover:to-blue-800/60',
+        'Event Reports': 'from-violet-100 to-fuchsia-100 dark:from-violet-900/40 dark:to-fuchsia-900/40 hover:from-violet-200 hover:to-fuchsia-200 dark:hover:from-violet-800/60 dark:hover:to-fuchsia-800/60',
     };
 
     const iconColors: Record<string, string> = {
-        'Quiz Studio': 'text-blue-600 dark:text-cyan-400',
-        'Contest Studio': 'text-indigo-600 dark:text-purple-400',
-        'Manage Problems': 'text-rose-600 dark:text-pink-400',
-        'Manage Users': 'text-emerald-600 dark:text-teal-400',
-        'Event Analytics': 'text-violet-600 dark:text-fuchsia-400',
-        'All Submissions': 'text-lime-600 dark:text-green-400',
+        'Quiz Studio': 'text-blue-600 dark:text-blue-400',
+        'Contest Studio': 'text-indigo-600 dark:text-indigo-400',
+        'Manage Problems': 'text-violet-600 dark:text-violet-400',
+        'Manage Users': 'text-emerald-600 dark:text-emerald-400',
+        'Manage Clubs': 'text-amber-600 dark:text-amber-400',
+        'Manage Faculty': 'text-sky-600 dark:text-sky-400',
+        'Event Analytics': 'text-blue-600 dark:text-blue-400',
+        'All Submissions': 'text-teal-600 dark:text-teal-400',
+        'Registration Hub': 'text-cyan-600 dark:text-cyan-400',
+        'LeetCode Questions': 'text-orange-600 dark:text-orange-400',
+        'Collective Details': 'text-indigo-600 dark:text-indigo-400',
+        'Event Reports': 'text-violet-600 dark:text-violet-400',
     };
 
     return (

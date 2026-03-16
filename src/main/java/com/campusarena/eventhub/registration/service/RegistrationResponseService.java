@@ -184,6 +184,12 @@ public class RegistrationResponseService {
                 .orElse(null);
     }
 
+    public String getRegistrationStatusForForm(String formId, String userId) {
+        return responseRepository.findByFormIdAndUserId(formId, userId)
+                .map(RegistrationResponse::getStatus)
+                .orElse(null);
+    }
+
 
     public RegistrationResponse submitMarks(String responseId, List<EvaluationMark> marks, String feedback,
             User currentUser) {
