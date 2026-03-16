@@ -13,6 +13,8 @@ import { AdminEventsPageSkeleton } from '@/components/skeleton';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
 import { CreateReportDialog } from './components/CreateReportDialog';
+import { FeedbackResultsModal } from './components/FeedbackResultsModal';
+import { MessageSquare } from 'lucide-react';
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -143,6 +145,13 @@ export default function AdminEventsPage() {
         eventId: string;
         eventTitle: string;
     }>({ open: false, eventId: '', eventTitle: '' });
+
+    const [feedbackModal, setFeedbackModal] = useState<{
+        open: boolean;
+        formId: string;
+        formTitle: string;
+        questions: any[];
+    }>({ open: false, formId: '', formTitle: '', questions: [] });
 
 
     useEffect(() => {
@@ -311,7 +320,15 @@ export default function AdminEventsPage() {
                 eventTitle={reportDialog.eventTitle}
                 eventType="QUIZ"
             />
-
+ 
+            <FeedbackResultsModal 
+                isOpen={feedbackModal.open}
+                onClose={() => setFeedbackModal({ ...feedbackModal, open: false })}
+                formId={feedbackModal.formId}
+                formTitle={feedbackModal.formTitle}
+                feedbackQuestions={feedbackModal.questions}
+            />
+ 
 
             <div className="space-y-6">
                 {/* Header */}
@@ -641,6 +658,22 @@ export default function AdminEventsPage() {
                                                     Leaderboard
                                                 </Button>
 
+                                                 {hasRegForm && regForm.feedbackEnabled && (
+                                                   <Button
+                                                       size="sm"
+                                                       variant="secondary"
+                                                       className="h-9 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-emerald-100 dark:shadow-none transition-all hover:scale-105"
+                                                       onClick={() => setFeedbackModal({
+                                                           open: true,
+                                                           formId: regForm.id,
+                                                           formTitle: event.title,
+                                                           questions: regForm.feedbackQuestions || []
+                                                       })}
+                                                   >
+                                                       <MessageSquare className="h-4 w-4" />
+                                                       Feedback
+                                                   </Button>
+                                               )}
                                                 {/* Reg. Form button: green if exists, red if not */}
                                                 {hasRegForm ? (
                                                     <Button

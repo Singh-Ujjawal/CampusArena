@@ -184,9 +184,38 @@ export default function RegistrationFormSubmission() {
     const isClosed = form.endTime && new Date() > new Date(form.endTime);
     const isUpcoming = form.startTime && new Date() < new Date(form.startTime);
 
-    if (isSubmitted) {
+    if (isSubmitted || isRegisteredStatus) {
+        const isApproved = isRegisteredStatus === 'APPROVED';
+        const isPending = isRegisteredStatus === 'PENDING';
+        const isRejected = isRegisteredStatus === 'REJECTED';
+
         return (
-            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col items-center justify-center p-4">
+                {/* Feedback Section if Approved and Closed */}
+                {isClosed && isApproved && form.feedbackEnabled && !feedbackSubmitted && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="w-full max-w-2xl mb-6 flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800 shadow-lg"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2.5 rounded-xl">
+                                <MessageSquare className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Share Your Feedback</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Tell us about your experience.</p>
+                            </div>
+                        </div>
+                        <Button 
+                            onClick={() => setShowFeedback(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold px-5 shadow-sm transition-all hover:scale-[1.05]"
+                        >
+                            Give Feedback
+                        </Button>
+                    </motion.div>
+                )}
+
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -194,7 +223,7 @@ export default function RegistrationFormSubmission() {
                     className="w-full max-w-md"
                 >
                     <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden bg-white dark:bg-slate-800">
-                        <div className="h-1 bg-gradient-to-r from-emerald-400 via-green-500 to-teal-500"></div>
+                        <div className={`h-1 bg-gradient-to-r ${isApproved ? 'from-emerald-400 to-teal-500' : isRejected ? 'from-rose-400 to-red-500' : 'from-amber-400 to-orange-500'}`}></div>
                         <CardContent className="p-8 flex flex-col items-center text-center">
                             <motion.div
                                 initial={{ scale: 0 }}
@@ -202,28 +231,75 @@ export default function RegistrationFormSubmission() {
                                 transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
                                 className="mb-5"
                             >
-                                <div className="bg-emerald-50 dark:bg-emerald-900/30 w-16 h-16 rounded-full flex items-center justify-center">
-                                    <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                                <div className={`${isApproved ? 'bg-emerald-50 dark:bg-emerald-900/30' : isRejected ? 'bg-rose-50 dark:bg-rose-900/30' : 'bg-amber-50 dark:bg-amber-900/30'} w-16 h-16 rounded-full flex items-center justify-center`}>
+                                    {isApproved ? (
+                                        <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                                    ) : isRejected ? (
+                                        <AlertCircle className="h-8 w-8 text-rose-600 dark:text-rose-400" />
+                                    ) : (
+                                        <Clock className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                                    )}
                                 </div>
                             </motion.div>
                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                                Registration Successful
+                                {isSubmitted ? 'Registration Successful' : 'Already Registered'}
                             </h2>
                             <p className="text-slate-600 dark:text-slate-300 text-sm mb-6 leading-relaxed">
-                                Your response for <span className="font-semibold text-slate-900 dark:text-white">"{form.title}"</span> has been submitted.
+                                {isSubmitted 
+                                    ? `Your response for "${form.title}" has been submitted.`
+                                    : `You have already submitted a response for "${form.title}".`}
                             </p>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-6 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800 w-full">
-                                Our administrative team will review your application shortly.
+                            
+                            <div className={`text-xs mb-6 p-3 rounded-lg border w-full font-bold uppercase tracking-wider ${
+                                isApproved ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' :
+                                isRejected ? 'bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-800 text-rose-700 dark:text-rose-400' :
+                                'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+                            }`}>
+                                Status: {isRegisteredStatus || 'PENDING'}
                             </div>
+
                             <Button
-                                onClick={() => navigate('/dashboard')}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-10 px-6 font-semibold w-full shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                onClick={() => {
+                                    const redirectTo = form?.eventId ? `/events/${form.eventId}`
+                                        : form?.contestId ? `/contests/${form.contestId}`
+                                            : '/dashboard';
+                                    navigate(redirectTo);
+                                }}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-10 px-6 font-semibold w-full shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
-                                Return to Dashboard
+                                Back to {form.eventId ? 'Event' : form.contestId ? 'Contest' : 'Dashboard'}
                             </Button>
                         </CardContent>
                     </Card>
                 </motion.div>
+
+                {/* Feedback Modal (for standalone view) */}
+                <AnimatePresence>
+                    {showFeedback && form && (
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                                className="w-full max-w-2xl"
+                            >
+                                <FeedbackForm 
+                                    formId={form.id} 
+                                    onClose={() => setShowFeedback(false)}
+                                    onSuccess={() => {
+                                        setFeedbackSubmitted(true);
+                                        setTimeout(() => setShowFeedback(false), 2000);
+                                    }}
+                                />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     }

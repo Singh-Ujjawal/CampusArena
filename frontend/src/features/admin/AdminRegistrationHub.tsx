@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
 import { CreateReportDialog } from './components/CreateReportDialog';
+import { FeedbackResultsModal } from './components/FeedbackResultsModal';
+import { MessageSquare } from 'lucide-react';
 
 
 interface RegistrationForm {
@@ -27,6 +29,8 @@ interface RegistrationForm {
     eventId?: string;
     contestId?: string;
     clubId?: string;
+    feedbackEnabled?: boolean;
+    feedbackQuestions?: any[];
 }
 
 export default function AdminRegistrationHub() {
@@ -40,12 +44,18 @@ export default function AdminRegistrationHub() {
         formTitle: ''
     });
 
-    // Report dialog state
     const [reportDialog, setReportDialog] = useState<{
         open: boolean;
         formId: string;
         formTitle: string;
     }>({ open: false, formId: '', formTitle: '' });
+
+    const [feedbackModal, setFeedbackModal] = useState<{
+        open: boolean;
+        formId: string;
+        formTitle: string;
+        questions: any[];
+    }>({ open: false, formId: '', formTitle: '', questions: [] });
 
     const navigate = useNavigate();
 
@@ -264,6 +274,22 @@ export default function AdminRegistrationHub() {
                                                     </Button>
                                                 );
                                             })()}
+                                             {form.feedbackEnabled && (
+                                                 <Button
+                                                     size="sm"
+                                                     variant="secondary"
+                                                     className="h-9 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center gap-2 shadow-md shadow-emerald-100 dark:shadow-none transition-all hover:scale-105"
+                                                     onClick={() => setFeedbackModal({
+                                                         open: true,
+                                                         formId: form.id,
+                                                         formTitle: form.title,
+                                                         questions: form.feedbackQuestions || []
+                                                     })}
+                                                 >
+                                                     <MessageSquare className="h-4 w-4" />
+                                                     Feedback
+                                                 </Button>
+                                             )}
 
                                             <Button
                                                 variant="ghost"
@@ -320,6 +346,14 @@ export default function AdminRegistrationHub() {
                 eventId={reportDialog.formId}
                 eventTitle={reportDialog.formTitle}
                 eventType="REGISTRATION"
+            />
+
+            <FeedbackResultsModal 
+                isOpen={feedbackModal.open}
+                onClose={() => setFeedbackModal({ ...feedbackModal, open: false })}
+                formId={feedbackModal.formId}
+                formTitle={feedbackModal.formTitle}
+                feedbackQuestions={feedbackModal.questions}
             />
         </div>
 

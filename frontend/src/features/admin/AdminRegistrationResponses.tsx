@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FeedbackResultsModal } from './components/FeedbackResultsModal';
 
 interface RegistrationResponse {
     id: string;
@@ -41,6 +42,8 @@ interface RegistrationForm {
     title: string;
     questions: any[];
     evaluationCriteria?: any[];
+    feedbackEnabled?: boolean;
+    feedbackQuestions?: any[];
 }
 
 export default function AdminRegistrationResponses() {
@@ -57,9 +60,7 @@ export default function AdminRegistrationResponses() {
     const [marksData, setMarksData] = useState<Record<string, number>>({});
     const [feedback, setFeedback] = useState('');
     const [isSubmittingMarks, setIsSubmittingMarks] = useState(false);
-    const [feedbackSubmissions, setFeedbackSubmissions] = useState<any[]>([]);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-    const [isLoadingFeedback, setIsLoadingFeedback] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -132,16 +133,7 @@ export default function AdminRegistrationResponses() {
     };
 
     const fetchFeedback = async () => {
-        setIsLoadingFeedback(true);
-        try {
-            const response = await api.get(`/api/feedback/${id}/responses`);
-            setFeedbackSubmissions(response.data);
-            setShowFeedbackModal(true);
-        } catch (error) {
-            toast.error('Failed to load feedback');
-        } finally {
-            setIsLoadingFeedback(false);
-        }
+        setShowFeedbackModal(true);
     };
 
     const filteredResponses = responses.filter(r => {
@@ -243,7 +235,6 @@ export default function AdminRegistrationResponses() {
                     </Button>
                     <Button
                         onClick={fetchFeedback}
-                        isLoading={isLoadingFeedback}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-2"
                     >
                         <MessageSquare className="h-4 w-4" /> View Feedback
@@ -604,79 +595,13 @@ export default function AdminRegistrationResponses() {
                 )}
             </AnimatePresence>
 
-            {/* Feedback Modal */}
-            <AnimatePresence>
-                {showFeedbackModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowFeedbackModal(false)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-5xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-                        >
-                            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-900/20">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                                        <MessageSquare className="h-6 w-6 text-emerald-600" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Event Feedback Results</h2>
-                                        <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{feedbackSubmissions.length} Submissions</p>
-                                    </div>
-                                </div>
-                                <Button variant="ghost" size="sm" onClick={() => setShowFeedbackModal(false)} className="rounded-full h-10 w-10 p-0 hover:bg-white dark:hover:bg-gray-800">
-                                    <X className="h-6 w-6" />
-                                </Button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto p-8">
-                                {feedbackSubmissions.length === 0 ? (
-                                    <div className="py-20 text-center">
-                                        <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-500 font-medium">No feedback submitted yet.</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {(form as any)?.feedbackQuestions?.map((q: any) => (
-                                            <div key={q.id} className="space-y-4">
-                                                <h3 className="text-sm font-black text-indigo-600 uppercase tracking-widest border-l-4 border-indigo-600 pl-3">
-                                                    {q.label}
-                                                </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {feedbackSubmissions.map((sub, idx) => {
-                                                        const ans = sub.answers[q.id];
-                                                        if (ans === undefined || ans === null || ans === '') return null;
-                                                        return (
-                                                            <div key={idx} className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
-                                                                <div className="flex items-center gap-2 mb-2">
-                                                                    <div className="h-6 w-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-[10px] font-bold text-indigo-600">
-                                                                        {sub.username?.charAt(0).toUpperCase() || '?'}
-                                                                    </div>
-                                                                    <span className="text-[10px] font-bold text-gray-400 truncate">{sub.username || 'Anonymous'}</span>
-                                                                </div>
-                                                                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                                                                    {Array.isArray(ans) ? ans.join(', ') : String(ans)}
-                                                                </p>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            <FeedbackResultsModal 
+                isOpen={showFeedbackModal}
+                onClose={() => setShowFeedbackModal(false)}
+                formId={id || ''}
+                formTitle={form?.title || ''}
+                feedbackQuestions={form?.feedbackQuestions || []}
+            />
         </div>
     );
 }
