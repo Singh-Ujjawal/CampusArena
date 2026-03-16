@@ -44,4 +44,7 @@ public class RegistrationForm {
     // Feedback Configuration
     private Boolean feedbackEnabled;
     private List<Question> feedbackQuestions;
+
+    // Social Media Links
+    private List<SocialMediaLink> socialMediaLinks;
 }

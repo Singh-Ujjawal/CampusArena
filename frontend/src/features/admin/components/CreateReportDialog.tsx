@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,15 +13,36 @@ interface CreateReportDialogProps {
     eventId: string;
     eventType: 'QUIZ' | 'CONTEST' | 'REGISTRATION';
     eventTitle: string;
+    initialVenue?: string;
+    initialObjective?: string;
+    initialSocialLinks?: string[];
 }
 
-export function CreateReportDialog({ isOpen, onClose, eventId, eventType, eventTitle }: CreateReportDialogProps) {
+export function CreateReportDialog({ 
+    isOpen, 
+    onClose, 
+    eventId, 
+    eventType, 
+    eventTitle,
+    initialVenue = '',
+    initialObjective = '',
+    initialSocialLinks = []
+}: CreateReportDialogProps) {
     const navigate = useNavigate();
-    const [venue, setVenue] = useState('');
-    const [objective, setObjective] = useState('');
-    const [socialLinks, setSocialLinks] = useState<string[]>([]);
+    const [venue, setVenue] = useState(initialVenue || '');
+    const [objective, setObjective] = useState(initialObjective || '');
+    const [socialLinks, setSocialLinks] = useState<string[]>(initialSocialLinks || []);
     const [linkInput, setLinkInput] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Update state when modal opens or initial props change
+    useEffect(() => {
+        if (isOpen) {
+            setVenue(initialVenue || '');
+            setObjective(initialObjective || '');
+            setSocialLinks(initialSocialLinks || []);
+        }
+    }, [isOpen, initialVenue, initialObjective, initialSocialLinks]);
 
     const addLink = () => {
         if (linkInput.trim() && !socialLinks.includes(linkInput.trim())) {

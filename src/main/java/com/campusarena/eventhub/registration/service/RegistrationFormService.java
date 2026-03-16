@@ -95,6 +95,7 @@ public class RegistrationFormService {
         existing.setEvaluationCriteria(updatedForm.getEvaluationCriteria());
         existing.setFeedbackEnabled(updatedForm.getFeedbackEnabled());
         existing.setFeedbackQuestions(updatedForm.getFeedbackQuestions());
+        existing.setSocialMediaLinks(updatedForm.getSocialMediaLinks());
         
         // Remove payment fees if payment not required or amount is invalid
         if (existing.getPaymentRequired() == null || !existing.getPaymentRequired()) {

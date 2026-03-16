@@ -46,7 +46,7 @@ function fromISTInput(localValue: string): string {
 interface Question {
     id: string;
     label: string;
-    type: 'TEXT' | 'RADIO' | 'CHECKBOX' | 'DROPDOWN' | 'NUMBER' | 'IMAGE_UPLOAD';
+    type: 'TEXT' | 'RADIO' | 'CHECKBOX' | 'DROPDOWN' | 'NUMBER' | 'IMAGE_UPLOAD' | 'RATING_STAR' | 'RATING_NUMBER' | 'TEXT_AREA';
     required: boolean;
     options: string[];
 }
@@ -55,6 +55,11 @@ interface EvaluationCriterion {
     id: string;
     name: string;
     maxMarks: number;
+}
+
+interface SocialMediaLink {
+    platform: string;
+    url: string;
 }
 
 
@@ -84,6 +89,7 @@ export default function AdminCreateRegistrationForm() {
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     const [questions, setQuestions] = useState<Question[]>([]);
+    const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([]);
     const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriterion[]>([]);
     const [feedbackEnabled, setFeedbackEnabled] = useState(false);
     const [feedbackQuestions, setFeedbackQuestions] = useState<Question[]>([]);
@@ -130,6 +136,7 @@ export default function AdminCreateRegistrationForm() {
             setEventId(data.eventId || '');
             setContestId(data.contestId || '');
             setQuestions(data.questions || []);
+            setSocialMediaLinks(data.socialMediaLinks || []);
             setEvaluationCriteria(data.evaluationCriteria || []);
             setFeedbackEnabled(data.feedbackEnabled || false);
             setFeedbackQuestions(data.feedbackQuestions || []);
@@ -164,12 +171,16 @@ export default function AdminCreateRegistrationForm() {
     };
 
     const addFeedbackQuestion = () => {
-        const newQuestion: Question = {
+        if (feedbackQuestions.length >= 3) {
+            toast.error('Maximum 3 feedback questions allowed');
+            return;
+        }
+        const newQuestion: any = {
             id: Math.random().toString(36).substr(2, 9),
             label: '',
-            type: 'TEXT',
+            type: 'TEXT_AREA',
             required: true,
-            options: ['Option 1'],
+            options: [],
         };
         setFeedbackQuestions([...feedbackQuestions, newQuestion]);
     };
@@ -197,6 +208,18 @@ export default function AdminCreateRegistrationForm() {
 
     const updateCriterion = (cId: string, updates: Partial<EvaluationCriterion>) => {
         setEvaluationCriteria(evaluationCriteria.map((c) => (c.id === cId ? { ...c, ...updates } : c)));
+    };
+
+    const addSocialMediaLink = () => {
+        setSocialMediaLinks([...socialMediaLinks, { platform: 'LinkedIn', url: '' }]);
+    };
+
+    const removeSocialMediaLink = (index: number) => {
+        setSocialMediaLinks(socialMediaLinks.filter((_, i) => i !== index));
+    };
+
+    const updateSocialMediaLink = (index: number, updates: Partial<SocialMediaLink>) => {
+        setSocialMediaLinks(socialMediaLinks.map((link, i) => (i === index ? { ...link, ...updates } : link)));
     };
 
     /**
@@ -235,8 +258,8 @@ export default function AdminCreateRegistrationForm() {
             toast.error('Please add at least one question');
             return;
         }
-        if (paymentRequired && !paymentFees) {
-            toast.error('Please enter payment fees');
+        if (paymentRequired && (!paymentFees || parseFloat(paymentFees) <= 0)) {
+            toast.error('Payment fees must be greater than zero');
             return;
         }
 
@@ -267,6 +290,7 @@ export default function AdminCreateRegistrationForm() {
             imageUrl: imageUrl || null,
             imagePublicId: imagePublicId || null,
             evaluationCriteria: evaluationCriteria,
+            socialMediaLinks,
             feedbackEnabled,
             feedbackQuestions,
         };
@@ -299,6 +323,12 @@ export default function AdminCreateRegistrationForm() {
         { label: 'Checkboxes', value: 'CHECKBOX' },
         { label: 'Dropdown', value: 'DROPDOWN' },
         { label: 'Image Upload', value: 'IMAGE_UPLOAD' },
+    ];
+
+    const FEEDBACK_QUESTION_TYPES = [
+        { label: 'Text Area', value: 'TEXT_AREA' },
+        { label: 'Star Rating', value: 'RATING_STAR' },
+        { label: 'Number Rating', value: 'RATING_NUMBER' },
     ];
 
     return (
@@ -584,53 +614,40 @@ export default function AdminCreateRegistrationForm() {
                                                 <select
                                                     className="w-full h-full bg-gray-50 dark:bg-gray-900 px-4 py-3 rounded-xl border border-transparent focus:border-indigo-500 outline-none transition-all dark:text-white font-medium cursor-pointer"
                                                     value={q.type}
-                                                    onChange={(e) => updateFeedbackQuestion(q.id, { type: e.target.value as any })}
+                                                    onChange={(e) => updateFeedbackQuestion(q.id, { type: e.target.value as any, options: e.target.value === 'RATING_NUMBER' ? ['5'] : [] })}
                                                 >
-                                                    {QUESTION_TYPES.map(t => (
+                                                    {FEEDBACK_QUESTION_TYPES.map(t => (
                                                         <option key={t.value} value={t.value}>{t.label}</option>
                                                     ))}
                                                 </select>
                                             </div>
                                         </div>
 
-                                        {['RADIO', 'CHECKBOX', 'DROPDOWN'].includes(q.type) && (
+                                        {q.type === 'RATING_NUMBER' && (
                                             <div className="pl-4 border-l-2 border-indigo-100 dark:border-indigo-900 space-y-3">
-                                                <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest pl-2">Options</p>
-                                                {q.options.map((opt, optIdx) => (
-                                                    <div key={optIdx} className="flex items-center gap-2 group/opt">
-                                                        <div className="h-2 w-2 rounded-full bg-indigo-200 group-hover/opt:bg-indigo-500"></div>
-                                                        <input
-                                                            type="text"
-                                                            className="flex-1 bg-transparent border-b border-gray-200 dark:border-gray-700 py-1 focus:border-indigo-500 outline-none text-sm dark:text-white"
-                                                            value={opt}
-                                                            onChange={(e) => {
-                                                                const newOpts = [...q.options];
-                                                                newOpts[optIdx] = e.target.value;
-                                                                updateFeedbackQuestion(q.id, { options: newOpts });
-                                                            }}
-                                                        />
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
-                                                            onClick={() => {
-                                                                const newOpts = q.options.filter((_, i) => i !== optIdx);
-                                                                updateFeedbackQuestion(q.id, { options: newOpts });
-                                                            }}
-                                                            disabled={q.options.length <= 1}
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg text-xs font-bold ml-4"
-                                                    onClick={() => updateFeedbackQuestion(q.id, { options: [...q.options, `Option ${q.options.length + 1}`] })}
-                                                >
-                                                    <Plus className="h-3 w-3 mr-1" /> Add Option
-                                                </Button>
+                                                <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest pl-2">Max Rating (Number)</p>
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        className="w-24 bg-gray-50 dark:bg-gray-900 px-4 py-2 rounded-xl border border-transparent focus:border-indigo-500 outline-none transition-all dark:text-white font-medium"
+                                                        value={q.options?.[0] || '5'}
+                                                        onChange={(e) => updateFeedbackQuestion(q.id, { options: [e.target.value] })}
+                                                    />
+                                                    <span className="text-sm text-gray-500">The participant can enter a number between 0 and this value.</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {q.type === 'RATING_STAR' && (
+                                            <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900 flex items-center gap-3 text-indigo-700 dark:text-indigo-300">
+                                                <span className="text-sm font-medium">Standard 5-star rating component will be displayed.</span>
+                                            </div>
+                                        )}
+
+                                        {q.type === 'TEXT_AREA' && (
+                                            <div className="bg-gray-50 dark:bg-gray-900/10 p-4 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                                                <span className="text-sm font-medium">A multi-line text area will be provided for written feedback.</span>
                                             </div>
                                         )}
 
@@ -664,10 +681,17 @@ export default function AdminCreateRegistrationForm() {
                             type="button"
                             variant="outline"
                             onClick={addFeedbackQuestion}
-                            className="w-full py-8 border-2 border-dashed border-indigo-100 dark:border-indigo-900/30 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-400 hover:text-indigo-600 transition-all font-bold"
+                            disabled={feedbackQuestions.length >= 3}
+                            className="w-full py-8 border-2 border-dashed border-indigo-100 dark:border-indigo-900/30 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-400 hover:text-indigo-600 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Plus className="h-6 w-6 mr-2" />
-                            Add Question to Feedback Form
+                            {feedbackQuestions.length >= 3 ? (
+                                <>Maximum 3 Questions Allowed</>
+                            ) : (
+                                <>
+                                    <Plus className="h-6 w-6 mr-2" />
+                                    Add Question to Feedback Form
+                                </>
+                            )}
                         </Button>
                     </div>
 
@@ -799,11 +823,63 @@ export default function AdminCreateRegistrationForm() {
                         <CardHeader className="border-b border-gray-50 dark:border-gray-700/50 p-5 bg-gray-50/50 dark:bg-gray-800/50">
                             <div className="flex items-center gap-2 text-indigo-600">
                                 <BadgeDollarSign className="h-5 w-5" />
-                                <span className="font-bold uppercase tracking-wider text-xs">Monetization & Poster</span>
+                                <span className="font-bold uppercase tracking-wider text-xs">Monetization & Social</span>
                             </div>
                         </CardHeader>
                         <CardContent className="p-6 space-y-5">
-                            <label className="flex items-center justify-between p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl cursor-pointer">
+                            {/* Social Media Links Section */}
+                            <div className="space-y-4">
+                                <label className="text-sm font-bold text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                    <Plus className="h-4 w-4" /> Social Media & Helpful Links
+                                </label>
+                                <div className="space-y-3">
+                                    {socialMediaLinks.map((link, idx) => (
+                                        <div key={idx} className="flex gap-2 items-center animate-in slide-in-from-left-2 duration-300">
+                                            <select
+                                                className="bg-gray-50 dark:bg-gray-900 border-none rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                                                value={link.platform}
+                                                onChange={(e) => updateSocialMediaLink(idx, { platform: e.target.value })}
+                                            >
+                                                <option value="LinkedIn">LinkedIn</option>
+                                                <option value="GitHub">GitHub</option>
+                                                <option value="Discord">Discord</option>
+                                                <option value="WhatsApp">WhatsApp</option>
+                                                <option value="Twitter">Twitter</option>
+                                                <option value="Instagram">Instagram</option>
+                                                <option value="Website">Website</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                            <input
+                                                type="url"
+                                                placeholder="https://..."
+                                                className="flex-1 bg-gray-50 dark:bg-gray-900 border-none rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                                                value={link.url}
+                                                onChange={(e) => updateSocialMediaLink(idx, { url: e.target.value })}
+                                            />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 w-9 p-0 text-gray-400 hover:text-red-500"
+                                                onClick={() => removeSocialMediaLink(idx)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full py-2 border-indigo-100 dark:border-indigo-900/50 text-indigo-500 hover:bg-indigo-50 rounded-xl text-xs font-bold"
+                                        onClick={addSocialMediaLink}
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" /> Add Link
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <label className="flex items-center justify-between p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl cursor-pointer">
                                 <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Requires Payment?</span>
                                 <input
                                     type="checkbox"
@@ -815,14 +891,17 @@ export default function AdminCreateRegistrationForm() {
                                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${paymentRequired ? 'left-7' : 'left-1'}`}></div>
                                 </div>
                             </label>
+                            </div>
 
                             {paymentRequired && (
                                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                                     <label className="text-sm font-bold text-gray-600 dark:text-gray-400">Entry Fees (₹)</label>
                                     <input
                                         type="number"
+                                        min="0.01"
+                                        step="0.01"
                                         className="w-full bg-gray-50 dark:bg-gray-900 border-none rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white"
-                                        placeholder="0.00"
+                                        placeholder="Enter amount > 0"
                                         value={paymentFees}
                                         onChange={(e) => setPaymentFees(e.target.value)}
                                     />
@@ -863,9 +942,9 @@ export default function AdminCreateRegistrationForm() {
                                             />
                                         </>
                                     ) : null}
-                                </div>
                             </div>
-                        </CardContent>
+                        </div>
+                    </CardContent>
                     </Card>
                 </div>
             </div>
