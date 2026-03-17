@@ -16,7 +16,10 @@ interface CreateReportDialogProps {
     initialVenue?: string;
     initialObjective?: string;
     initialSocialLinks?: string[];
+    reportId?: string;
 }
+
+const EMPTY_ARRAY: string[] = [];
 
 export function CreateReportDialog({ 
     isOpen, 
@@ -26,21 +29,22 @@ export function CreateReportDialog({
     eventTitle,
     initialVenue = '',
     initialObjective = '',
-    initialSocialLinks = []
+    initialSocialLinks = EMPTY_ARRAY,
+    reportId
 }: CreateReportDialogProps) {
     const navigate = useNavigate();
-    const [venue, setVenue] = useState(initialVenue || '');
-    const [objective, setObjective] = useState(initialObjective || '');
-    const [socialLinks, setSocialLinks] = useState<string[]>(initialSocialLinks || []);
+    const [venue, setVenue] = useState<string>(typeof initialVenue === 'string' ? initialVenue : '');
+    const [objective, setObjective] = useState<string>(typeof initialObjective === 'string' ? initialObjective : '');
+    const [socialLinks, setSocialLinks] = useState<string[]>(Array.isArray(initialSocialLinks) ? initialSocialLinks : EMPTY_ARRAY);
     const [linkInput, setLinkInput] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Update state when modal opens or initial props change
     useEffect(() => {
         if (isOpen) {
-            setVenue(initialVenue || '');
-            setObjective(initialObjective || '');
-            setSocialLinks(initialSocialLinks || []);
+            setVenue(typeof initialVenue === 'string' ? initialVenue : '');
+            setObjective(typeof initialObjective === 'string' ? initialObjective : '');
+            setSocialLinks(Array.isArray(initialSocialLinks) ? initialSocialLinks : EMPTY_ARRAY);
         }
     }, [isOpen, initialVenue, initialObjective, initialSocialLinks]);
 
@@ -61,15 +65,30 @@ export function CreateReportDialog({
             return;
         }
 
+        if (!eventId) {
+            toast.error('Event ID is missing');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            const response = await api.post('/api/reports/generate', {
-                eventId,
-                eventType,
+            // Clean and sanitize the payload to ensure the backend receives exactly what it expects
+            const cleanedSocialLinks = Array.isArray(socialLinks) 
+                ? socialLinks
+                    .filter(l => l && typeof l === 'string' && l.trim().length > 0)
+                    .map(l => l.trim())
+                : [];
+
+            const payload = {
+                id: reportId,
+                eventId: String(eventId).trim(),
+                eventType: String(eventType).trim().toUpperCase(),
                 venue: venue.trim() || undefined,
                 objective: objective.trim(),
-                socialMediaLinks: socialLinks.length > 0 ? socialLinks : undefined,
-            });
+                socialMediaLinks: cleanedSocialLinks.length > 0 ? cleanedSocialLinks : undefined
+            };
+
+            const response = await api.post('/api/reports/generate', payload);
 
             toast.success('Report generated successfully!');
             onClose();
@@ -108,10 +127,10 @@ export function CreateReportDialog({
                             </button>
                             <h2 className="text-2xl font-bold flex items-center gap-3">
                                 <FileText className="h-6 w-6" />
-                                Generate Event Report
+                                {reportId ? 'Regenerate Event Report' : 'Generate Event Report'}
                             </h2>
                             <p className="text-indigo-100 text-sm mt-1 opacity-90">
-                                For: <span className="font-semibold">{eventTitle}</span>
+                                {reportId ? 'Updating' : 'Creating'} Report for: <span className="font-semibold">{eventTitle}</span>
                             </p>
                         </div>
 
@@ -158,7 +177,7 @@ export function CreateReportDialog({
                                         </Button>
                                     </div>
                                     
-                                    {socialLinks.length > 0 && (
+                                    {socialLinks && socialLinks.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-3">
                                             {socialLinks.map((link) => (
                                                 <div key={link} className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800">
@@ -191,7 +210,7 @@ export function CreateReportDialog({
                                     ) : (
                                         <>
                                             <Send className="h-4 w-4 mr-2" />
-                                            Generate
+                                            {reportId ? 'Regenerate' : 'Generate'}
                                         </>
                                     )}
                                 </Button>

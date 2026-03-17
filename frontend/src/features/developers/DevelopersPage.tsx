@@ -8,7 +8,7 @@ const teamMembers = [
         name: 'Ujjawal Singh',
         role: 'Backend Architect',
         bio: 'Architecture & System Design',
-        avatar: '/ujjawal.jpeg',
+        avatar: '/ujjawal.png',
         skills: [ 'Spring Boot', 'MongoDB', 'AWS', 'Microservices', 'System Design',  'Database Design', 'API Development','Containerization', 'CI/CD Pipelines' ],
         email: 'singhujjawal9096@gmail.com',
         linkedin: 'https://www.linkedin.com/in/ujjawal-singh-57463129b/'

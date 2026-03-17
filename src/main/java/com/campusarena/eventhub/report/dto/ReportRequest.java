@@ -12,6 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReportRequest {
+    private String id;
     private String eventId;
     private String eventType; // QUIZ, CONTEST, REGISTRATION
     private String venue;

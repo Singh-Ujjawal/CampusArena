@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
@@ -10,10 +9,13 @@ import {
     CheckCircle2, MessageSquare, RotateCcw
 } from 'lucide-react';
 import { CreateReportDialog } from './components/CreateReportDialog';
+import { DeleteButton } from '@/components/DeleteButton';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { toast } from 'sonner';
 import type { Report } from '@/types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useEffect, useState } from 'react';
 
 export default function ReportViewPage() {
     const { id } = useParams();
@@ -25,6 +27,7 @@ export default function ReportViewPage() {
     const [feedbackSubmissions, setFeedbackSubmissions] = useState<any[]>([]);
     const [feedbackForm, setFeedbackForm] = useState<any>(null);
     const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     useEffect(() => {
         if (id) fetchReport();
@@ -60,12 +63,42 @@ export default function ReportViewPage() {
     const fetchReport = async () => {
         try {
             const response = await api.get(`/api/reports/${id}`);
-            setReport(response.data);
+            const data = response.data;
+            
+            // Critical Fix: Sanitize data to ensure arrays are never null/undefined
+            // This prevents "cannot read property 'length' of null" errors
+            const sanitizedReport = {
+                ...data,
+                eventId: data.eventId || '',
+                eventType: data.eventType || '',
+                participants: Array.isArray(data.participants) ? data.participants : [],
+                winners: Array.isArray(data.winners) ? data.winners : [],
+                socialMediaLinks: Array.isArray(data.socialMediaLinks) 
+                    ? data.socialMediaLinks.filter((l: any) => typeof l === 'string') 
+                    : [],
+                facultyCoordinators: Array.isArray(data.facultyCoordinators) ? data.facultyCoordinators : [],
+                studentCoordinators: Array.isArray(data.studentCoordinators) ? data.studentCoordinators : []
+            };
+
+            setReport(sanitizedReport);
         } catch (error) {
             toast.error('Failed to fetch report');
             console.error(error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleDeleteReport = async () => {
+        if (!id) return;
+        
+        try {
+            await api.delete(`/api/reports/${id}`);
+            toast.success('Report deleted successfully');
+            navigate('/admin/reports');
+        } catch (error) {
+            console.error('Failed to delete report', error);
+            toast.error('Failed to delete report');
         }
     };
 
@@ -365,6 +398,12 @@ export default function ReportViewPage() {
                             <RotateCcw className="h-4 w-4 mr-2" />
                             Regenerate
                         </Button>
+                        <DeleteButton 
+                            onClick={() => setShowDeleteDialog(true)}
+                            variant="full"
+                            label="Delete Report"
+                            className="bg-red-50 text-red-600 border-red-100 hover:bg-red-600 hover:text-white"
+                        />
                         <Button 
                             onClick={handleDownloadPDF}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 dark:shadow-none"
@@ -660,6 +699,14 @@ export default function ReportViewPage() {
                 initialVenue={report.venue}
                 initialObjective={report.objective}
                 initialSocialLinks={report.socialMediaLinks}
+                reportId={report.id}
+            />
+            <DeleteConfirmDialog
+                isOpen={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                onConfirm={handleDeleteReport}
+                title={report?.eventName || 'This Report'}
+                itemType="Report"
             />
         </div>
     );

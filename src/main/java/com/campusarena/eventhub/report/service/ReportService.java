@@ -52,8 +52,10 @@ public class ReportService {
             .withZone(ZoneId.of("Asia/Kolkata"));
 
     public Report generateReport(ReportRequest request, String createdBy) {
-        Optional<Report> existingReport = reportRepository.findByEventIdAndEventType(request.getEventId(), request.getEventType());
-        
+        Optional<Report> existingReport = request.getId() != null
+                ? reportRepository.findById(request.getId())
+                : reportRepository.findByEventIdAndEventType(request.getEventId(), request.getEventType());
+
         Report.ReportBuilder reportBuilder = Report.builder()
                 .id(existingReport.map(Report::getId).orElse(null))
                 .eventId(request.getEventId())
@@ -61,8 +63,8 @@ public class ReportService {
                 .venue(request.getVenue())
                 .objective(request.getObjective())
                 .socialMediaLinks(request.getSocialMediaLinks())
-                .createdAt(Instant.now())
-                .createdBy(createdBy);
+                .createdAt(existingReport.map(Report::getCreatedAt).orElse(Instant.now()))
+                .createdBy(existingReport.map(Report::getCreatedBy).orElse(createdBy));
 
         if ("QUIZ".equalsIgnoreCase(request.getEventType())) {
             Event event = eventRepository.findById(request.getEventId())
@@ -78,15 +80,55 @@ public class ReportService {
                 clubRepository.findById(event.getClubId()).ifPresent(club -> reportBuilder.clubName(club.getName()));
             }
 
-            // Participants and Winners for Quiz
+            // Participants and Winners for Quiz: Sorted by Score Desc, SubmittedAt Asc
             List<EventLeaderboardEntry> leaderboard = eventLeaderboardService.getLeaderboard(event.getId());
             String totalMarks = event.getTotalMarks() != null ? String.valueOf(event.getTotalMarks()) : "N/A";
             
-            reportBuilder.participants(leaderboard.stream()
-                    .map(entry -> mapToParticipantInfo(entry.getUsername(), entry.getScore() + " / " + totalMarks))
-                    .collect(Collectors.toList()));
-            reportBuilder.winners(leaderboard.stream().limit(3)
-                    .map(entry -> mapToParticipantInfo(entry.getUsername(), entry.getScore() + " / " + totalMarks))
+            List<Report.ParticipantInfo> participants;
+            Optional<RegistrationForm> regForm = registrationFormRepository.findByEventId(event.getId());
+            
+            if (regForm.isPresent()) {
+                List<RegistrationResponse> responses = registrationResponseRepository.findByFormId(regForm.get().getId());
+                
+                // Sort responses based on leaderboard performance first, then keep them in the list
+                participants = responses.stream()
+                        .map(res -> {
+                            Optional<EventLeaderboardEntry> entry = leaderboard.stream()
+                                    .filter(e -> (e.getUserId() != null && e.getUserId().equals(res.getUserId())) || 
+                                                 (e.getUsername() != null && e.getUsername().equals(res.getUsername())))
+                                    .findFirst();
+                            
+                            double scoreVal = entry.map(EventLeaderboardEntry::getScore).orElse(0.0);
+                            Instant time = entry.map(EventLeaderboardEntry::getSubmittedAt).orElse(null);
+                            
+                            return new Object() {
+                                final Report.ParticipantInfo info = mapToParticipantInfo(res.getUserId(), 
+                                        res.getName() != null ? res.getName() : res.getUsername(), 
+                                        res.getRollNumber(), 
+                                        (entry.isPresent() ? entry.get().getScore() + " / " + totalMarks : "0 / " + totalMarks));
+                                final double score = scoreVal;
+                                final Instant submittedAt = time;
+                            };
+                        })
+                        .sorted((a, b) -> {
+                            if (b.score != a.score) return Double.compare(b.score, a.score);
+                            if (a.submittedAt == null && b.submittedAt == null) return 0;
+                            if (a.submittedAt == null) return 1;
+                            if (b.submittedAt == null) return -1;
+                            return a.submittedAt.compareTo(b.submittedAt);
+                        })
+                        .map(wrapper -> wrapper.info)
+                        .collect(Collectors.toList());
+            } else {
+                participants = leaderboard.stream()
+                        .map(entry -> mapToParticipantInfo(entry.getUserId(), entry.getUsername(), entry.getRollNumber(), entry.getScore() + " / " + totalMarks))
+                        .collect(Collectors.toList());
+            }
+
+            reportBuilder.participants(participants);
+            reportBuilder.winners(participants.stream()
+                    .filter(p -> !p.getScore().startsWith("0 /")) // Ensure winners actually scored points
+                    .limit(3)
                     .collect(Collectors.toList()));
 
         } else if ("CONTEST".equalsIgnoreCase(request.getEventType())) {
@@ -103,13 +145,56 @@ public class ReportService {
                 clubRepository.findById(contest.getClubId()).ifPresent(club -> reportBuilder.clubName(club.getName()));
             }
 
-            // Participants and Winners for Contest
+            // Participants and Winners for Contest: Sorted by Score Desc, LastSubmissionTime Asc
             List<LeaderboardEntry> leaderboard = contestLeaderboardService.getLeaderboard(contest.getId());
-            reportBuilder.participants(leaderboard.stream()
-                    .map(entry -> mapToParticipantInfo(entry.getUsername(), String.valueOf(entry.getTotalScore())))
-                    .collect(Collectors.toList()));
-            reportBuilder.winners(leaderboard.stream().limit(3)
-                    .map(entry -> mapToParticipantInfo(entry.getUsername(), String.valueOf(entry.getTotalScore())))
+            
+            List<Report.ParticipantInfo> participants;
+            Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(contest.getId());
+            
+            if (regForm.isPresent()) {
+                List<RegistrationResponse> responses = registrationResponseRepository.findByFormId(regForm.get().getId());
+                
+                participants = responses.stream()
+                        .map(res -> {
+                            Optional<LeaderboardEntry> entry = leaderboard.stream()
+                                    .filter(e -> (e.getUserId() != null && e.getUserId().equals(res.getUserId())) || 
+                                                 (e.getUsername() != null && e.getUsername().equals(res.getUsername())))
+                                    .findFirst();
+                            
+                            int scoreVal = entry.map(LeaderboardEntry::getTotalScore).orElse(0);
+                            Instant time = entry.map(LeaderboardEntry::getLastSubmissionTime).orElse(null);
+                            
+                            return new Object() {
+                                final Report.ParticipantInfo info = mapToParticipantInfo(res.getUserId(), 
+                                        res.getName() != null ? res.getName() : res.getUsername(), 
+                                        res.getRollNumber(), 
+                                        (entry.isPresent() 
+                                                ? entry.get().getTotalScore() + " pts (" + entry.get().getProblemsSolved() + " solved)"
+                                                : "0 pts (0 solved)"));
+                                final int score = scoreVal;
+                                final Instant lastTime = time;
+                            };
+                        })
+                        .sorted((a, b) -> {
+                            if (b.score != a.score) return Integer.compare(b.score, a.score);
+                            if (a.lastTime == null && b.lastTime == null) return 0;
+                            if (a.lastTime == null) return 1;
+                            if (b.lastTime == null) return -1;
+                            return a.lastTime.compareTo(b.lastTime);
+                        })
+                        .map(wrapper -> wrapper.info)
+                        .collect(Collectors.toList());
+            } else {
+                participants = leaderboard.stream()
+                        .map(entry -> mapToParticipantInfo(entry.getUserId(), entry.getUsername(), entry.getRollNumber(), 
+                                entry.getTotalScore() + " pts (" + entry.getProblemsSolved() + " solved)"))
+                        .collect(Collectors.toList());
+            }
+
+            reportBuilder.participants(participants);
+            reportBuilder.winners(participants.stream()
+                    .filter(p -> !p.getScore().startsWith("0 pts")) // Ensure winners actually solved something
+                    .limit(3)
                     .collect(Collectors.toList()));
 
         } else if ("REGISTRATION".equalsIgnoreCase(request.getEventType())) {
@@ -139,20 +224,90 @@ public class ReportService {
             }
 
 
-            // Participants: Those who registered
+            // Participants: Sorted by Performance from linked Quiz/Contest
             List<RegistrationResponse> responses = registrationResponseRepository.findByFormId(form.getId());
-            reportBuilder.participants(responses.stream()
-                    .map(this::mapResponseToParticipantInfo)
-                    .collect(Collectors.toList()));
+            List<Report.ParticipantInfo> participants;
             
-            // Winners: Those with highest evaluation marks (if any)
-            List<RegistrationResponse> winners = responses.stream()
-                    .filter(r -> r.getTotalEvaluationMarks() != null)
-                    .sorted((a, b) -> Double.compare(b.getTotalEvaluationMarks(), a.getTotalEvaluationMarks()))
+            // Fetch scores from linked event/contest if they exist for attendance
+            if (form.getEventId() != null) {
+                Event event = eventRepository.findById(form.getEventId()).orElse(null);
+                List<EventLeaderboardEntry> leaderboard = eventLeaderboardService.getLeaderboard(form.getEventId());
+                String totalMarks = (event != null && event.getTotalMarks() != null) ? String.valueOf(event.getTotalMarks()) : "N/A";
+                
+                participants = responses.stream().map(res -> {
+                    Optional<EventLeaderboardEntry> entry = leaderboard.stream()
+                        .filter(e -> (e.getUserId() != null && e.getUserId().equals(res.getUserId())) || 
+                                     (e.getUsername() != null && e.getUsername().equals(res.getUsername())))
+                        .findFirst();
+                    
+                    double scoreVal = entry.map(EventLeaderboardEntry::getScore).orElse(0.0);
+                    Instant time = entry.map(EventLeaderboardEntry::getSubmittedAt).orElse(null);
+                    
+                    return new Object() {
+                        final Report.ParticipantInfo info = mapToParticipantInfo(res.getUserId(), 
+                                res.getName() != null ? res.getName() : res.getUsername(), 
+                                res.getRollNumber(), 
+                                (entry.isPresent() ? entry.get().getScore() + " / " + totalMarks : "0 / " + totalMarks));
+                        final double score = scoreVal;
+                        final Instant submittedAt = time;
+                    };
+                })
+                .sorted((a, b) -> {
+                    if (b.score != a.score) return Double.compare(b.score, a.score);
+                    if (a.submittedAt == null && b.submittedAt == null) return 0;
+                    if (a.submittedAt == null) return 1;
+                    if (b.submittedAt == null) return -1;
+                    return a.submittedAt.compareTo(b.submittedAt);
+                })
+                .map(wrapper -> wrapper.info)
+                .collect(Collectors.toList());
+            } else if (form.getContestId() != null) {
+                List<LeaderboardEntry> leaderboard = contestLeaderboardService.getLeaderboard(form.getContestId());
+                participants = responses.stream().map(res -> {
+                    Optional<LeaderboardEntry> entry = leaderboard.stream()
+                        .filter(e -> (e.getUserId() != null && e.getUserId().equals(res.getUserId())) || 
+                                     (e.getUsername() != null && e.getUsername().equals(res.getUsername())))
+                        .findFirst();
+                    
+                    int scoreVal = entry.map(LeaderboardEntry::getTotalScore).orElse(0);
+                    Instant time = entry.map(LeaderboardEntry::getLastSubmissionTime).orElse(null);
+                    
+                    return new Object() {
+                        final Report.ParticipantInfo info = mapToParticipantInfo(res.getUserId(), 
+                                res.getName() != null ? res.getName() : res.getUsername(), 
+                                res.getRollNumber(), 
+                                (entry.isPresent() 
+                                    ? entry.get().getTotalScore() + " pts (" + entry.get().getProblemsSolved() + " solved)"
+                                    : "0 pts (0 solved)"));
+                        final int score = scoreVal;
+                        final Instant lastTime = time;
+                    };
+                })
+                .sorted((a, b) -> {
+                    if (b.score != a.score) return Integer.compare(b.score, a.score);
+                    if (a.lastTime == null && b.lastTime == null) return 0;
+                    if (a.lastTime == null) return 1;
+                    if (b.lastTime == null) return -1;
+                    return a.lastTime.compareTo(b.lastTime);
+                })
+                .map(wrapper -> wrapper.info)
+                .collect(Collectors.toList());
+            } else {
+                participants = responses.stream()
+                        .map(this::mapResponseToParticipantInfo)
+                        .sorted((a, b) -> {
+                            // Sort by score string if numeric score not available (basic fallback)
+                            return b.getScore().compareTo(a.getScore());
+                        })
+                        .collect(Collectors.toList());
+            }
+            
+            reportBuilder.participants(participants);
+            
+            // Winners: Top 3 from sorted list
+            reportBuilder.winners(participants.stream()
+                    .filter(p -> !p.getScore().startsWith("0 /") && !p.getScore().startsWith("0 pts"))
                     .limit(3)
-                    .collect(Collectors.toList());
-            reportBuilder.winners(winners.stream()
-                    .map(this::mapResponseToParticipantInfo)
                     .collect(Collectors.toList()));
         }
 
@@ -196,18 +351,28 @@ public class ReportService {
                 .build();
     }
 
-    private Report.ParticipantInfo mapToParticipantInfo(String username, String score) {
-        return userRepository.findByUsername(username)
+    private Report.ParticipantInfo mapToParticipantInfo(String userId, String username, String rollNumber, String score) {
+        // Try looking up by userId first for maximum reliability
+        return (userId != null ? userRepository.findById(userId) : userRepository.findByUsername(username))
                 .map(user -> Report.ParticipantInfo.builder()
-                        .name((user.getFirstName() != null ? user.getFirstName() : "") + " " +
-                                (user.getLastName() != null ? user.getLastName() : ""))
-                        .rollNumber(user.getRollNumber())
+                        .name(((user.getFirstName() != null ? user.getFirstName() : "") + " " +
+                                (user.getLastName() != null ? user.getLastName() : "")).trim())
+                        .rollNumber(user.getRollNumber() != null ? user.getRollNumber() : rollNumber)
                         .course(user.getCourse() != null ? user.getCourse().name() : "N/A")
                         .branch(user.getBranch() != null ? user.getBranch().name() : "N/A")
                         .section(user.getSection())
                         .score(score)
                         .build())
-                .orElse(Report.ParticipantInfo.builder().name(username).score(score).build());
+                .orElseGet(() -> {
+                    // Fallback to provided leaderboard data if user document not found
+                    return Report.ParticipantInfo.builder()
+                            .name(username)
+                            .rollNumber(rollNumber != null ? rollNumber : "N/A")
+                            .course("N/A")
+                            .branch("N/A")
+                            .score(score)
+                            .build();
+                });
     }
 
     public List<Report> getAllReports() {
@@ -220,6 +385,13 @@ public class ReportService {
 
     public Report getReportById(String id) {
         return reportRepository.findById(id).orElseThrow(() -> new RuntimeException("Report not found"));
+    }
+
+    public void deleteReport(String id) {
+        if (!reportRepository.existsById(id)) {
+            throw new RuntimeException("Report not found");
+        }
+        reportRepository.deleteById(id);
     }
 
     public Optional<Report> getReportByEventIdAndType(String eventId, String eventType) {
