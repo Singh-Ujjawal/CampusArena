@@ -37,11 +37,10 @@ public class ReportController {
         return ResponseEntity.ok(reportService.getReportById(id));
     }
 
-    @GetMapping("/check")
-    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY')")
-    public ResponseEntity<Report> checkReport(@RequestParam String eventId, @RequestParam String eventType) {
-        return reportService.getReportByEventIdAndType(eventId, eventType)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteReport(@PathVariable String id) {
+        reportService.deleteReport(id);
+        return ResponseEntity.noContent().build();
     }
 }
