@@ -84,13 +84,16 @@ export default function ContestDetailsPage() {
                 // Fetch form info regardless of registrationRequired to check for feedback
                 try {
                     const formRes = await api.get(`/api/registration/forms/contest/${contestId}`);
-                    if (formRes.data && formRes.data.feedbackEnabled) {
-                        setAssociatedFormId(formRes.data.id);
-                        
-                        // Check if user already submitted feedback
-                        if (user) {
-                            const statusRes = await api.get(`/api/feedback/${formRes.data.id}/status`);
-                            setFeedbackSubmitted(statusRes.data);
+                    if (formRes.data) {
+                        setRegFormId(formRes.data.id);
+                        if (formRes.data.feedbackEnabled) {
+                            setAssociatedFormId(formRes.data.id);
+                            
+                            // Check if user already submitted feedback
+                            if (user) {
+                                const statusRes = await api.get(`/api/feedback/${formRes.data.id}/status`);
+                                setFeedbackSubmitted(statusRes.data);
+                            }
                         }
                     }
                 } catch (e) {
