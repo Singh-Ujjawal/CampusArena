@@ -23,7 +23,28 @@ public class CodeExecutionService {
 
     private final LanguageStrategyFactory strategyFactory;
 
+    // LIMIT TO 1 EXECUTION AT A TIME (Queue System) to prevent AWS Free Tier 1GB RAM crash
+    private final java.util.concurrent.Semaphore executionQueue = new java.util.concurrent.Semaphore(1);
+
     public ExecutionResponse executeCode(ExecutionRequest request) {
+        try {
+            // Wait in queue for up to 60 seconds for a free slot
+            if (!executionQueue.tryAcquire(60, TimeUnit.SECONDS)) {
+                return ExecutionResponse.error("Server is currently busy evaluating other submissions. Please wait a moment and try again.");
+            }
+            try {
+                return executeCodeInternal(request);
+            } finally {
+                // Always release the slot when done so the next person in queue can go
+                executionQueue.release();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return ExecutionResponse.error("Execution cancelled while waiting in queue.");
+        }
+    }
+
+    private ExecutionResponse executeCodeInternal(ExecutionRequest request) {
         long startTime = System.currentTimeMillis();
         Path tempDir = null;
         String containerName = "sandbox-" + UUID.randomUUID();
@@ -53,7 +74,7 @@ public class CodeExecutionService {
             ProcessResult startRes = runProcess(List.of(
                     "docker", "run", "-d", "--rm",
                     "--name", containerName,
-                    "--memory=256m", "--cpus=1.0",
+                    "--memory=128m", "--cpus=1.0",
                     "--network=none",
                     "-v", volumeMount,
                     "-w", "/app",
