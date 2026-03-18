@@ -82,6 +82,12 @@ public class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
+                "http://52.66.175.187/",
+                "http://52.66.175.187:5173",
+                "http://52.66.175.187:80",
+                "http://13.201.124.46/",
+                "http://13.201.124.46:5173",
+                "http://13.201.124.46:80",
                 "http://35.154.206.192",
                 "http://35.154.206.192:5173",
                 "http://35.154.206.192:80",
