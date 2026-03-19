@@ -1,0 +1,15 @@
+package com.campusarena.eventhub.club.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class SubClubGroup {
+    private String name;
+    private List<SubClub> subClubs;
+}

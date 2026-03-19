@@ -32,6 +32,7 @@ interface RegistrationForm {
     clubId?: string;
     feedbackEnabled?: boolean;
     feedbackQuestions?: any[];
+    subClubName?: string;
 }
 
 export default function AdminRegistrationHub() {
@@ -215,6 +216,11 @@ export default function AdminRegistrationHub() {
                                 <StatusIcon className="h-3 w-3" />
                                 {status.label}
                             </span>
+                            {form.subClubName && (
+                                <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tight bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                    {form.subClubName}
+                                </span>
+                            )}
                         </div>
                         
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-semibold text-gray-500 dark:text-gray-400">

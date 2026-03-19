@@ -27,6 +27,7 @@ public class Report {
     private List<String> facultyCoordinators;
     private List<String> studentCoordinators;
     private String clubName;
+    private String subClubName;
     private String objective;
     private String description;
     private List<ParticipantInfo> participants;

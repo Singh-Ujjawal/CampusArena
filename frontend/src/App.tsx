@@ -36,6 +36,7 @@ import AdminSubmissionsPage from '@/features/admin/AdminSubmissionsPage';
 import AdminContestParticipantsPage from '@/features/admin/AdminContestParticipantsPage';
 import AdminEventAnalyticsPage from '@/features/admin/AdminEventAnalyticsPage';
 import AdminClubsPage from '@/features/admin/AdminClubsPage';
+import AdminCreateClubPage from '@/features/admin/AdminCreateClubPage';
 import AdminFacultyPage from '@/features/admin/AdminFacultyPage';
 import AdminCollectiveDetails from '@/features/admin/AdminCollectiveDetails';
 import AdminEventLeaderboardPage from '@/features/admin/AdminEventLeaderboardPage';
@@ -141,6 +142,8 @@ function App() {
                 <Route path="/admin/users/:userId" element={<ProfilePage />} />
                 <Route path="/admin/faculty" element={<AdminFacultyPage />} />
                 <Route path="/admin/clubs" element={<AdminClubsPage />} />
+                <Route path="/admin/clubs/create" element={<AdminCreateClubPage />} />
+                <Route path="/admin/clubs/edit/:id" element={<AdminCreateClubPage />} />
               </Route>
             </Route>
 

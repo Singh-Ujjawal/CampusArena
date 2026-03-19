@@ -144,7 +144,7 @@ export default function ReportViewPage() {
             doc.setFontSize(11);
             doc.setTextColor(100, 116, 139); // slate-500
             doc.setFont('helvetica', 'normal');
-            doc.text(`Organized by ${report.clubName || 'Institution'} | ${report.eventType} Event | CAMPUS ARENA`, 15, yPos);
+            doc.text(`Organized by ${report.clubName || 'Institution'}${report.subClubName ? ` — ${report.subClubName}` : ''} | ${report.eventType} Event | CAMPUS ARENA`, 15, yPos);
             yPos += 15;
 
             // 3. Stats Banner
@@ -437,6 +437,12 @@ export default function ReportViewPage() {
                                                 <Award className="h-4 w-4 text-indigo-500" />
                                                 <span className="text-slate-900 dark:text-white">{report.clubName || 'INSTITUTION'}</span>
                                             </div>
+                                            {report.subClubName && (
+                                                <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-2xl shadow-sm ring-1 ring-blue-200 dark:ring-blue-800">
+                                                    <Award className="h-4 w-4 text-blue-500" />
+                                                    <span className="text-blue-700 dark:text-blue-300 font-bold">{report.subClubName}</span>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm ring-1 ring-slate-100 dark:ring-slate-700">
                                                 <FileText className="h-4 w-4 text-slate-400" />
                                                 <span className="uppercase tracking-tighter">Event Category: {report.eventType}</span>
@@ -700,6 +706,10 @@ export default function ReportViewPage() {
                 initialObjective={report.objective}
                 initialSocialLinks={report.socialMediaLinks}
                 reportId={report.id}
+                onSuccess={() => {
+                    setShowRegenerateDialog(false);
+                    fetchReport();
+                }}
             />
             <DeleteConfirmDialog
                 isOpen={showDeleteDialog}

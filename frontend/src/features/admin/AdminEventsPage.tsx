@@ -439,9 +439,27 @@ export default function AdminEventsPage() {
                             <Select
                                 label="Club"
                                 value={currentEvent.clubId || ''}
-                                onChange={e => setCurrentEvent({ ...currentEvent, clubId: e.target.value })}
+                                onChange={e => setCurrentEvent({ ...currentEvent, clubId: e.target.value, subClubName: '' })}
                                 options={clubs.map(c => ({ value: c.id, label: c.name }))}
                             />
+                            {(() => {
+                                const selectedClub = clubs.find(c => c.id === currentEvent.clubId);
+                                const subClubs = selectedClub?.subClubGroup?.subClubs || [];
+                                if (subClubs.length > 0) {
+                                    return (
+                                        <Select
+                                            label={`${selectedClub?.subClubGroup?.name || 'Sub-Club'}`}
+                                            value={currentEvent.subClubName || ''}
+                                            onChange={e => setCurrentEvent({ ...currentEvent, subClubName: e.target.value })}
+                                            options={[
+                                                { value: '', label: 'Select (Optional)' },
+                                                ...subClubs.map(sc => ({ value: sc.name, label: sc.name }))
+                                            ]}
+                                        />
+                                    );
+                                }
+                                return null;
+                            })()}
                             <Input
                                 label="Access Password (6 digits)"
                                 value={currentEvent.accessPassword || ''}
@@ -575,6 +593,11 @@ export default function AdminEventsPage() {
                                                     {event.accessPassword && (
                                                         <span className="inline-block px-2 py-0.5 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 tracking-wider">
                                                             PWD: {event.accessPassword}
+                                                        </span>
+                                                    )}
+                                                    {event.subClubName && (
+                                                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                                            {event.subClubName}
                                                         </span>
                                                     )}
                                                 </div>

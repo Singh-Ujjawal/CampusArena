@@ -25,5 +25,9 @@ public class Club {
     
     @NotBlank(message = "Club coordinator ID is required")
     private String clubCoordinatorId;
+    
+    private String description;
+    private String objective;
+    private SubClubGroup subClubGroup;
 }
 

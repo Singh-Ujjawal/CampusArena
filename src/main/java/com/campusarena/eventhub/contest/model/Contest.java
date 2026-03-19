@@ -25,6 +25,7 @@ public class Contest {
     private String clubId; // Reference to Club ID
     @Size(min = 6, max = 6, message = "Password must be exactly 6 digits")
     private String accessPassword;
+    private String subClubName;
     private List<String> problemIds;
     private List<String> facultyCoordinators;
     private List<String> studentCoordinators;

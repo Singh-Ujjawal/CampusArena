@@ -81,6 +81,7 @@ export default function AdminCreateRegistrationForm() {
     const [clubId, setClubId] = useState(searchParams.get('clubId') || '');
     const [eventId, setEventId] = useState(linkedEventId || '');
     const [contestId, setContestId] = useState(linkedContestId || '');
+    const [subClubName, setSubClubName] = useState('');
 
     // Cloudinary image state
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -140,6 +141,7 @@ export default function AdminCreateRegistrationForm() {
             setEvaluationCriteria(data.evaluationCriteria || []);
             setFeedbackEnabled(data.feedbackEnabled || false);
             setFeedbackQuestions(data.feedbackQuestions || []);
+            setSubClubName(data.subClubName || '');
             // Load Cloudinary image if it exists
             if (data.imageUrl) {
                 setImageUrl(data.imageUrl);
@@ -284,6 +286,7 @@ export default function AdminCreateRegistrationForm() {
             paymentRequired,
             paymentFees: finalPaymentFees,
             clubId: clubId || null,
+            subClubName: subClubName || null,
             eventId: eventId || null,
             contestId: contestId || null,
             questions,
@@ -750,6 +753,29 @@ export default function AdminCreateRegistrationForm() {
                                                 ))}
                                             </select>
                                         </div>
+
+                                        {(() => {
+                                            const selectedClub = clubs.find(c => c.id === clubId);
+                                            const subClubs = selectedClub?.subClubGroup?.subClubs || [];
+                                            if (subClubs.length > 0) {
+                                                return (
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">{selectedClub?.subClubGroup?.name || 'Sub-Club'}</label>
+                                                        <select
+                                                            className="w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-white"
+                                                            value={subClubName}
+                                                            onChange={(e) => setSubClubName(e.target.value)}
+                                                        >
+                                                            <option value="">Select (Optional)</option>
+                                                            {subClubs.map(sc => (
+                                                                <option key={sc.name} value={sc.name}>{sc.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
 
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Associate with Event (Quiz)</label>

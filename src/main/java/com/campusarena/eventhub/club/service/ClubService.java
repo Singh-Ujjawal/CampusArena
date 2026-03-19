@@ -38,6 +38,9 @@ public class ClubService {
         club.setImage(newClub.getImage());
         club.setImagePublicId(newClub.getImagePublicId());
         club.setClubCoordinatorId(newClub.getClubCoordinatorId());
+        club.setDescription(newClub.getDescription());
+        club.setObjective(newClub.getObjective());
+        club.setSubClubGroup(newClub.getSubClubGroup());
         return clubRepository.save(club);
     }
 
