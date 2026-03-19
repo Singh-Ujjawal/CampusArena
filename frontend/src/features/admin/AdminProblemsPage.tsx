@@ -4,11 +4,19 @@ import { type Problem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash, Upload } from 'lucide-react';
+import { Plus, Edit, Trash, Upload, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminProblemsPageSkeleton } from '@/components/skeleton';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { DeleteButton } from '@/components/DeleteButton';
+
+const TEST_CASE_FORMAT_EXAMPLE = `[
+  {
+    "input": "10 20",
+    "expectedOutput": "30",
+    "hidden": false
+  }
+]`;
 
 export default function AdminProblemsPage() {
     const [problems, setProblems] = useState<Problem[]>([]);
@@ -16,6 +24,7 @@ export default function AdminProblemsPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [currentProblem, setCurrentProblem] = useState<Partial<Problem>>({});
     const [problemToDelete, setProblemToDelete] = useState<string | null>(null);
+    const [testCaseJson, setTestCaseJson] = useState('');
 
     useEffect(() => {
         fetchProblems();
@@ -65,6 +74,11 @@ export default function AdminProblemsPage() {
         }
     };
 
+    const copyFormat = () => {
+        navigator.clipboard.writeText(TEST_CASE_FORMAT_EXAMPLE);
+        toast.success('Format copied to clipboard');
+    };
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -75,6 +89,7 @@ export default function AdminProblemsPage() {
                 const json = JSON.parse(event.target?.result as string);
                 if (Array.isArray(json)) {
                     setCurrentProblem({ ...currentProblem, testCases: json });
+                    setTestCaseJson(JSON.stringify(json, null, 2));
                     toast.success(`Imported ${json.length} test cases`);
                 } else {
                     toast.error('JSON must be an array of test cases');
@@ -92,7 +107,11 @@ export default function AdminProblemsPage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Problem Studio</h1>
-                <Button onClick={() => { setCurrentProblem({ testCases: [] }); setIsEditing(true); }}>
+                <Button onClick={() => { 
+                    setCurrentProblem({ testCases: [] }); 
+                    setTestCaseJson('');
+                    setIsEditing(true); 
+                }}>
                     <Plus className="mr-2 h-4 w-4" /> Add Problem
                 </Button>
             </div>
@@ -131,25 +150,43 @@ export default function AdminProblemsPage() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Test Cases (JSON Array)</label>
-                                <div className="relative">
-                                    <input
-                                        type="file"
-                                        accept=".json"
-                                        onChange={handleFileUpload}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                    <Button variant="outline" size="sm" type="button">
-                                        <Upload className="h-4 w-4 mr-2" /> Import JSON
+                                <div className="flex items-center space-x-2">
+                                    <Button variant="outline" size="sm" type="button" onClick={copyFormat}>
+                                        <Copy className="h-4 w-4 mr-2" /> Copy Format
                                     </Button>
+                                        <Button variant="outline" size="sm" type="button" onClick={() => {
+                                            // Trigger file input
+                                            const input = document.getElementById('json-upload') as HTMLInputElement;
+                                            input?.click();
+                                        }}>
+                                            <Upload className="h-4 w-4 mr-2" /> Import JSON
+                                        </Button>
+                                        <input
+                                            id="json-upload"
+                                            type="file"
+                                            accept=".json"
+                                            onChange={handleFileUpload}
+                                            className="hidden"
+                                        />
                                 </div>
                             </div>
                             <textarea
                                 className="w-full border rounded-md p-2 font-mono text-xs bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-700"
-                                rows={5}
-                                value={JSON.stringify(currentProblem.testCases || [], null, 2)}
+                                rows={8}
+                                placeholder={TEST_CASE_FORMAT_EXAMPLE}
+                                value={testCaseJson}
                                 onChange={e => {
+                                    const val = e.target.value;
+                                    setTestCaseJson(val);
                                     try {
-                                        setCurrentProblem({ ...currentProblem, testCases: JSON.parse(e.target.value) });
+                                        if (!val.trim()) {
+                                            setCurrentProblem({ ...currentProblem, testCases: [] });
+                                            return;
+                                        }
+                                        const parsed = JSON.parse(val);
+                                        if (Array.isArray(parsed)) {
+                                            setCurrentProblem({ ...currentProblem, testCases: parsed });
+                                        }
                                     } catch (e) { }
                                 }}
                             />
@@ -181,7 +218,11 @@ export default function AdminProblemsPage() {
                                     </div>
                                 </div>
                                 <div className="flex space-x-2">
-                                    <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => { setCurrentProblem(problem); setIsEditing(true); }}><Edit className="h-4 w-4" /></Button>
+                                    <Button size="sm" variant="secondary" className="text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700" onClick={() => { 
+                                        setCurrentProblem(problem); 
+                                        setTestCaseJson(JSON.stringify(problem.testCases || [], null, 2));
+                                        setIsEditing(true); 
+                                    }}><Edit className="h-4 w-4" /></Button>
                                     <DeleteButton
                                         onClick={() => setProblemToDelete(problem.id)}
                                     />

@@ -6,7 +6,8 @@ import {
     ClipboardCheck, Calendar, Clock, AlertCircle,
     Upload, CheckCircle2, BadgeDollarSign,
     ChevronLeft, Send, Loader2, Plus, 
-    Linkedin, Github, Instagram, Twitter, Globe, MessageCircle
+    Linkedin, Github, Instagram, Twitter, Globe, MessageCircle,
+    Image as ImageIcon, MapPin, User
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { useAuth } from '@/context/AuthContext';
@@ -30,6 +31,14 @@ interface RegistrationForm {
     paymentFees?: number;
     imageUrl?: string;
     imagePublicId?: string;
+    noticeUrl?: string;
+    noticePublicId?: string;
+    posterUrl?: string;
+    posterPublicId?: string;
+    showNotice?: boolean;
+    showPoster?: boolean;
+    venue?: string;
+    resourcePerson?: string;
     eventId?: string;
     contestId?: string;
     feedbackEnabled?: boolean;
@@ -327,9 +336,31 @@ export default function RegistrationFormSubmission() {
                             Form
                         </div>
 
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight truncate flex-1">
-                            {form.title}
-                        </h1>
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+                                {form.title}
+                            </h1>
+                            {(form.venue || form.resourcePerson) && (
+                                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2">
+                                    {form.venue && (
+                                        <div className="flex items-center gap-2 px-2.5 py-1 bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 rounded-full">
+                                            <MapPin className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                                            <span className="text-[11px] sm:text-xs font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wide">
+                                                {form.venue}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {form.resourcePerson && (
+                                        <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-full">
+                                            <User className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                            <span className="text-[11px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
+                                                {form.resourcePerson}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {(isClosed || isUpcoming) && (
                             <div className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 shadow-sm font-bold text-xs sm:text-sm whitespace-nowrap shrink-0 animate-pulse ${
@@ -421,7 +452,6 @@ export default function RegistrationFormSubmission() {
                                                     </label>
                                                 </div>
                                             </div>
-
                                             <div className="pl-11 space-y-3.5">
                                                 {q.type === 'TEXT' && (
                                                     <motion.input
@@ -544,7 +574,7 @@ export default function RegistrationFormSubmission() {
                                                                     <motion.div
                                                                         initial={{ scale: 0.95 }}
                                                                         animate={{ scale: 1 }}
-                                                                        className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm inline-flex items-center gap-3 border border-slate-200 dark:border-slate-700 w-full max-w-sm"
+                                                                        className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm inline-flex items-center gap-3 border border-slate-200 dark:border-slate-700 w-full max-sm:max-w-xs"
                                                                     >
                                                                         <div className="h-10 w-10 rounded-md bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
                                                                             <Upload className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -691,6 +721,52 @@ export default function RegistrationFormSubmission() {
                                                 </div>
                                             </motion.div>
                                         )}
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {/* Notice & Poster Cards */}
+                        {form.noticeUrl && form.showNotice && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                            >
+                                <Card className="border border-blue-100 dark:border-blue-900/40 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                                    <CardHeader className="p-5 border-b border-blue-50 dark:border-blue-900/30 bg-blue-50/30 dark:bg-blue-900/10">
+                                        <CardTitle className="flex items-center gap-2.5 text-base font-bold text-blue-800 dark:text-blue-400">
+                                            <AlertCircle className="h-4 w-4" />
+                                            Official Notice / Circular
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5">
+                                        <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <img src={form.noticeUrl} alt="Notice" className="w-full h-auto rounded-md cursor-zoom-in" onClick={() => window.open(form.noticeUrl, '_blank')} />
+                                        </div>
+                                        <p className="text-[10px] text-center text-slate-400 mt-2 font-medium italic">Click to view full size</p>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        )}
+
+                        {form.posterUrl && form.showPoster && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <Card className="border border-purple-100 dark:border-purple-900/40 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                                    <CardHeader className="p-5 border-b border-purple-50 dark:border-purple-900/30 bg-purple-50/30 dark:bg-purple-900/10">
+                                        <CardTitle className="flex items-center gap-2.5 text-base font-bold text-purple-800 dark:text-purple-400">
+                                            <ImageIcon className="h-4 w-4" />
+                                            Event Poster
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-5">
+                                        <div className="bg-slate-50 dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <img src={form.posterUrl} alt="Poster" className="w-full h-auto rounded-md cursor-zoom-in" onClick={() => window.open(form.posterUrl, '_blank')} />
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </motion.div>

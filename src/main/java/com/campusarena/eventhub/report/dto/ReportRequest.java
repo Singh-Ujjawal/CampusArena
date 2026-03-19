@@ -15,7 +15,9 @@ public class ReportRequest {
     private String id;
     private String eventId;
     private String eventType; // QUIZ, CONTEST, REGISTRATION
-    private String venue;
     private String objective;
+    private String impactAnalysis;
+    private List<String> photographs;
+    private List<String> photoPublicIds;
     private List<String> socialMediaLinks;
 }

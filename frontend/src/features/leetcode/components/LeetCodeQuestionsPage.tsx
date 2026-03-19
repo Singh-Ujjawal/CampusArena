@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/axios';
-import { ExternalLink, Code2, Search, Trophy, Settings, CheckCircle2, Circle } from 'lucide-react';
+import { ExternalLink, Code2, Search, Trophy, Settings, CheckCircle2, Circle, RefreshCw, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
@@ -8,6 +8,8 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { LeetCodeQuestionsSkeleton } from '@/components/skeleton';
+import { toast } from 'sonner';
+import { type LcUserProfile } from '../types';
 
 interface LcQuestion {
     id: string;
@@ -18,25 +20,55 @@ interface LcQuestion {
     isSolved?: boolean;
 }
 
+const COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes — must match backend
+
+function formatRelativeTime(isoString: string | null): string {
+    if (!isoString) return 'Never';
+    const date = new Date(isoString);
+    const diff = Date.now() - date.getTime();
+    const secs = Math.floor(diff / 1000);
+    if (secs < 60) return `${secs}s ago`;
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return date.toLocaleDateString();
+}
+
+function getCooldownRemaining(lastSyncedTimestamp: number | null): number {
+    if (!lastSyncedTimestamp) return 0;
+    const elapsed = Date.now() - lastSyncedTimestamp;
+    return Math.max(0, Math.ceil((COOLDOWN_MS - elapsed) / 1000));
+}
+
 export default function LeetCodeQuestionsPage() {
     const { user, isStaff } = useAuth();
     const [questions, setQuestions] = useState<LcQuestion[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [profile, setProfile] = useState<LcUserProfile | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [cooldownSecs, setCooldownSecs] = useState(0);
 
-    const fetchQuestions = async () => {
+    const fetchQuestions = useCallback(async () => {
         if (!user) return;
         try {
             // Fetch questions and user's LeetCode profile (which contains activity stats)
             const [questionsRes, profileRes] = await Promise.all([
                 api.get('/leetcode/questions'),
-                api.get(`/leetcode/profile/${user.id}`).catch(() => ({ data: { topicStats: {} } }))
+                api.get(`/leetcode/profile/${user.id}`).catch(() => ({ data: null }))
             ]);
 
-            const topicStats = profileRes.data.topicStats || {};
+            const profileData: LcUserProfile | null = profileRes.data;
+            setProfile(profileData);
+            
+            if (profileData) {
+                setCooldownSecs(getCooldownRemaining(profileData.lastSyncedTimestamp));
+            }
+
+            const topicStats = profileData?.topicStats || {};
             
             // Heuristic: If question's topic exists in user's solved topic stats, mark as solved
-            // The user mentioned checking profile statistics to determine solved status
             const questionsWithStatus = questionsRes.data.map((q: LcQuestion) => ({
                 ...q,
                 isSolved: !!topicStats[q.topic] && topicStats[q.topic] > 0
@@ -48,11 +80,49 @@ export default function LeetCodeQuestionsPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         fetchQuestions();
-    }, [user]);
+    }, [fetchQuestions]);
+
+    // Countdown ticker
+    useEffect(() => {
+        if (cooldownSecs <= 0) return;
+        const timer = setInterval(() => {
+            setCooldownSecs(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [cooldownSecs]);
+
+    const handleSync = async () => {
+        if (!user) return;
+        setIsSyncing(true);
+        try {
+            const res = await api.post(`/leetcode/sync/${user.id}`);
+            const msg = res.data?.message || 'LeetCode submissions synced!';
+            toast.success(msg);
+            await fetchQuestions();
+        } catch (error: any) {
+            const serverMsg: string =
+                error.response?.data?.message ||
+                error.response?.data ||
+                'Failed to sync LeetCode submissions';
+            const match = serverMsg.match(/Please wait (\d+) seconds/i);
+            if (match) {
+                setCooldownSecs(parseInt(match[1], 10));
+            }
+            toast.error(serverMsg);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const filteredQuestions = questions.filter(q =>
         q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -62,6 +132,13 @@ export default function LeetCodeQuestionsPage() {
     if (isLoading) {
         return <LeetCodeQuestionsSkeleton />;
     }
+
+    const onCooldown = cooldownSecs > 0;
+    const cooldownMins = Math.floor(cooldownSecs / 60);
+    const cooldownRemSecs = cooldownSecs % 60;
+    const cooldownLabel = cooldownMins > 0
+        ? `${cooldownMins}m ${cooldownRemSecs}s`
+        : `${cooldownSecs}s`;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -97,8 +174,29 @@ export default function LeetCodeQuestionsPage() {
                     </div>
                     
                     <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button
+                            onClick={handleSync}
+                            disabled={isSyncing || onCooldown}
+                            title={onCooldown ? `Cooldown: ${cooldownLabel} remaining` : 'Sync submissions'}
+                            variant="outline"
+                            className={`h-10 px-4 rounded-xl font-bold text-xs transition-all border-slate-200 dark:border-slate-800 ${
+                                onCooldown 
+                                    ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 opacity-70' 
+                                    : 'hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400'
+                            }`}
+                        >
+                            {isSyncing ? (
+                                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                            ) : onCooldown ? (
+                                <Clock className="h-3.5 w-3.5 mr-2" />
+                            ) : (
+                                <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                            )}
+                            {isSyncing ? 'Syncing...' : onCooldown ? cooldownLabel : 'Sync Now'}
+                        </Button>
+
                         <Link to="/leetcode/leaderboard" className="flex-1 sm:flex-none">
-                            <Button variant="outline" className="w-full h-10 px-4 rounded-xl font-bold text-xs border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                            <Button variant="outline" className="w-full h-10 px-4 rounded-xl font-bold text-xs border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300">
                                 <Trophy className="h-3.5 w-3.5 mr-2 text-amber-500" />
                                 Leaderboard
                             </Button>
@@ -113,6 +211,16 @@ export default function LeetCodeQuestionsPage() {
                         )}
                     </div>
                 </div>
+
+                {/* Last Sync Info Tooltip-like Area */}
+                {profile?.lastSyncTime && (
+                    <div className="absolute bottom-1 right-6 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                            Last Refreshed: {formatRelativeTime(profile.lastSyncTime)}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Questions Grid/List */}

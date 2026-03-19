@@ -79,6 +79,20 @@ public class RegistrationFormService {
             cloudinaryService.deleteImage(existing.getImagePublicId());
         }
 
+        // Delete old notice image from Cloudinary if a new one is provided
+        if (updatedForm.getNoticeUrl() != null && !updatedForm.getNoticeUrl().isEmpty() 
+                && !updatedForm.getNoticeUrl().equals(existing.getNoticeUrl())
+                && existing.getNoticePublicId() != null) {
+            cloudinaryService.deleteImage(existing.getNoticePublicId());
+        }
+
+        // Delete old poster image from Cloudinary if a new one is provided
+        if (updatedForm.getPosterUrl() != null && !updatedForm.getPosterUrl().isEmpty() 
+                && !updatedForm.getPosterUrl().equals(existing.getPosterUrl())
+                && existing.getPosterPublicId() != null) {
+            cloudinaryService.deleteImage(existing.getPosterPublicId());
+        }
+
         existing.setTitle(updatedForm.getTitle());
         existing.setDescription(updatedForm.getDescription());
         existing.setQuestions(updatedForm.getQuestions());
@@ -90,8 +104,17 @@ public class RegistrationFormService {
         existing.setClubId(updatedForm.getClubId());
         existing.setEventId(updatedForm.getEventId());
         existing.setContestId(updatedForm.getContestId());
+        existing.setSubClubName(updatedForm.getSubClubName());
         existing.setImageUrl(updatedForm.getImageUrl());
         existing.setImagePublicId(updatedForm.getImagePublicId());
+        existing.setNoticeUrl(updatedForm.getNoticeUrl());
+        existing.setNoticePublicId(updatedForm.getNoticePublicId());
+        existing.setPosterUrl(updatedForm.getPosterUrl());
+        existing.setPosterPublicId(updatedForm.getPosterPublicId());
+        existing.setShowNotice(updatedForm.isShowNotice());
+        existing.setShowPoster(updatedForm.isShowPoster());
+        existing.setVenue(updatedForm.getVenue());
+        existing.setResourcePerson(updatedForm.getResourcePerson());
         existing.setEvaluationCriteria(updatedForm.getEvaluationCriteria());
         existing.setFeedbackEnabled(updatedForm.getFeedbackEnabled());
         existing.setFeedbackQuestions(updatedForm.getFeedbackQuestions());
@@ -122,9 +145,15 @@ public class RegistrationFormService {
             }
         }
 
-        // Delete image from Cloudinary before deleting the form
+        // Delete images from Cloudinary before deleting the form
         if (form.getImagePublicId() != null && !form.getImagePublicId().isEmpty()) {
             cloudinaryService.deleteImage(form.getImagePublicId());
+        }
+        if (form.getNoticePublicId() != null && !form.getNoticePublicId().isEmpty()) {
+            cloudinaryService.deleteImage(form.getNoticePublicId());
+        }
+        if (form.getPosterPublicId() != null && !form.getPosterPublicId().isEmpty()) {
+            cloudinaryService.deleteImage(form.getPosterPublicId());
         }
 
         formRepository.delete(form);

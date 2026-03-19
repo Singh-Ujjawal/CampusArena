@@ -24,12 +24,20 @@ public class Report {
     private Instant date;
     private String time;
     private String venue;
+    private String resourcePerson;
+    private String noticeUrl;
+    private String noticePublicId;
+    private String posterUrl;
+    private String posterPublicId;
+    private List<String> photographs; // List of image URLs
+    private List<String> photoPublicIds; // List of public IDs for deletion
     private List<String> facultyCoordinators;
     private List<String> studentCoordinators;
     private String clubName;
     private String subClubName;
     private String objective;
     private String description;
+    private String impactAnalysis;
     private List<ParticipantInfo> participants;
     private List<ParticipantInfo> winners;
     private List<String> socialMediaLinks;

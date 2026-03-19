@@ -60,8 +60,10 @@ public class ReportService {
                 .id(existingReport.map(Report::getId).orElse(null))
                 .eventId(request.getEventId())
                 .eventType(request.getEventType())
-                .venue(request.getVenue())
                 .objective(request.getObjective())
+                .impactAnalysis(request.getImpactAnalysis())
+                .photographs(request.getPhotographs())
+                .photoPublicIds(request.getPhotoPublicIds())
                 .socialMediaLinks(request.getSocialMediaLinks())
                 .createdAt(existingReport.map(Report::getCreatedAt).orElse(Instant.now()))
                 .createdBy(existingReport.map(Report::getCreatedBy).orElse(createdBy));
@@ -89,6 +91,14 @@ public class ReportService {
             
             List<Report.ParticipantInfo> participants;
             Optional<RegistrationForm> regForm = registrationFormRepository.findByEventId(event.getId());
+            if (regForm.isPresent()) {
+                reportBuilder.venue(regForm.get().getVenue());
+                reportBuilder.resourcePerson(regForm.get().getResourcePerson());
+                reportBuilder.noticeUrl(regForm.get().getNoticeUrl());
+                reportBuilder.noticePublicId(regForm.get().getNoticePublicId());
+                reportBuilder.posterUrl(regForm.get().getPosterUrl());
+                reportBuilder.posterPublicId(regForm.get().getPosterPublicId());
+            }
             
             if (regForm.isPresent()) {
                 List<RegistrationResponse> responses = registrationResponseRepository.findByFormId(regForm.get().getId());
@@ -156,6 +166,14 @@ public class ReportService {
             
             List<Report.ParticipantInfo> participants;
             Optional<RegistrationForm> regForm = registrationFormRepository.findByContestId(contest.getId());
+            if (regForm.isPresent()) {
+                reportBuilder.venue(regForm.get().getVenue());
+                reportBuilder.resourcePerson(regForm.get().getResourcePerson());
+                reportBuilder.noticeUrl(regForm.get().getNoticeUrl());
+                reportBuilder.noticePublicId(regForm.get().getNoticePublicId());
+                reportBuilder.posterUrl(regForm.get().getPosterUrl());
+                reportBuilder.posterPublicId(regForm.get().getPosterPublicId());
+            }
             
             if (regForm.isPresent()) {
                 List<RegistrationResponse> responses = registrationResponseRepository.findByFormId(regForm.get().getId());
@@ -209,7 +227,13 @@ public class ReportService {
             reportBuilder.eventName(form.getTitle())
                     .date(form.getStartTime())
                     .time(TIME_FORMATTER.format(form.getStartTime()) + " - " + (form.getEndTime() != null ? TIME_FORMATTER.format(form.getEndTime()) : "N/A"))
-                    .description(form.getDescription());
+                    .description(form.getDescription())
+                    .venue(form.getVenue())
+                    .resourcePerson(form.getResourcePerson())
+                    .noticeUrl(form.getNoticeUrl())
+                    .noticePublicId(form.getNoticePublicId())
+                    .posterUrl(form.getPosterUrl())
+                    .posterPublicId(form.getPosterPublicId());
 
 
             if (form.getClubId() != null) {
