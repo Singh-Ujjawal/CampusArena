@@ -27,6 +27,14 @@ public class RegistrationForm {
     private Instant endTime;
     private String imageUrl;        // Cloudinary secure URL (HTTPS)
     private String imagePublicId;   // Cloudinary public ID for deletion
+    private String noticeUrl;       // Cloudinary secure URL for notice
+    private String noticePublicId;  // Cloudinary public ID for notice
+    private String posterUrl;       // Cloudinary secure URL for poster
+    private String posterPublicId;  // Cloudinary public ID for poster
+    private boolean showNotice;     // Toggle to show notice to user
+    private boolean showPoster;     // Toggle to show poster to user
+    private String venue;           // Optional venue for the event
+    private String resourcePerson;  // Optional resource person for the event
     private Boolean paymentRequired;
     private BigDecimal paymentFees;
     private boolean active;

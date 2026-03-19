@@ -133,7 +133,11 @@ export default function AdminEventAnalyticsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400">{analytics.totalAttempts}</div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{((analytics.totalAttempts / analytics.totalRegistrations) * 100).toFixed(1)}% participation</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {analytics.totalRegistrations > 0 
+                                ? `${((analytics.totalAttempts / analytics.totalRegistrations) * 100).toFixed(1)}% participation`
+                                : '0% participation'}
+                        </p>
                     </CardContent>
                 </Card>
 
@@ -154,7 +158,9 @@ export default function AdminEventAnalyticsPage() {
                         <Target className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{analytics.passPercentage.toFixed(1)}%</div>
+                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                            {isNaN(analytics.passPercentage) ? '0.0' : analytics.passPercentage.toFixed(1)}%
+                        </div>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Success rate</p>
                     </CardContent>
                 </Card>
@@ -182,7 +188,9 @@ export default function AdminEventAnalyticsPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">{analytics.averageScore.toFixed(2)}</div>
+                        <div className="text-3xl font-bold">
+                            {isNaN(analytics.averageScore) ? '0.00' : analytics.averageScore.toFixed(2)}
+                        </div>
                     </CardContent>
                 </Card>
 

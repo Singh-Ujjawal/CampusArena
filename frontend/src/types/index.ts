@@ -234,14 +234,20 @@ export interface Report {
     date: string;
     time: string;
     venue?: string;
+    resourcePerson?: string;
     facultyCoordinators: string[];
     studentCoordinators: string[];
     clubName?: string;
     subClubName?: string;
     objective: string;
     description: string;
+    impactAnalysis?: string;
     participants: ParticipantInfo[];
     winners: ParticipantInfo[];
+    photographs: string[];
+    photoPublicIds: string[];
+    noticeUrl?: string;
+    posterUrl?: string;
     socialMediaLinks: string[];
     createdAt: string;
     createdBy: string;
@@ -257,10 +263,13 @@ export interface ParticipantInfo {
 }
 
 export interface ReportRequest {
+    id?: string;
     eventId: string;
     eventType: 'QUIZ' | 'CONTEST' | 'REGISTRATION';
-    venue?: string;
     objective: string;
+    impactAnalysis?: string;
+    photographs?: string[];
+    photoPublicIds?: string[];
     socialMediaLinks?: string[];
 }
 

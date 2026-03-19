@@ -5,7 +5,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
     Plus, Trash2, Image as ImageIcon, X, ChevronLeft,
     Save, Layout, Settings, FileQuestion, BadgeDollarSign,
-    Calendar, Clock, Loader2, Trophy, MessageSquare
+    Calendar, Clock, Loader2, Trophy, MessageSquare, MapPin, User
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
@@ -89,6 +89,22 @@ export default function AdminCreateRegistrationForm() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+    const [noticeUrl, setNoticeUrl] = useState<string | null>(null);
+    const [noticePublicId, setNoticePublicId] = useState<string | null>(null);
+    const [noticePreview, setNoticePreview] = useState<string | null>(null);
+    const [isUploadingNotice, setIsUploadingNotice] = useState(false);
+
+    const [posterUrl, setPosterUrl] = useState<string | null>(null);
+    const [posterPublicId, setPosterPublicId] = useState<string | null>(null);
+    const [posterPreview, setPosterPreview] = useState<string | null>(null);
+    const [isUploadingPoster, setIsUploadingPoster] = useState(false);
+
+    const [showNotice, setShowNotice] = useState(true);
+    const [showPoster, setShowPoster] = useState(true);
+
+    const [venue, setVenue] = useState('');
+    const [resourcePerson, setResourcePerson] = useState('');
+
     const [questions, setQuestions] = useState<Question[]>([]);
     const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([]);
     const [evaluationCriteria, setEvaluationCriteria] = useState<EvaluationCriterion[]>([]);
@@ -142,12 +158,26 @@ export default function AdminCreateRegistrationForm() {
             setFeedbackEnabled(data.feedbackEnabled || false);
             setFeedbackQuestions(data.feedbackQuestions || []);
             setSubClubName(data.subClubName || '');
-            // Load Cloudinary image if it exists
+            // Load Cloudinary images if they exist
             if (data.imageUrl) {
                 setImageUrl(data.imageUrl);
                 setImagePublicId(data.imagePublicId || null);
                 setImagePreview(data.imageUrl);
             }
+            if (data.noticeUrl) {
+                setNoticeUrl(data.noticeUrl);
+                setNoticePublicId(data.noticePublicId || null);
+                setNoticePreview(data.noticeUrl);
+            }
+            if (data.posterUrl) {
+                setPosterUrl(data.posterUrl);
+                setPosterPublicId(data.posterPublicId || null);
+                setPosterPreview(data.posterUrl);
+            }
+            setShowNotice(data.showNotice ?? true);
+            setShowPoster(data.showPoster ?? true);
+            setVenue(data.venue || '');
+            setResourcePerson(data.resourcePerson || '');
         } catch (error) {
             toast.error('Failed to load form data');
         }
@@ -254,6 +284,50 @@ export default function AdminCreateRegistrationForm() {
         }
     };
 
+    const handleNoticeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingNotice(true);
+        try {
+            const result = await uploadToCloudinary(file);
+            if (result.error) {
+                toast.error(result.error);
+                return;
+            }
+            setNoticeUrl(result.secure_url);
+            setNoticePublicId(result.public_id);
+            setNoticePreview(result.secure_url);
+            toast.success('Notice uploaded successfully!');
+        } catch (error) {
+            toast.error('Failed to upload notice');
+        } finally {
+            setIsUploadingNotice(false);
+        }
+    };
+
+    const handlePosterChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingPoster(true);
+        try {
+            const result = await uploadToCloudinary(file);
+            if (result.error) {
+                toast.error(result.error);
+                return;
+            }
+            setPosterUrl(result.secure_url);
+            setPosterPublicId(result.public_id);
+            setPosterPreview(result.secure_url);
+            toast.success('Poster uploaded successfully!');
+        } catch (error) {
+            toast.error('Failed to upload poster');
+        } finally {
+            setIsUploadingPoster(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (questions.length === 0) {
@@ -292,6 +366,14 @@ export default function AdminCreateRegistrationForm() {
             questions,
             imageUrl: imageUrl || null,
             imagePublicId: imagePublicId || null,
+            noticeUrl: noticeUrl || null,
+            noticePublicId: noticePublicId || null,
+            posterUrl: posterUrl || null,
+            posterPublicId: posterPublicId || null,
+            showNotice,
+            showPoster,
+            venue: venue || null,
+            resourcePerson: resourcePerson || null,
             evaluationCriteria: evaluationCriteria,
             socialMediaLinks,
             feedbackEnabled,
@@ -394,6 +476,39 @@ export default function AdminCreateRegistrationForm() {
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                 />
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-50 dark:border-gray-700/50">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                                            <MapPin className="h-3 w-3" />
+                                            Venue (Optional)
+                                        </label>
+                                        <div className="relative group">
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Auditorium / Room 101"
+                                                className="w-full bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-700/50 rounded-xl py-2.5 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 outline-none transition-all dark:text-gray-200 text-sm"
+                                                value={venue}
+                                                onChange={(e) => setVenue(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                                            <User className="h-3 w-3" />
+                                            Resource Person (Optional)
+                                        </label>
+                                        <div className="relative group">
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Dr. John Doe"
+                                                className="w-full bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-700/50 rounded-xl py-2.5 px-4 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 outline-none transition-all dark:text-gray-200 text-sm"
+                                                value={resourcePerson}
+                                                onChange={(e) => setResourcePerson(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -767,8 +882,8 @@ export default function AdminCreateRegistrationForm() {
                                                             onChange={(e) => setSubClubName(e.target.value)}
                                                         >
                                                             <option value="">Select (Optional)</option>
-                                                            {subClubs.map(sc => (
-                                                                <option key={sc.name} value={sc.name}>{sc.name}</option>
+                                                            {subClubs.map((sub: any) => (
+                                                                <option key={sub.name} value={sub.name}>{sub.name}</option>
                                                             ))}
                                                         </select>
                                                     </div>
@@ -839,6 +954,38 @@ export default function AdminCreateRegistrationForm() {
                                     />
                                     <div className={`w-12 h-6 rounded-full relative transition-all ${feedbackEnabled ? 'bg-indigo-600' : 'bg-gray-300'}`}>
                                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${feedbackEnabled ? 'left-7' : 'left-1'}`}></div>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-center justify-between p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl cursor-pointer">
+                                    <div className="flex items-center gap-2">
+                                        <ImageIcon className="h-4 w-4 text-blue-600" />
+                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Show Notice to User</span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={showNotice}
+                                        onChange={e => setShowNotice(e.target.checked)}
+                                    />
+                                    <div className={`w-12 h-6 rounded-full relative transition-all ${showNotice ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showNotice ? 'left-7' : 'left-1'}`}></div>
+                                    </div>
+                                </label>
+
+                                <label className="flex items-center justify-between p-3 bg-purple-50/50 dark:bg-purple-900/10 rounded-xl cursor-pointer">
+                                    <div className="flex items-center gap-2">
+                                        <ImageIcon className="h-4 w-4 text-purple-600" />
+                                        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Show Poster to User</span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={showPoster}
+                                        onChange={e => setShowPoster(e.target.checked)}
+                                    />
+                                    <div className={`w-12 h-6 rounded-full relative transition-all ${showPoster ? 'bg-purple-600' : 'bg-gray-300'}`}>
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showPoster ? 'left-7' : 'left-1'}`}></div>
                                     </div>
                                 </label>
                             </div>
@@ -932,10 +1079,8 @@ export default function AdminCreateRegistrationForm() {
                                         onChange={(e) => setPaymentFees(e.target.value)}
                                     />
                                 </div>
-                            )}
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-600 dark:text-gray-400">Poster / QR Attachment</label>
+                            )}                             <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-600 dark:text-gray-400">Payment QR Code (Required if Payment Enabled)</label>
                                 <div className="border-2 border-dashed border-gray-100 dark:border-gray-700 rounded-2xl p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer relative min-h-[140px] flex flex-col items-center justify-center">
                                     {isUploadingImage && (
                                         <div className="flex flex-col items-center justify-center gap-3">
@@ -958,7 +1103,7 @@ export default function AdminCreateRegistrationForm() {
                                     ) : !isUploadingImage ? (
                                         <>
                                             <ImageIcon className="h-8 w-8 text-gray-300 mb-2" />
-                                            <p className="text-xs text-gray-400 px-4">Upload a banner or payment QR code (Max 2MB, JPG/PNG)</p>
+                                            <p className="text-xs text-gray-400 px-4">Upload payment QR code (Max 2MB, JPG/PNG)</p>
                                             <input 
                                                 type="file" 
                                                 className="absolute inset-0 opacity-0 cursor-pointer" 
@@ -968,9 +1113,83 @@ export default function AdminCreateRegistrationForm() {
                                             />
                                         </>
                                     ) : null}
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-600 dark:text-gray-400">Notice Attachment (Circular/Rules)</label>
+                                <div className="border-2 border-dashed border-gray-100 dark:border-gray-700 rounded-2xl p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer relative min-h-[140px] flex flex-col items-center justify-center">
+                                    {isUploadingNotice && (
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+                                            <p className="text-xs text-gray-500">Uploading to Cloudinary...</p>
+                                        </div>
+                                    )}
+                                    {!isUploadingNotice && noticePreview ? (
+                                        <div className="relative w-full h-full min-h-[100px]">
+                                            <img src={noticePreview} alt="Notice Preview" className="w-full h-full object-contain rounded-xl" />
+                                            <Button
+                                                variant="danger"
+                                                size="sm"
+                                                className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 shadow-lg"
+                                                onClick={(e) => { e.preventDefault(); setNoticeUrl(null); setNoticePublicId(null); setNoticePreview(null); }}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ) : !isUploadingNotice ? (
+                                        <>
+                                            <ImageIcon className="h-8 w-8 text-gray-300 mb-2" />
+                                            <p className="text-xs text-gray-400 px-4">Upload Notice image (Max 2MB, JPG/PNG)</p>
+                                            <input 
+                                                type="file" 
+                                                className="absolute inset-0 opacity-0 cursor-pointer" 
+                                                onChange={handleNoticeChange} 
+                                                accept="image/jpeg,image/jpg,image/png"
+                                                disabled={isUploadingNotice}
+                                            />
+                                        </>
+                                    ) : null}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-gray-600 dark:text-gray-400">Event Poster</label>
+                                <div className="border-2 border-dashed border-gray-100 dark:border-gray-700 rounded-2xl p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-900 transition-all cursor-pointer relative min-h-[140px] flex flex-col items-center justify-center">
+                                    {isUploadingPoster && (
+                                        <div className="flex flex-col items-center justify-center gap-3">
+                                            <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+                                            <p className="text-xs text-gray-500">Uploading to Cloudinary...</p>
+                                        </div>
+                                    )}
+                                    {!isUploadingPoster && posterPreview ? (
+                                        <div className="relative w-full h-full min-h-[100px]">
+                                            <img src={posterPreview} alt="Poster Preview" className="w-full h-full object-contain rounded-xl" />
+                                            <Button
+                                                variant="danger"
+                                                size="sm"
+                                                className="absolute -top-2 -right-2 h-8 w-8 rounded-full p-0 shadow-lg"
+                                                onClick={(e) => { e.preventDefault(); setPosterUrl(null); setPosterPublicId(null); setPosterPreview(null); }}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ) : !isUploadingPoster ? (
+                                        <>
+                                            <ImageIcon className="h-8 w-8 text-gray-300 mb-2" />
+                                            <p className="text-xs text-gray-400 px-4">Upload Event Poster (Max 2MB, JPG/PNG)</p>
+                                            <input 
+                                                type="file" 
+                                                className="absolute inset-0 opacity-0 cursor-pointer" 
+                                                onChange={handlePosterChange} 
+                                                accept="image/jpeg,image/jpg,image/png"
+                                                disabled={isUploadingPoster}
+                                            />
+                                        </>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </CardContent>
                     </Card>
                 </div>
             </div>

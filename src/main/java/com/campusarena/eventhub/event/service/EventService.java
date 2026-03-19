@@ -312,11 +312,16 @@ public class EventService {
         }
 
         List<McqSubmission> submissions = submissionRepository
-                .findByEventIdOrderByTotalScoreDescSubmittedAtAsc(eventId);
+                .findByEventIdOrderByTotalScoreDescSubmittedAtAsc(eventId)
+                .stream()
+                .filter(s -> "COMPLETED".equals(s.getStatus()) || "AUTO_SUBMITTED".equals(s.getStatus()))
+                .filter(s -> s.getTotalScore() != null)
+                .collect(Collectors.toList());
+
         long totalAttempts = submissions.size();
         long totalAbsent = Math.max(0, totalRegistrations - totalAttempts);
 
-        if (submissions.isEmpty()) {
+        if (totalAttempts == 0) {
             return new AdminEventAnalyticsDTO(totalRegistrations, 0, totalRegistrations, 0, 0, 0, 0, List.of());
         }
 
@@ -364,6 +369,7 @@ public class EventService {
         event.setTotalMarks(updatedEvent.getTotalMarks());
         event.setClubId(updatedEvent.getClubId());
         event.setAccessPassword(updatedEvent.getAccessPassword());
+        event.setSubClubName(updatedEvent.getSubClubName());
         event.setFacultyCoordinators(updatedEvent.getFacultyCoordinators());
         event.setStudentCoordinators(updatedEvent.getStudentCoordinators());
         event.setRegistrationRequired(

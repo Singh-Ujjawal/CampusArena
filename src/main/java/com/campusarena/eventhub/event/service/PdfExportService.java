@@ -20,6 +20,9 @@ public class PdfExportService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
+            if (analytics == null) {
+                throw new IllegalArgumentException("Analytics data is missing");
+            }
             PdfWriter.getInstance(document, out);
             document.open();
 
@@ -56,26 +59,30 @@ public class PdfExportService {
             document.add(summaryTable);
             document.add(new Paragraph(" "));
 
-            Paragraph topTitle = new Paragraph("Top Performers", titleFont);
-            topTitle.setSpacingBefore(10);
-            document.add(topTitle);
-            document.add(new Paragraph(" "));
+            if (analytics.getTopPerformers() != null && !analytics.getTopPerformers().isEmpty()) {
+                Paragraph topTitle = new Paragraph("Top Performers", titleFont);
+                topTitle.setSpacingBefore(10);
+                document.add(topTitle);
+                document.add(new Paragraph(" "));
 
-            PdfPTable topTable = new PdfPTable(4);
-            topTable.setWidthPercentage(100);
-            addHeaderCell(topTable, "Rank");
-            addHeaderCell(topTable, "User");
-            addHeaderCell(topTable, "Roll Number");
-            addHeaderCell(topTable, "Score");
+                PdfPTable topTable = new PdfPTable(4);
+                topTable.setWidthPercentage(100);
+                addHeaderCell(topTable, "Rank");
+                addHeaderCell(topTable, "User");
+                addHeaderCell(topTable, "Roll Number");
+                addHeaderCell(topTable, "Score");
 
-            for (TopPerformerDTO performer : analytics.getTopPerformers()) {
-                addCell(topTable, String.valueOf(performer.getRank()));
-                addCell(topTable, performer.getUsername());
-                addCell(topTable, performer.getRollNumber());
-                addCell(topTable, String.valueOf(performer.getScore()));
+                for (TopPerformerDTO performer : analytics.getTopPerformers()) {
+                    addCell(topTable, String.valueOf(performer.getRank()));
+                    addCell(topTable, performer.getUsername() != null ? performer.getUsername() : "Unknown");
+                    addCell(topTable, performer.getRollNumber() != null ? performer.getRollNumber() : "N/A");
+                    addCell(topTable, String.valueOf(performer.getScore()));
+                }
+
+                document.add(topTable);
+            } else {
+                document.add(new Paragraph("No top performers data available.", normalFont));
             }
-
-            document.add(topTable);
             document.close();
         } catch (Exception e) {
             throw new RuntimeException("Error generating PDF", e);

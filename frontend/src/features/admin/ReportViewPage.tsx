@@ -6,7 +6,7 @@ import {
     ChevronLeft, FileText, Calendar, 
     Clock, MapPin, Users, Trophy, ExternalLink, 
     Download, Target, Info, Shield, Award,
-    CheckCircle2, MessageSquare, RotateCcw
+    CheckCircle2, MessageSquare, RotateCcw, User
 } from 'lucide-react';
 import { CreateReportDialog } from './components/CreateReportDialog';
 import { DeleteButton } from '@/components/DeleteButton';
@@ -73,6 +73,13 @@ export default function ReportViewPage() {
                 eventType: data.eventType || '',
                 participants: Array.isArray(data.participants) ? data.participants : [],
                 winners: Array.isArray(data.winners) ? data.winners : [],
+                photographs: Array.isArray(data.photographs) ? data.photographs : [],
+                photoPublicIds: Array.isArray(data.photoPublicIds) ? data.photoPublicIds : [],
+                noticeUrl: data.noticeUrl || '',
+                posterUrl: data.posterUrl || '',
+                objective: data.objective || '',
+                impactAnalysis: data.impactAnalysis || '',
+                resourcePerson: data.resourcePerson || '',
                 socialMediaLinks: Array.isArray(data.socialMediaLinks) 
                     ? data.socialMediaLinks.filter((l: any) => typeof l === 'string') 
                     : [],
@@ -156,12 +163,14 @@ export default function ReportViewPage() {
                     { header: 'DATE', dataKey: 'date' },
                     { header: 'TIME', dataKey: 'time' },
                     { header: 'VENUE', dataKey: 'venue' },
+                    { header: 'RESOURCE PERSON', dataKey: 'resourcePerson' },
                     { header: 'PARTICIPANTS', dataKey: 'participants' }
                 ],
                 body: [[
                     new Date(report.date).toLocaleDateString(undefined, { dateStyle: 'long' }),
                     report.time,
                     report.venue || 'TBD/Online',
+                    (report as any).resourcePerson || 'N/A',
                     report.participants.length.toString()
                 ]],
                 margin: { left: 15, right: 15 }
@@ -185,6 +194,9 @@ export default function ReportViewPage() {
             };
 
             drawSection('EXECUTIVE OBJECTIVE', report.objective);
+            if (report.impactAnalysis) {
+                drawSection('IMPACT ANALYSIS / OUTCOME', report.impactAnalysis);
+            }
             drawSection('EVENT SUMMARY', report.description);
 
             // 5. Winners Highlight (Top 3)
@@ -318,8 +330,73 @@ export default function ReportViewPage() {
                 doc.text('Campus Arena Report Infrastructure © 2026', 15, pageHeight - 10);
             }
 
-            const fileName = `${report.eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_full_report.pdf`;
-            doc.save(fileName);
+            // 9. Attach Poster and Notice to PDF
+            const addImageToPdf = async (url: string, title: string) => {
+                try {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    img.src = url;
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+                    
+                    doc.addPage();
+                    doc.setFillColor(30, 41, 59);
+                    doc.rect(0, 0, pageWidth, 20, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(10);
+                    doc.text(`CAMPUS ARENA - EVENT DOCUMENTATION: ${title.toUpperCase()}`, pageWidth / 2, 12, { align: 'center' });
+                    
+                    const padding = 20;
+                    const availableWidth = pageWidth - (padding * 2);
+                    const availableHeight = pageHeight - 40;
+                    const ratio = Math.min(availableWidth / img.width, availableHeight / img.height);
+                    const width = img.width * ratio;
+                    const height = img.height * ratio;
+                    
+                    doc.addImage(img, 'JPEG', (pageWidth - width) / 2, 30, width, height);
+                } catch (e) {
+                    console.error(`Failed to add ${title} Image to PDF`, e);
+                }
+            };
+
+            if ((report as any).noticeUrl) await addImageToPdf((report as any).noticeUrl, 'Official Notice');
+            if ((report as any).posterUrl) await addImageToPdf((report as any).posterUrl, 'Event Poster');
+
+            // 10. Photographs Gallery in PDF
+            if ((report as any).photographs?.length > 0) {
+                doc.addPage();
+                doc.setFillColor(30, 41, 59);
+                doc.rect(0, 0, pageWidth, 20, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.text(`CAMPUS ARENA - EVENT HIGHLIGHTS / PHOTOGRAPHS`, pageWidth / 2, 12, { align: 'center' });
+                
+                let photoY = 30;
+                for (const photoUrl of (report as any).photographs) {
+                    if (photoY > pageHeight - 100) {
+                        doc.addPage();
+                        photoY = 20;
+                    }
+                    try {
+                        const img = new Image();
+                        img.crossOrigin = 'Anonymous';
+                        img.src = photoUrl;
+                        await new Promise((resolve, reject) => {
+                            img.onload = resolve;
+                            img.onerror = reject;
+                        });
+                        const ratio = 60 / img.height;
+                        const width = img.width * ratio;
+                        doc.addImage(img, 'JPEG', (pageWidth - width) / 2, photoY, width, 60);
+                        photoY += 70;
+                    } catch (e) {
+                        console.error('Failed to add photograph to PDF', e);
+                    }
+                }
+            }
+
+            doc.save(`${report.eventName.replace(/\s+/g, '_')}_Completion_Report.pdf`);
             toast.success('Professional Full-Width Report Saved', { id: toastId });
         } catch (error) {
             console.error('PDF Generation Error:', error);
@@ -476,7 +553,7 @@ export default function ReportViewPage() {
                         <div className="grid grid-cols-2 lg:grid-cols-4 border-b border-slate-100 dark:border-slate-800 divide-x divide-slate-100 dark:divide-slate-800">
                             {[
                                 { icon: Calendar, label: 'Execution Date', value: new Date(report.date).toLocaleDateString(undefined, { dateStyle: 'full' }), color: 'text-indigo-500', bg: 'bg-indigo-50/50' },
-                                { icon: Clock, label: 'Time Registry', value: report.time, color: 'text-amber-500', bg: 'bg-amber-50/50' },
+                                { icon: User, label: 'Resource Person', value: (report as any).resourcePerson || 'Internal Resource', color: 'text-violet-500', bg: 'bg-violet-50/50' },
                                 { icon: MapPin, label: 'Geo Location', value: report.venue || 'Virtual / Multi-Location', color: 'text-rose-500', bg: 'bg-rose-50/50' },
                                 { icon: Users, label: 'Total Engagement', value: `${report.participants.length} Participants`, color: 'text-emerald-500', bg: 'bg-emerald-50/50' }
                             ].map((item, i) => (
@@ -492,7 +569,7 @@ export default function ReportViewPage() {
 
                         {/* 3. Narrative Documentation */}
                         <div className="p-10 md:p-14 space-y-20">
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-20">
+                            <div className="space-y-16">
                                 <section className="space-y-6">
                                     <div className="flex items-center gap-4">
                                         <div className="h-8 w-1.5 bg-indigo-600 rounded-full"></div>
@@ -500,6 +577,15 @@ export default function ReportViewPage() {
                                     </div>
                                     <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                                         {report.objective}
+                                    </p>
+                                </section>
+                                <section className="space-y-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-8 w-1.5 bg-emerald-500 rounded-full"></div>
+                                        <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white tracking-tight">Impact Analysis</h3>
+                                    </div>
+                                    <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                                        {report.impactAnalysis || 'Impact documentation and outcome analysis not provided for this report.'}
                                     </p>
                                 </section>
                                 <section className="space-y-6">
@@ -512,6 +598,66 @@ export default function ReportViewPage() {
                                     </p>
                                 </section>
                             </div>
+
+                            {/* Event Photographs Gallery */}
+                            {(report as any).photographs?.length > 0 && (
+                                <section className="space-y-8">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-8 w-1.5 bg-amber-500 rounded-full"></div>
+                                        <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white tracking-tight">Event Photographs</h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {(report as any).photographs.map((photo: string, index: number) => (
+                                            <div key={index} className="group relative aspect-video rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 shadow-sm hover:shadow-xl transition-all duration-500">
+                                                <img 
+                                                    src={photo} 
+                                                    alt={`Event photo ${index + 1}`} 
+                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                                                    <p className="text-white text-xs font-bold uppercase tracking-widest">Enlarge Photograph</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Official Notice & Event Poster Section */}
+                            {((report as any).noticeUrl || (report as any).posterUrl) && (
+                                <section className="space-y-8 mt-12">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-8 w-1.5 bg-indigo-500 rounded-full"></div>
+                                        <h3 className="text-lg font-black uppercase text-slate-900 dark:text-white tracking-tight">Compliance & Promotion</h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {(report as any).noticeUrl && (
+                                            <div className="space-y-4">
+                                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Official Notice</p>
+                                                <div className="rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+                                                    <img 
+                                                        src={(report as any).noticeUrl} 
+                                                        alt="Official Notice" 
+                                                        className="w-full h-auto object-contain max-h-[500px] p-4"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {(report as any).posterUrl && (
+                                            <div className="space-y-4">
+                                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Event Poster</p>
+                                                <div className="rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+                                                    <img 
+                                                        src={(report as any).posterUrl} 
+                                                        alt="Event Poster" 
+                                                        className="w-full h-auto object-contain max-h-[500px]"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+                            )}
 
                             {/* 4. Podium Winners Section */}
                             {report.winners.length > 0 && (
@@ -702,9 +848,11 @@ export default function ReportViewPage() {
                 eventId={report.eventId}
                 eventTitle={report.eventName}
                 eventType={report.eventType as any}
-                initialVenue={report.venue}
                 initialObjective={report.objective}
+                initialImpactAnalysis={report.impactAnalysis}
                 initialSocialLinks={report.socialMediaLinks}
+                initialPhotographs={(report as any).photographs}
+                initialPhotoPublicIds={(report as any).photoPublicIds}
                 reportId={report.id}
                 onSuccess={() => {
                     setShowRegenerateDialog(false);

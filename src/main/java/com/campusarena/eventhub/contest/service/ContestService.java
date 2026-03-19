@@ -40,6 +40,7 @@ public class ContestService {
                 .problemIds(request.getProblemIds())
                 .facultyCoordinators(request.getFacultyCoordinators())
                 .studentCoordinators(request.getStudentCoordinators())
+                .subClubName(request.getSubClubName())
                 .registrationRequired(
                         request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true)
                 .createdBy(creator != null ? creator.getUsername() : null)
@@ -114,6 +115,7 @@ public class ContestService {
         contest.setProblemIds(request.getProblemIds());
         contest.setFacultyCoordinators(request.getFacultyCoordinators());
         contest.setStudentCoordinators(request.getStudentCoordinators());
+        contest.setSubClubName(request.getSubClubName());
         contest.setRegistrationRequired(
                 request.getRegistrationRequired() != null ? request.getRegistrationRequired() : true);
 
@@ -175,6 +177,7 @@ public class ContestService {
                 .problemIds(contest.getProblemIds())
                 .facultyCoordinators(contest.getFacultyCoordinators())
                 .studentCoordinators(contest.getStudentCoordinators())
+                .subClubName(contest.getSubClubName())
                 .status(getContestStatus(contest.getStartTime(), contest.getEndTime()))
                 .registrationRequired(contest.getRegistrationRequired())
                 .registeredUserCount(userCount)
