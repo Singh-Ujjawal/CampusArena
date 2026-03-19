@@ -16,12 +16,25 @@ export interface User {
     leetCodeUsername?: string;
 }
 
+export interface SubClub {
+    name: string;
+    clubCoordinatorId: string;
+}
+
+export interface SubClubGroup {
+    name: string;
+    subClubs: SubClub[];
+}
+
 export interface Club {
     id: string;
     name: string;
     image: string;
     imagePublicId?: string;
     clubCoordinatorId: string;
+    description?: string;
+    objective?: string;
+    subClubGroup?: SubClubGroup;
 }
 
 
@@ -42,6 +55,7 @@ export interface Event {
     clubId: string;
     status: 'UPCOMING' | 'LIVE' | 'COMPLETED';
     accessPassword?: string;
+    subClubName?: string;
     facultyCoordinators?: string[];
     studentCoordinators?: string[];
     registrationRequired?: boolean;
@@ -57,6 +71,7 @@ export interface Contest {
     problemIds: string[];
     status?: 'UPCOMING' | 'LIVE' | 'ENDED'; // Derived or from API
     accessPassword?: string;
+    subClubName?: string;
     facultyCoordinators?: string[];
     studentCoordinators?: string[];
     registrationRequired?: boolean;
@@ -167,6 +182,7 @@ export interface RegistrationForm {
     clubId: string;
     eventId?: string;
     contestId?: string;
+    subClubName?: string;
     active: boolean;
     evaluationCriteria?: EvaluationCriterion[];
     feedbackEnabled?: boolean;
@@ -221,6 +237,7 @@ export interface Report {
     facultyCoordinators: string[];
     studentCoordinators: string[];
     clubName?: string;
+    subClubName?: string;
     objective: string;
     description: string;
     participants: ParticipantInfo[];

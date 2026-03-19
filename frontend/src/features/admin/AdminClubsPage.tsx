@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { type Club, type Faculty } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -17,24 +18,12 @@ import { DeleteButton } from '@/components/DeleteButton';
 import { uploadToCloudinary } from '@/utils/cloudinary';
 
 export default function AdminClubsPage() {
+    const navigate = useNavigate();
     const [clubs, setClubs] = useState<Club[]>([]);
     const [faculties, setFaculties] = useState<Faculty[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingClub, setEditingClub] = useState<Club | null>(null);
     const [clubToDelete, setClubToDelete] = useState<string | null>(null);
-
-    // Form states
-    const [formData, setFormData] = useState({
-        name: '',
-        image: '',
-        imagePublicId: '',
-        clubCoordinatorId: ''
-    });
-    const [imagePreview, setImagePreview] = useState<string>('');
 
     useEffect(() => {
         fetchClubs();
@@ -61,62 +50,6 @@ export default function AdminClubsPage() {
         }
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setIsUploadingImage(true);
-        try {
-            const result = await uploadToCloudinary(file);
-            
-            if (result.error) {
-                toast.error(result.error);
-                return;
-            }
-
-            setFormData(prev => ({ 
-                ...prev, 
-                image: result.secure_url,
-                imagePublicId: result.public_id 
-            }));
-            setImagePreview(result.secure_url);
-            toast.success('Logo uploaded successfully');
-        } catch (error) {
-            toast.error('Failed to upload image');
-        } finally {
-            setIsUploadingImage(false);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formData.name) {
-            toast.error('Club name is required');
-            return;
-        }
-        if (!formData.clubCoordinatorId) {
-            toast.error('Please select a coordinator');
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            if (editingClub) {
-                await api.put(`/api/clubs/${editingClub.id}`, formData);
-                toast.success('Club updated successfully');
-            } else {
-                await api.post('/api/clubs', formData);
-                toast.success('Club created successfully');
-            }
-            fetchClubs();
-            handleCloseModal();
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || (editingClub ? 'Failed to update club' : 'Failed to create club'));
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
 
     const handleDelete = async (id: string) => {
         try {
@@ -129,22 +62,7 @@ export default function AdminClubsPage() {
     };
 
     const handleEdit = (club: Club) => {
-        setEditingClub(club);
-        setFormData({
-            name: club.name,
-            image: club.image,
-            imagePublicId: club.imagePublicId || '',
-            clubCoordinatorId: club.clubCoordinatorId
-        });
-        setImagePreview(club.image);
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setEditingClub(null);
-        setFormData({ name: '', image: '', imagePublicId: '', clubCoordinatorId: '' });
-        setImagePreview('');
+        navigate(`/admin/clubs/edit/${club.id}`);
     };
 
     const filteredClubs = clubs.filter(club => {
@@ -168,7 +86,7 @@ export default function AdminClubsPage() {
                     </div>
 
                     <Button
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => navigate('/admin/clubs/create')}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-11 px-6 text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all"
                     >
                         <Plus className="mr-2 h-4 w-4" /> Add Club
@@ -266,134 +184,7 @@ export default function AdminClubsPage() {
                     </div>
                 )}
 
-                {/* Create/Edit Modal */}
-                <AnimatePresence>
-                    {isModalOpen && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={handleCloseModal}
-                                className="absolute inset-0 bg-[#0B0F1A]/80 backdrop-blur-sm"
-                            />
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="relative bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 dark:border-gray-800"
-                            >
-                                <div className="p-10">
-                                    <div className="flex items-center justify-between mb-10">
-                                        <h2 className="text-3xl font-black text-gray-900 dark:text-white">
-                                            {editingClub ? 'Update' : 'Create'} <span className="text-indigo-600">Club</span>
-                                        </h2>
-                                        <button onClick={handleCloseModal} className="h-12 w-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                                            <X className="h-6 w-6" />
-                                        </button>
-                                    </div>
 
-                                    <form onSubmit={handleSubmit} className="space-y-8">
-                                        <div className="space-y-6">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-4">Club Name</label>
-                                                <Input
-                                                    required
-                                                    value={formData.name}
-                                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                                    placeholder="Enter club name..."
-                                                    className="h-16 px-6 bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-indigo-500 rounded-2xl text-lg font-bold transition-all"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-4">Club Image</label>
-                                                <div className="space-y-3">
-                                                    <div className="relative">
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            onChange={handleImageUpload}
-                                                            disabled={isUploadingImage}
-                                                            className="hidden"
-                                                            id="image-upload"
-                                                        />
-                                                        <label
-                                                            htmlFor="image-upload"
-                                                            className="flex items-center justify-center h-16 px-6 bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl cursor-pointer hover:border-indigo-500 transition-colors"
-                                                        >
-                                                            {isUploadingImage ? (
-                                                                <div className="flex items-center gap-2">
-                                                                    <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
-                                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Uploading...</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex items-center gap-2">
-                                                                    <Upload className="h-5 w-5 text-gray-400" />
-                                                                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                                                        {formData.image ? 'Change Image' : 'Select Image'}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                        </label>
-                                                    </div>
-                                                    {(formData.image || imagePreview) && (
-                                                        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Preview</p>
-                                                            <div className="relative w-full h-40 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-900">
-                                                                <img 
-                                                                    src={imagePreview || formData.image} 
-                                                                    alt="Preview" 
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            </div>
-                                                            {formData.image && (
-                                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate">
-                                                                    {formData.image}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-4">Club Coordinator</label>
-                                                <Select
-                                                    id="coordinator"
-                                                    value={formData.clubCoordinatorId}
-                                                    onChange={e => setFormData({ ...formData, clubCoordinatorId: e.target.value })}
-                                                    options={faculties.map(faculty => ({
-                                                        value: faculty.id,
-                                                        label: `${faculty.firstName} ${faculty.lastName || ''}`
-                                                    }))}
-                                                    className="dark:bg-gray-900 dark:text-gray-100"
-                                                    style={{ backgroundColor: '#343434', color: '#E8F4F8', borderColor: '#404040' }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-4 pt-4">
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                onClick={handleCloseModal}
-                                                className="flex-1 h-16 rounded-2xl text-lg font-black"
-                                            >
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                type="submit"
-                                                disabled={isSubmitting}
-                                                className="flex-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl h-16 px-10 text-lg font-black shadow-xl shadow-indigo-500/20 disabled:grayscale transition-all"
-                                            >
-                                                {isSubmitting ? <Loader2 className="animate-spin" /> : editingClub ? 'Save Changes' : 'Create Club'}
-                                            </Button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
             </div>
 
             <DeleteConfirmDialog

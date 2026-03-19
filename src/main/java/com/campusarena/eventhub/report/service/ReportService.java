@@ -79,6 +79,9 @@ public class ReportService {
             if (event.getClubId() != null) {
                 clubRepository.findById(event.getClubId()).ifPresent(club -> reportBuilder.clubName(club.getName()));
             }
+            if (event.getSubClubName() != null) {
+                reportBuilder.subClubName(event.getSubClubName());
+            }
 
             // Participants and Winners for Quiz: Sorted by Score Desc, SubmittedAt Asc
             List<EventLeaderboardEntry> leaderboard = eventLeaderboardService.getLeaderboard(event.getId());
@@ -144,6 +147,9 @@ public class ReportService {
             if (contest.getClubId() != null) {
                 clubRepository.findById(contest.getClubId()).ifPresent(club -> reportBuilder.clubName(club.getName()));
             }
+            if (contest.getSubClubName() != null) {
+                reportBuilder.subClubName(contest.getSubClubName());
+            }
 
             // Participants and Winners for Contest: Sorted by Score Desc, LastSubmissionTime Asc
             List<LeaderboardEntry> leaderboard = contestLeaderboardService.getLeaderboard(contest.getId());
@@ -208,6 +214,9 @@ public class ReportService {
 
             if (form.getClubId() != null) {
                 clubRepository.findById(form.getClubId()).ifPresent(club -> reportBuilder.clubName(club.getName()));
+            }
+            if (form.getSubClubName() != null) {
+                reportBuilder.subClubName(form.getSubClubName());
             }
 
             // Fetch coordinators from linked event/contest if exists

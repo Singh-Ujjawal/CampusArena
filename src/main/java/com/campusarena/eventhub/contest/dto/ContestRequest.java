@@ -18,6 +18,7 @@ public class ContestRequest {
     private Instant endTime;
     private String clubId;
     private String accessPassword;
+    private String subClubName;
     private List<String> problemIds;
     private List<String> facultyCoordinators;
     private List<String> studentCoordinators;

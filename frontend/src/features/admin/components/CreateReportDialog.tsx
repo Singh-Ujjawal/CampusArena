@@ -17,6 +17,7 @@ interface CreateReportDialogProps {
     initialObjective?: string;
     initialSocialLinks?: string[];
     reportId?: string;
+    onSuccess?: (reportId: string) => void;
 }
 
 const EMPTY_ARRAY: string[] = [];
@@ -30,7 +31,8 @@ export function CreateReportDialog({
     initialVenue = '',
     initialObjective = '',
     initialSocialLinks = EMPTY_ARRAY,
-    reportId
+    reportId,
+    onSuccess
 }: CreateReportDialogProps) {
     const navigate = useNavigate();
     const [venue, setVenue] = useState<string>(typeof initialVenue === 'string' ? initialVenue : '');
@@ -92,7 +94,11 @@ export function CreateReportDialog({
 
             toast.success('Report generated successfully!');
             onClose();
-            navigate(`/admin/reports/${response.data.id}`);
+            if (onSuccess) {
+                onSuccess(response.data.id);
+            } else {
+                navigate(`/admin/reports/${response.data.id}`);
+            }
         } catch (error) {
             toast.error('Failed to generate report');
             console.error(error);
