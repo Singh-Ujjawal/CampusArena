@@ -60,15 +60,15 @@ public class WebSecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> 
-                    auth.requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/events/**").permitAll() // Many events are public
-                        .requestMatchers("/api/registration/**").permitAll() // Public registration
-                        .requestMatchers("/api/contests/**").permitAll()
-                        .requestMatchers("/api/problems/**").permitAll()
-                        .requestMatchers("/user/**").permitAll() // Some user endpoints might need open access for login/reg
-                        .requestMatchers("/uploads/**").permitAll()
-                        .anyRequest().authenticated()
+                .authorizeHttpRequests(auth ->
+                        auth.requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/api/events/**").permitAll() // Many events are public
+                                .requestMatchers("/api/registration/**").permitAll() // Public registration
+                                .requestMatchers("/api/contests/**").permitAll()
+                                .requestMatchers("/api/problems/**").permitAll()
+                                .requestMatchers("/user/**").permitAll() // Some user endpoints might need open access for login/reg
+                                .requestMatchers("/uploads/**").permitAll()
+                                .anyRequest().authenticated()
                 );
 
         http.authenticationProvider(authenticationProvider());
@@ -82,6 +82,12 @@ public class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
+                "http://52.66.175.187/",
+                "http://52.66.175.187:5173",
+                "http://52.66.175.187:80",
+                "http://13.201.124.46/",
+                "http://13.201.124.46:5173",
+                "http://13.201.124.46:80",
                 "http://35.154.206.192",
                 "http://35.154.206.192:5173",
                 "http://35.154.206.192:80",
