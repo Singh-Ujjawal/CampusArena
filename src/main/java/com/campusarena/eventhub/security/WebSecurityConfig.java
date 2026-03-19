@@ -60,15 +60,15 @@ public class WebSecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> 
-                    auth.requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/events/**").permitAll() // Many events are public
-                        .requestMatchers("/api/registration/**").permitAll() // Public registration
-                        .requestMatchers("/api/contests/**").permitAll()
-                        .requestMatchers("/api/problems/**").permitAll()
-                        .requestMatchers("/user/**").permitAll() // Some user endpoints might need open access for login/reg
-                        .requestMatchers("/uploads/**").permitAll()
-                        .anyRequest().authenticated()
+                .authorizeHttpRequests(auth ->
+                        auth.requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/api/events/**").permitAll() // Many events are public
+                                .requestMatchers("/api/registration/**").permitAll() // Public registration
+                                .requestMatchers("/api/contests/**").permitAll()
+                                .requestMatchers("/api/problems/**").permitAll()
+                                .requestMatchers("/user/**").permitAll() // Some user endpoints might need open access for login/reg
+                                .requestMatchers("/uploads/**").permitAll()
+                                .anyRequest().authenticated()
                 );
 
         http.authenticationProvider(authenticationProvider());
