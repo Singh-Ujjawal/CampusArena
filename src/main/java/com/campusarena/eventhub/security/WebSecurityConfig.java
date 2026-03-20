@@ -1,6 +1,7 @@
 package com.campusarena.eventhub.security;
 
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,7 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -85,9 +86,9 @@ public class WebSecurityConfig {
                 "http://52.66.175.187/",
                 "http://52.66.175.187:5173",
                 "http://52.66.175.187:80",
-                "http://13.201.124.46/",
-                "http://13.201.124.46:5173",
-                "http://13.201.124.46:80",
+                "http://65.2.33.147/",
+                "http://65.2.33.147:5173",
+                "http://65.2.33.147:80",
                 "http://35.154.206.192",
                 "http://35.154.206.192:5173",
                 "http://35.154.206.192:80",
