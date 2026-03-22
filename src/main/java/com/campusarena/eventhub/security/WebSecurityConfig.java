@@ -86,6 +86,8 @@ public class WebSecurityConfig {
                 "http://52.66.175.187/",
                 "http://www.campusarena.qzz.io",
                 "http://www.campusarena.qzz.io/",
+                "https://www.campusarena.qzz.io",
+                "https://www.campusarena.qzz.io/",
                 "http://52.66.175.187:5173",
                 "http://52.66.175.187:80",
                 "http://65.2.33.147/",
