@@ -1,7 +1,7 @@
 # CampusArena — Full Stack Documentation & Developer Guide
 
 > **Stack:** Java 21 · Spring Boot 3.5 · MongoDB · React 19 · TypeScript · Vite  
-> **Deployed on:** AWS EC2 — `http://35.154.206.192:8080`  
+> **Deployed on:** AWS EC2 — `http://http://65.2.33.147`  
 > **Last Updated:** 2026-03-13
 
 ---
